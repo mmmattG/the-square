@@ -1,6 +1,7 @@
 local SURFACE_NAME = "fes-bootstrap"
 local SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 local SETTING_DEV_MODE = "fes-dev-mode"
+local SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
 local FLOOR_TILE_NAME = "grass-1"
 local VOID_TILE_NAME = "out-of-map"
 local CHART_MARGIN = 1
@@ -974,6 +975,10 @@ local function handle_ingress_built(entity, actor)
     return
   end
 
+  if actor and actor.valid and actor.object_name == "LuaPlayer" then
+    print_ingress_placement_debug(actor, bootstrap.square_size, entity.position)
+  end
+
   local side = get_anchor_side_for_position(bootstrap.square_size, entity.position)
 
   if not side then
@@ -1209,6 +1214,56 @@ end
 
 local function is_dev_mode_enabled(player)
   return settings.get_player_settings(player)[SETTING_DEV_MODE].value
+end
+
+local function is_ingress_placement_debug_enabled(player)
+  return player
+    and player.valid
+    and settings.get_player_settings(player)[SETTING_INGRESS_PLACEMENT_DEBUG].value
+end
+
+local function format_position(position)
+  if not position then
+    return "(nil)"
+  end
+
+  return "(" .. position.x .. ", " .. position.y .. ")"
+end
+
+local function build_ingress_edge_check_debug(square_size, position)
+  local bounds = get_anchor_bounds(square_size)
+  local min_x = bounds.left_top.x
+  local min_y = bounds.left_top.y
+  local max_x = bounds.right_bottom.x - 1
+  local max_y = bounds.right_bottom.y - 1
+  local north_match = position.y == min_y and position.x > min_x and position.x < max_x
+  local east_match = position.x == max_x and position.y > min_y and position.y < max_y
+  local south_match = position.y == max_y and position.x > min_x and position.x < max_x
+  local west_match = position.x == min_x and position.y > min_y and position.y < max_y
+  local detected_side = get_anchor_side_for_position(square_size, position)
+
+  return table.concat({
+    "[Expanding Square] Ingress placement debug",
+    "position=" .. format_position(position),
+    "square_size=" .. square_size,
+    "anchor_bounds.left_top=" .. format_position(bounds.left_top),
+    "anchor_bounds.right_bottom=" .. format_position(bounds.right_bottom),
+    "min=(" .. min_x .. ", " .. min_y .. ")",
+    "max=(" .. max_x .. ", " .. max_y .. ")",
+    "north=" .. tostring(north_match),
+    "east=" .. tostring(east_match),
+    "south=" .. tostring(south_match),
+    "west=" .. tostring(west_match),
+    "detected_side=" .. tostring(detected_side)
+  }, " | ")
+end
+
+local function print_ingress_placement_debug(player, square_size, position)
+  if not is_ingress_placement_debug_enabled(player) then
+    return
+  end
+
+  player.print(build_ingress_edge_check_debug(square_size, position))
 end
 
 local function ensure_debug_frame(player)
