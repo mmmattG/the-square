@@ -44,6 +44,17 @@ local function get_surface_size(square_size)
   return square_size + (STARTER_ANCHOR_OUTER_RING_WIDTH * 2)
 end
 
+local function is_inside_bounds(bounds, position)
+  return position.x >= bounds.left_top.x
+    and position.x < bounds.right_bottom.x
+    and position.y >= bounds.left_top.y
+    and position.y < bounds.right_bottom.y
+end
+
+local function get_position_key(position)
+  return position.x .. ":" .. position.y
+end
+
 local function get_edge_positions(bounds, side)
   local positions = {}
   local min_x = bounds.left_top.x
@@ -140,16 +151,27 @@ local function build_clean_square_tiles(size)
   return tiles
 end
 
-local function build_void_tiles(size)
-  local bounds = get_square_bounds(size)
+local function build_anchor_ring_tiles(square_size, surface_size)
+  local surface_bounds = get_square_bounds(surface_size)
+  local square_bounds = get_square_bounds(square_size)
   local tiles = {}
+  local anchor_positions = {}
+  local anchors = build_starter_anchor_layout(square_size, surface_size)
 
-  for y = bounds.left_top.y, bounds.right_bottom.y - 1 do
-    for x = bounds.left_top.x, bounds.right_bottom.x - 1 do
-      tiles[#tiles + 1] = {
-        name = VOID_TILE_NAME,
-        position = {x = x, y = y}
-      }
+  for _, anchor in ipairs(anchors) do
+    anchor_positions[get_position_key(anchor.position)] = true
+  end
+
+  for y = surface_bounds.left_top.y, surface_bounds.right_bottom.y - 1 do
+    for x = surface_bounds.left_top.x, surface_bounds.right_bottom.x - 1 do
+      local position = {x = x, y = y}
+
+      if not is_inside_bounds(square_bounds, position) then
+        tiles[#tiles + 1] = {
+          name = anchor_positions[get_position_key(position)] and FLOOR_TILE_NAME or VOID_TILE_NAME,
+          position = position
+        }
+      end
     end
   end
 
@@ -157,19 +179,11 @@ local function build_void_tiles(size)
 end
 
 local function build_bootstrap_tiles(square_size, surface_size)
-  local anchors = build_starter_anchor_layout(square_size, surface_size)
-  local tiles = build_void_tiles(surface_size)
-  local square_tiles = build_clean_square_tiles(square_size)
+  local tiles = build_clean_square_tiles(square_size)
+  local anchor_ring_tiles = build_anchor_ring_tiles(square_size, surface_size)
 
-  for _, tile in ipairs(square_tiles) do
+  for _, tile in ipairs(anchor_ring_tiles) do
     tiles[#tiles + 1] = tile
-  end
-
-  for _, anchor in ipairs(anchors) do
-    tiles[#tiles + 1] = {
-      name = FLOOR_TILE_NAME,
-      position = anchor.position
-    }
   end
 
   return tiles
@@ -197,6 +211,7 @@ end
 
 local function ensure_bootstrap_surface()
   local square_size = get_square_size()
+  local surface_size = get_surface_size(square_size)
   local surface = game.surfaces[SURFACE_NAME]
 
   if not surface then
@@ -210,15 +225,37 @@ local function ensure_bootstrap_surface()
   surface.destroy_decoratives({})
   surface.clear_hidden_tiles()
   destroy_noise_entities(surface)
-  surface.set_tiles(build_bootstrap_tiles(square_size, get_surface_size(square_size)), true, true, true, false)
+  surface.set_tiles(build_bootstrap_tiles(square_size, surface_size), true, true, true, false)
 
   storage.bootstrap = {
     square_size = square_size,
-    surface_size = get_surface_size(square_size),
+    surface_size = surface_size,
     surface_name = SURFACE_NAME
   }
 
   return surface
+end
+
+local function ensure_surface_anchor_ring(surface, bootstrap)
+  local target_surface_size = get_surface_size(bootstrap.square_size)
+
+  if (bootstrap.surface_size or 0) < target_surface_size then
+    local map_gen_settings = surface.map_gen_settings
+    map_gen_settings.width = target_surface_size
+    map_gen_settings.height = target_surface_size
+    surface.map_gen_settings = map_gen_settings
+    bootstrap.surface_size = target_surface_size
+  end
+
+  if bootstrap.surface_size then
+    surface.set_tiles(
+      build_anchor_ring_tiles(bootstrap.square_size, bootstrap.surface_size),
+      true,
+      true,
+      true,
+      false
+    )
+  end
 end
 
 local function find_entity_at_position(surface, prototype_name, position)
@@ -311,10 +348,25 @@ local function ensure_starter_anchors()
     return
   end
 
+  ensure_surface_anchor_ring(surface, bootstrap)
+
   local layout_surface_size = bootstrap.surface_size or bootstrap.square_size
 
   if storage.starter_anchors then
     storage.starter_anchors.layout_version = storage.starter_anchors.layout_version or 1
+  end
+
+  if storage.starter_anchors
+    and (
+      storage.starter_anchors.square_size ~= bootstrap.square_size
+      or storage.starter_anchors.surface_size ~= layout_surface_size
+      or storage.starter_anchors.layout_version ~= STARTER_ANCHOR_LAYOUT_VERSION
+    ) then
+    for _, anchor in ipairs(storage.starter_anchors.anchors or {}) do
+      if anchor.entity and anchor.entity.valid then
+        anchor.entity.destroy()
+      end
+    end
   end
 
   storage.starter_anchors = storage.starter_anchors or {
