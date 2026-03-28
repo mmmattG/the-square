@@ -1,9 +1,12 @@
 local SURFACE_NAME = "fes-bootstrap"
 local SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 local FLOOR_TILE_NAME = "grass-1"
+local VOID_TILE_NAME = "out-of-map"
 local CHART_MARGIN = 1
 local ITEM_ANCHOR_INTERVAL_TICKS = 8
 local FLUID_ANCHOR_AMOUNT_PER_INTERVAL = 160
+local STARTER_ANCHOR_OUTER_RING_WIDTH = 1
+local STARTER_ANCHOR_LAYOUT_VERSION = 2
 
 local STARTER_INPUT_DEFINITIONS = {
   {resource = "iron-ore", kind = "item", side = "north"},
@@ -35,6 +38,10 @@ local function get_square_bounds(size)
     left_top = {x = left, y = left},
     right_bottom = {x = left + size, y = left + size}
   }
+end
+
+local function get_surface_size(square_size)
+  return square_size + (STARTER_ANCHOR_OUTER_RING_WIDTH * 2)
 end
 
 local function get_edge_positions(bounds, side)
@@ -82,8 +89,8 @@ local function choose_spread_positions(positions, count, side)
   return chosen
 end
 
-local function build_starter_anchor_layout(square_size)
-  local bounds = get_square_bounds(square_size)
+local function build_starter_anchor_layout(square_size, surface_size)
+  local bounds = get_square_bounds(surface_size or square_size)
   local resources_by_side = {}
   local anchors = {}
 
@@ -133,6 +140,41 @@ local function build_clean_square_tiles(size)
   return tiles
 end
 
+local function build_void_tiles(size)
+  local bounds = get_square_bounds(size)
+  local tiles = {}
+
+  for y = bounds.left_top.y, bounds.right_bottom.y - 1 do
+    for x = bounds.left_top.x, bounds.right_bottom.x - 1 do
+      tiles[#tiles + 1] = {
+        name = VOID_TILE_NAME,
+        position = {x = x, y = y}
+      }
+    end
+  end
+
+  return tiles
+end
+
+local function build_bootstrap_tiles(square_size, surface_size)
+  local anchors = build_starter_anchor_layout(square_size, surface_size)
+  local tiles = build_void_tiles(surface_size)
+  local square_tiles = build_clean_square_tiles(square_size)
+
+  for _, tile in ipairs(square_tiles) do
+    tiles[#tiles + 1] = tile
+  end
+
+  for _, anchor in ipairs(anchors) do
+    tiles[#tiles + 1] = {
+      name = FLOOR_TILE_NAME,
+      position = anchor.position
+    }
+  end
+
+  return tiles
+end
+
 local function destroy_noise_entities(surface)
   for _, entity in ipairs(surface.find_entities()) do
     if entity.valid and entity.type ~= "character" then
@@ -142,9 +184,11 @@ local function destroy_noise_entities(surface)
 end
 
 local function build_surface_map_gen_settings(square_size)
+  local surface_size = get_surface_size(square_size)
+
   return {
-    width = square_size,
-    height = square_size,
+    width = surface_size,
+    height = surface_size,
     starting_points = {{x = 0, y = 0}},
     peaceful_mode = true,
     no_enemies_mode = true
@@ -166,10 +210,11 @@ local function ensure_bootstrap_surface()
   surface.destroy_decoratives({})
   surface.clear_hidden_tiles()
   destroy_noise_entities(surface)
-  surface.set_tiles(build_clean_square_tiles(square_size), true, true, true, false)
+  surface.set_tiles(build_bootstrap_tiles(square_size, get_surface_size(square_size)), true, true, true, false)
 
   storage.bootstrap = {
     square_size = square_size,
+    surface_size = get_surface_size(square_size),
     surface_name = SURFACE_NAME
   }
 
@@ -266,15 +311,27 @@ local function ensure_starter_anchors()
     return
   end
 
+  local layout_surface_size = bootstrap.surface_size or bootstrap.square_size
+
+  if storage.starter_anchors then
+    storage.starter_anchors.layout_version = storage.starter_anchors.layout_version or 1
+  end
+
   storage.starter_anchors = storage.starter_anchors or {
     square_size = bootstrap.square_size,
-    anchors = build_starter_anchor_layout(bootstrap.square_size)
+    surface_size = layout_surface_size,
+    layout_version = STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = build_starter_anchor_layout(bootstrap.square_size, layout_surface_size)
   }
 
-  if storage.starter_anchors.square_size ~= bootstrap.square_size then
+  if storage.starter_anchors.square_size ~= bootstrap.square_size
+    or storage.starter_anchors.surface_size ~= layout_surface_size
+    or storage.starter_anchors.layout_version ~= STARTER_ANCHOR_LAYOUT_VERSION then
     storage.starter_anchors = {
       square_size = bootstrap.square_size,
-      anchors = build_starter_anchor_layout(bootstrap.square_size)
+      surface_size = layout_surface_size,
+      layout_version = STARTER_ANCHOR_LAYOUT_VERSION,
+      anchors = build_starter_anchor_layout(bootstrap.square_size, layout_surface_size)
     }
   end
 
@@ -346,7 +403,7 @@ local function teleport_player_to_square(player)
   player.force.set_spawn_position(target_position, surface)
   player.teleport(target_position, surface)
 
-  local chart_bounds = get_square_bounds(bootstrap.square_size)
+  local chart_bounds = get_square_bounds(bootstrap.surface_size or bootstrap.square_size)
   player.force.chart(surface, {
     {
       chart_bounds.left_top.x - CHART_MARGIN,
