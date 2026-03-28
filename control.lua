@@ -272,7 +272,7 @@ local function ensure_bootstrap_surface()
   surface.destroy_decoratives({})
   surface.clear_hidden_tiles()
   destroy_noise_entities(surface)
-  surface.set_tiles(build_bootstrap_tiles(square_size, surface_size), true, true, true, false)
+  surface.set_tiles(build_bootstrap_tiles(square_size, surface_size), false, true, true, false)
 
   storage.bootstrap = {
     square_size = square_size,
@@ -297,7 +297,7 @@ local function ensure_surface_anchor_ring(surface, bootstrap)
   if bootstrap.surface_size then
     surface.set_tiles(
       build_anchor_ring_tiles(bootstrap.square_size, bootstrap.surface_size),
-      true,
+      false,
       true,
       true,
       false
