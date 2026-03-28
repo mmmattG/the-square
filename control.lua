@@ -1259,7 +1259,7 @@ local function build_ingress_edge_check_debug(square_size, position)
   }, " | ")
 end
 
-local function print_ingress_placement_debug(player, square_size, position)
+print_ingress_placement_debug = function(player, square_size, position)
   if not is_ingress_placement_debug_enabled(player) then
     return
   end
