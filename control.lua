@@ -3,24 +3,16 @@ local SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 local FLOOR_TILE_NAME = "grass-1"
 local CHART_MARGIN = 1
 
-local function normalize_square_size(value)
-  if value % 2 == 0 then
-    value = value + 1
-  end
-
-  return value
-end
-
 local function get_square_size()
-  return normalize_square_size(settings.global[SETTING_STARTING_SQUARE_SIZE].value)
+  return settings.global[SETTING_STARTING_SQUARE_SIZE].value
 end
 
 local function get_square_bounds(size)
-  local half_extent = math.floor(size / 2)
+  local left = -math.floor(size / 2)
 
   return {
-    left_top = {x = -half_extent, y = -half_extent},
-    right_bottom = {x = half_extent + 1, y = half_extent + 1}
+    left_top = {x = left, y = left},
+    right_bottom = {x = left + size, y = left + size}
   }
 end
 
@@ -31,11 +23,11 @@ local function call_freeplay(interface_name, value)
 end
 
 local function build_clean_square_tiles(size)
-  local half_extent = math.floor(size / 2)
+  local bounds = get_square_bounds(size)
   local tiles = {}
 
-  for y = -half_extent, half_extent do
-    for x = -half_extent, half_extent do
+  for y = bounds.left_top.y, bounds.right_bottom.y - 1 do
+    for x = bounds.left_top.x, bounds.right_bottom.x - 1 do
       tiles[#tiles + 1] = {
         name = FLOOR_TILE_NAME,
         position = {x = x, y = y}
@@ -154,7 +146,7 @@ local function refresh_spawn_routing()
 end
 
 local function notify_square_size_change_applies_to_new_saves()
-  local requested_size = normalize_square_size(settings.global[SETTING_STARTING_SQUARE_SIZE].value)
+  local requested_size = settings.global[SETTING_STARTING_SQUARE_SIZE].value
 
   if storage.bootstrap and storage.bootstrap.square_size == requested_size then
     return
