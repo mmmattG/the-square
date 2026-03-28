@@ -1,12 +1,14 @@
 local SURFACE_NAME = "fes-bootstrap"
 local SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
+local SETTING_DEV_MODE = "fes-dev-mode"
 local FLOOR_TILE_NAME = "grass-1"
 local VOID_TILE_NAME = "out-of-map"
 local CHART_MARGIN = 1
 local ITEM_ANCHOR_INTERVAL_TICKS = 8
 local FLUID_ANCHOR_AMOUNT_PER_INTERVAL = 160
 local STARTER_ANCHOR_OUTER_RING_WIDTH = 2
-local STARTER_ANCHOR_LAYOUT_VERSION = 3
+local STARTER_ANCHOR_LAYOUT_VERSION = 4
+local DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
 
 local STARTER_INPUT_DEFINITIONS = {
   {resource = "iron-ore", kind = "item", side = "north"},
@@ -22,6 +24,13 @@ local DIRECTION_BY_SIDE = {
   east = defines.direction.west,
   south = defines.direction.north,
   west = defines.direction.east
+}
+
+local OFFSET_BY_SIDE = {
+  north = {x = 0, y = -1},
+  east = {x = 1, y = 0},
+  south = {x = 0, y = 1},
+  west = {x = -1, y = 0}
 }
 
 local ITEM_ANCHOR_PROTOTYPE_NAME = "transport-belt"
@@ -147,7 +156,7 @@ local function choose_spread_positions(positions, count, side)
   return chosen
 end
 
-local function build_starter_anchor_layout(square_size, surface_size)
+local function build_starter_anchor_layout(square_size)
   local bounds = get_anchor_bounds(square_size)
   local resources_by_side = {}
   local anchors = {}
@@ -198,24 +207,57 @@ local function build_clean_square_tiles(size)
   return tiles
 end
 
-local function build_anchor_ring_tiles(square_size, surface_size)
-  local surface_bounds = get_square_bounds(surface_size)
-  local square_bounds = get_square_bounds(square_size)
-  local tiles = {}
-  local anchor_positions = {}
-  local anchors = build_starter_anchor_layout(square_size, surface_size)
+local function move_position(position, side, distance)
+  local offset = OFFSET_BY_SIDE[side]
 
-  for _, anchor in ipairs(anchors) do
-    anchor_positions[get_position_key(anchor.position)] = true
+  return {
+    x = position.x + (offset.x * distance),
+    y = position.y + (offset.y * distance)
+  }
+end
+
+local function build_anchor_position_lookup(anchors)
+  local positions = {}
+
+  for _, anchor in ipairs(anchors or {}) do
+    positions[get_position_key(anchor.position)] = true
   end
+
+  return positions
+end
+
+local function get_managed_tile_name(square_size, surface_size, anchor_positions, position)
+  local square_bounds = get_square_bounds(square_size)
+
+  if is_inside_bounds(square_bounds, position) then
+    return FLOOR_TILE_NAME
+  end
+
+  local surface_bounds = get_square_bounds(surface_size)
+
+  if is_inside_bounds(surface_bounds, position) then
+    if anchor_positions[get_position_key(position)] then
+      return FLOOR_TILE_NAME
+    end
+
+    return VOID_TILE_NAME
+  end
+
+  return nil
+end
+
+local function build_anchor_ring_tiles(square_size, surface_size, anchors)
+  local surface_bounds = get_square_bounds(surface_size)
+  local tiles = {}
+  local anchor_positions = build_anchor_position_lookup(anchors)
 
   for y = surface_bounds.left_top.y, surface_bounds.right_bottom.y - 1 do
     for x = surface_bounds.left_top.x, surface_bounds.right_bottom.x - 1 do
       local position = {x = x, y = y}
 
-      if not is_inside_bounds(square_bounds, position) then
+      if not is_inside_bounds(get_square_bounds(square_size), position) then
         tiles[#tiles + 1] = {
-          name = anchor_positions[get_position_key(position)] and FLOOR_TILE_NAME or VOID_TILE_NAME,
+          name = get_managed_tile_name(square_size, surface_size, anchor_positions, position),
           position = position
         }
       end
@@ -225,12 +267,40 @@ local function build_anchor_ring_tiles(square_size, surface_size)
   return tiles
 end
 
-local function build_bootstrap_tiles(square_size, surface_size)
+local function build_bootstrap_tiles(square_size, surface_size, anchors)
   local tiles = build_clean_square_tiles(square_size)
-  local anchor_ring_tiles = build_anchor_ring_tiles(square_size, surface_size)
+  local anchor_ring_tiles = build_anchor_ring_tiles(square_size, surface_size, anchors)
 
   for _, tile in ipairs(anchor_ring_tiles) do
     tiles[#tiles + 1] = tile
+  end
+
+  return tiles
+end
+
+local function build_resize_tile_updates(old_square_size, old_surface_size, new_square_size, new_surface_size, anchors)
+  local tiles = {}
+  local anchor_positions = build_anchor_position_lookup(anchors)
+  local old_bounds = get_square_bounds(old_surface_size)
+  local new_bounds = get_square_bounds(new_surface_size)
+  local min_x = math.min(old_bounds.left_top.x, new_bounds.left_top.x)
+  local min_y = math.min(old_bounds.left_top.y, new_bounds.left_top.y)
+  local max_x = math.max(old_bounds.right_bottom.x - 1, new_bounds.right_bottom.x - 1)
+  local max_y = math.max(old_bounds.right_bottom.y - 1, new_bounds.right_bottom.y - 1)
+
+  for y = min_y, max_y do
+    for x = min_x, max_x do
+      local position = {x = x, y = y}
+      local previous_tile_name = get_managed_tile_name(old_square_size, old_surface_size, {}, position)
+      local next_tile_name = get_managed_tile_name(new_square_size, new_surface_size, anchor_positions, position)
+
+      if next_tile_name and next_tile_name ~= previous_tile_name then
+        tiles[#tiles + 1] = {
+          name = next_tile_name,
+          position = position
+        }
+      end
+    end
   end
 
   return tiles
@@ -256,10 +326,42 @@ local function build_surface_map_gen_settings(square_size)
   }
 end
 
+local function create_starter_anchor_state(square_size)
+  return {
+    layout_version = STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = build_starter_anchor_layout(square_size)
+  }
+end
+
+local function ensure_bootstrap_state_defaults()
+  if not storage.bootstrap then
+    return
+  end
+
+  storage.bootstrap.surface_name = storage.bootstrap.surface_name or SURFACE_NAME
+  storage.bootstrap.surface_size = storage.bootstrap.surface_size or get_surface_size(storage.bootstrap.square_size)
+  storage.bootstrap.expansion_points = storage.bootstrap.expansion_points or 0
+  storage.bootstrap.expansions_completed = storage.bootstrap.expansions_completed or 0
+end
+
+local function ensure_surface_dimensions(surface, target_surface_size)
+  local map_gen_settings = surface.map_gen_settings
+
+  if map_gen_settings.width ~= target_surface_size or map_gen_settings.height ~= target_surface_size then
+    map_gen_settings.width = target_surface_size
+    map_gen_settings.height = target_surface_size
+    surface.map_gen_settings = map_gen_settings
+  end
+
+  surface.request_to_generate_chunks({x = 0, y = 0}, CHART_MARGIN)
+  surface.force_generate_chunk_requests()
+end
+
 local function ensure_bootstrap_surface()
   local square_size = get_square_size()
   local surface_size = get_surface_size(square_size)
   local surface = game.surfaces[SURFACE_NAME]
+  local starter_anchors = storage.starter_anchors and storage.starter_anchors.anchors or build_starter_anchor_layout(square_size)
 
   if not surface then
     surface = game.create_surface(SURFACE_NAME, build_surface_map_gen_settings(square_size))
@@ -267,42 +369,19 @@ local function ensure_bootstrap_surface()
 
   surface.peaceful_mode = true
   surface.no_enemies_mode = true
-  surface.request_to_generate_chunks({x = 0, y = 0}, CHART_MARGIN)
-  surface.force_generate_chunk_requests()
+  ensure_surface_dimensions(surface, surface_size)
   surface.destroy_decoratives({})
   surface.clear_hidden_tiles()
   destroy_noise_entities(surface)
-  surface.set_tiles(build_bootstrap_tiles(square_size, surface_size), false, true, true, false)
+  surface.set_tiles(build_bootstrap_tiles(square_size, surface_size, starter_anchors), false, true, true, false)
 
-  storage.bootstrap = {
-    square_size = square_size,
-    surface_size = surface_size,
-    surface_name = SURFACE_NAME
-  }
+  storage.bootstrap = storage.bootstrap or {}
+  storage.bootstrap.square_size = square_size
+  storage.bootstrap.surface_size = surface_size
+  storage.bootstrap.surface_name = SURFACE_NAME
+  ensure_bootstrap_state_defaults()
 
   return surface
-end
-
-local function ensure_surface_anchor_ring(surface, bootstrap)
-  local target_surface_size = get_surface_size(bootstrap.square_size)
-
-  if (bootstrap.surface_size or 0) < target_surface_size then
-    local map_gen_settings = surface.map_gen_settings
-    map_gen_settings.width = target_surface_size
-    map_gen_settings.height = target_surface_size
-    surface.map_gen_settings = map_gen_settings
-    bootstrap.surface_size = target_surface_size
-  end
-
-  if bootstrap.surface_size then
-    surface.set_tiles(
-      build_anchor_ring_tiles(bootstrap.square_size, bootstrap.surface_size),
-      false,
-      true,
-      true,
-      false
-    )
-  end
 end
 
 local function find_entity_at_position(surface, prototype_name, position)
@@ -314,10 +393,20 @@ local function find_entity_at_position(surface, prototype_name, position)
   return entities[1]
 end
 
-local function configure_anchor_entity(entity)
+local function configure_source_anchor_entity(entity)
   entity.minable = false
   entity.destructible = false
   entity.operable = false
+end
+
+local function release_anchor_entity(entity)
+  if not (entity and entity.valid) then
+    return
+  end
+
+  entity.minable = true
+  entity.destructible = true
+  entity.operable = true
 end
 
 local function ensure_item_anchor(surface, anchor)
@@ -328,7 +417,7 @@ local function ensure_item_anchor(surface, anchor)
       entity.direction = anchor.direction
     end
 
-    configure_anchor_entity(entity)
+    configure_source_anchor_entity(entity)
     return entity
   end
 
@@ -336,7 +425,7 @@ local function ensure_item_anchor(surface, anchor)
 
   if entity and entity.valid then
     entity.direction = anchor.direction
-    configure_anchor_entity(entity)
+    configure_source_anchor_entity(entity)
     anchor.entity = entity
     return entity
   end
@@ -348,7 +437,7 @@ local function ensure_item_anchor(surface, anchor)
     force = game.forces.player
   })
 
-  configure_anchor_entity(entity)
+  configure_source_anchor_entity(entity)
   anchor.entity = entity
 
   return entity
@@ -358,14 +447,14 @@ local function ensure_fluid_anchor(surface, anchor)
   local entity = anchor.entity
 
   if entity and entity.valid then
-    configure_anchor_entity(entity)
+    configure_source_anchor_entity(entity)
     return entity
   end
 
   entity = find_entity_at_position(surface, FLUID_ANCHOR_PROTOTYPE_NAME, anchor.position)
 
   if entity and entity.valid then
-    configure_anchor_entity(entity)
+    configure_source_anchor_entity(entity)
     anchor.entity = entity
     return entity
   end
@@ -376,10 +465,26 @@ local function ensure_fluid_anchor(surface, anchor)
     force = game.forces.player
   })
 
-  configure_anchor_entity(entity)
+  configure_source_anchor_entity(entity)
   anchor.entity = entity
 
   return entity
+end
+
+local function ensure_starter_anchor_state()
+  local bootstrap = storage.bootstrap
+
+  if not bootstrap then
+    return nil
+  end
+
+  if storage.starter_anchors and storage.starter_anchors.layout_version ~= STARTER_ANCHOR_LAYOUT_VERSION then
+    storage.starter_anchors = nil
+  end
+
+  storage.starter_anchors = storage.starter_anchors or create_starter_anchor_state(bootstrap.square_size)
+
+  return storage.starter_anchors
 end
 
 local function ensure_starter_anchors()
@@ -395,46 +500,13 @@ local function ensure_starter_anchors()
     return
   end
 
-  ensure_surface_anchor_ring(surface, bootstrap)
+  local starter_anchors = ensure_starter_anchor_state()
 
-  local layout_surface_size = bootstrap.surface_size or bootstrap.square_size
-
-  if storage.starter_anchors then
-    storage.starter_anchors.layout_version = storage.starter_anchors.layout_version or 1
+  if not starter_anchors then
+    return
   end
 
-  if storage.starter_anchors
-    and (
-      storage.starter_anchors.square_size ~= bootstrap.square_size
-      or storage.starter_anchors.surface_size ~= layout_surface_size
-      or storage.starter_anchors.layout_version ~= STARTER_ANCHOR_LAYOUT_VERSION
-    ) then
-    for _, anchor in ipairs(storage.starter_anchors.anchors or {}) do
-      if anchor.entity and anchor.entity.valid then
-        anchor.entity.destroy()
-      end
-    end
-  end
-
-  storage.starter_anchors = storage.starter_anchors or {
-    square_size = bootstrap.square_size,
-    surface_size = layout_surface_size,
-    layout_version = STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = build_starter_anchor_layout(bootstrap.square_size, layout_surface_size)
-  }
-
-  if storage.starter_anchors.square_size ~= bootstrap.square_size
-    or storage.starter_anchors.surface_size ~= layout_surface_size
-    or storage.starter_anchors.layout_version ~= STARTER_ANCHOR_LAYOUT_VERSION then
-    storage.starter_anchors = {
-      square_size = bootstrap.square_size,
-      surface_size = layout_surface_size,
-      layout_version = STARTER_ANCHOR_LAYOUT_VERSION,
-      anchors = build_starter_anchor_layout(bootstrap.square_size, layout_surface_size)
-    }
-  end
-
-  for _, anchor in ipairs(storage.starter_anchors.anchors) do
+  for _, anchor in ipairs(starter_anchors.anchors) do
     if anchor.kind == "item" then
       ensure_item_anchor(surface, anchor)
     else
@@ -485,6 +557,21 @@ local function reset_rotated_anchor(entity)
   end
 end
 
+local function chart_play_area(force, surface, surface_size)
+  local chart_bounds = get_square_bounds(surface_size)
+
+  force.chart(surface, {
+    {
+      chart_bounds.left_top.x - CHART_MARGIN,
+      chart_bounds.left_top.y - CHART_MARGIN
+    },
+    {
+      chart_bounds.right_bottom.x + CHART_MARGIN,
+      chart_bounds.right_bottom.y + CHART_MARGIN
+    }
+  })
+end
+
 local function teleport_player_to_square(player)
   local bootstrap = storage.bootstrap
 
@@ -501,23 +588,145 @@ local function teleport_player_to_square(player)
   local target_position = {x = 0, y = 0}
   player.force.set_spawn_position(target_position, surface)
   player.teleport(target_position, surface)
+  chart_play_area(player.force, surface, bootstrap.surface_size or bootstrap.square_size)
+end
 
-  local chart_bounds = get_square_bounds(bootstrap.surface_size or bootstrap.square_size)
-  player.force.chart(surface, {
-    {
-      chart_bounds.left_top.x - CHART_MARGIN,
-      chart_bounds.left_top.y - CHART_MARGIN
-    },
-    {
-      chart_bounds.right_bottom.x + CHART_MARGIN,
-      chart_bounds.right_bottom.y + CHART_MARGIN
+local function add_expansion_points(amount)
+  storage.bootstrap.expansion_points = (storage.bootstrap.expansion_points or 0) + amount
+end
+
+local function release_starter_anchor_entities()
+  local starter_anchors = storage.starter_anchors
+
+  if not starter_anchors then
+    return
+  end
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    release_anchor_entity(anchor.entity)
+    anchor.entity = nil
+  end
+end
+
+local function move_starter_anchors_outward()
+  local starter_anchors = storage.starter_anchors
+
+  if not starter_anchors then
+    return
+  end
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    anchor.position = move_position(anchor.position, anchor.side, 1)
+  end
+end
+
+local function apply_square_resize(surface, old_square_size, old_surface_size, new_square_size, new_surface_size)
+  ensure_surface_dimensions(surface, new_surface_size)
+
+  local tile_updates = build_resize_tile_updates(
+    old_square_size,
+    old_surface_size,
+    new_square_size,
+    new_surface_size,
+    storage.starter_anchors and storage.starter_anchors.anchors or {}
+  )
+
+  if #tile_updates > 0 then
+    surface.set_tiles(tile_updates, false, true, true, false)
+  end
+end
+
+local function expand_square(player)
+  local bootstrap = storage.bootstrap
+
+  if not bootstrap then
+    return
+  end
+
+  local surface = game.surfaces[bootstrap.surface_name]
+
+  if not surface then
+    return
+  end
+
+  ensure_starter_anchor_state()
+
+  local previous_square_size = bootstrap.square_size
+  local previous_surface_size = bootstrap.surface_size or get_surface_size(previous_square_size)
+  local next_square_size = previous_square_size + 2
+  local next_surface_size = get_surface_size(next_square_size)
+  local newly_unlocked_tiles = (next_square_size * next_square_size) - (previous_square_size * previous_square_size)
+
+  release_starter_anchor_entities()
+  move_starter_anchors_outward()
+
+  bootstrap.square_size = next_square_size
+  bootstrap.surface_size = next_surface_size
+  bootstrap.expansions_completed = (bootstrap.expansions_completed or 0) + 1
+  add_expansion_points(newly_unlocked_tiles)
+
+  apply_square_resize(surface, previous_square_size, previous_surface_size, next_square_size, next_surface_size)
+  ensure_starter_anchors()
+  chart_play_area(game.forces.player, surface, next_surface_size)
+
+  game.print(
+    {"",
+      "[Expanding Square] Square expanded from ",
+      previous_square_size,
+      "x",
+      previous_square_size,
+      " to ",
+      next_square_size,
+      "x",
+      next_square_size,
+      ". Awarded ",
+      newly_unlocked_tiles,
+      " expansion points (total: ",
+      bootstrap.expansion_points,
+      ")."
     }
-  })
+  )
+
+  if player and player.valid then
+    player.play_sound({path = "utility/new_objective"})
+  end
+end
+
+local function is_dev_mode_enabled(player)
+  return settings.get_player_settings(player)[SETTING_DEV_MODE].value
+end
+
+local function sync_dev_gui(player)
+  if not (player and player.valid) then
+    return
+  end
+
+  local button = player.gui.top[DEV_EXPAND_BUTTON_NAME]
+
+  if is_dev_mode_enabled(player) then
+    if not button then
+      player.gui.top.add({
+        type = "button",
+        name = DEV_EXPAND_BUTTON_NAME,
+        caption = {"gui.fes-dev-expand-button"}
+      })
+    end
+  elseif button then
+    button.destroy()
+  end
+end
+
+local function sync_all_dev_guis()
+  for _, player in pairs(game.players) do
+    sync_dev_gui(player)
+  end
 end
 
 local function bootstrap_world()
   call_freeplay("set_skip_intro", true)
   call_freeplay("set_disable_crashsite", true)
+
+  storage.starter_anchors = create_starter_anchor_state(get_square_size())
 
   local surface = ensure_bootstrap_surface()
   game.forces.player.set_spawn_position({x = 0, y = 0}, surface)
@@ -526,6 +735,8 @@ local function bootstrap_world()
   for _, player in pairs(game.players) do
     teleport_player_to_square(player)
   end
+
+  sync_all_dev_guis()
 end
 
 local function refresh_spawn_routing()
@@ -534,6 +745,8 @@ local function refresh_spawn_routing()
   if not bootstrap then
     return
   end
+
+  ensure_bootstrap_state_defaults()
 
   local surface = game.surfaces[bootstrap.surface_name]
 
@@ -549,6 +762,8 @@ local function refresh_spawn_routing()
   for _, player in pairs(game.players) do
     teleport_player_to_square(player)
   end
+
+  sync_all_dev_guis()
 end
 
 local function notify_square_size_change_applies_to_new_saves()
@@ -576,6 +791,8 @@ end)
 
 script.on_configuration_changed(function()
   if storage.bootstrap then
+    ensure_bootstrap_state_defaults()
+    ensure_starter_anchor_state()
     refresh_spawn_routing()
     return
   end
@@ -588,6 +805,7 @@ script.on_event(defines.events.on_player_created, function(event)
 
   if player then
     teleport_player_to_square(player)
+    sync_dev_gui(player)
   end
 end)
 
@@ -596,6 +814,7 @@ script.on_event(defines.events.on_player_respawned, function(event)
 
   if player then
     teleport_player_to_square(player)
+    sync_dev_gui(player)
   end
 end)
 
@@ -607,13 +826,31 @@ script.on_event(defines.events.on_player_flipped_entity, function(event)
   reset_rotated_anchor(event.entity)
 end)
 
+script.on_event(defines.events.on_gui_click, function(event)
+  if event.element and event.element.valid and event.element.name == DEV_EXPAND_BUTTON_NAME then
+    local player = game.get_player(event.player_index)
+
+    if player and is_dev_mode_enabled(player) then
+      expand_square(player)
+    end
+  end
+end)
+
 script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
-  if event.setting ~= SETTING_STARTING_SQUARE_SIZE then
+  if event.setting == SETTING_STARTING_SQUARE_SIZE then
+    if storage.bootstrap then
+      notify_square_size_change_applies_to_new_saves()
+    end
+
     return
   end
 
-  if storage.bootstrap then
-    notify_square_size_change_applies_to_new_saves()
+  if event.setting == SETTING_DEV_MODE then
+    local player = game.get_player(event.player_index)
+
+    if player then
+      sync_dev_gui(player)
+    end
   end
 end)
 

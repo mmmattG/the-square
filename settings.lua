@@ -7,5 +7,12 @@ data:extend({
     minimum_value = 4,
     maximum_value = 255,
     order = "a"
+  },
+  {
+    type = "bool-setting",
+    name = "fes-dev-mode",
+    setting_type = "runtime-per-user",
+    default_value = false,
+    order = "b"
   }
 })

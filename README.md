@@ -11,6 +11,8 @@ make install
 
 The starting square size is a per-save map setting (`runtime-global` in Factorio terms). Set it when creating a run. Changing it after the bootstrap surface already exists does not resize the current save.
 
+For manual testing of square growth, enable the per-player `Developer mode` runtime setting. That adds an `Expand square` button to the top-left UI which performs one symmetric ring expansion and moves the active input anchors outward by one tile.
+
 `make install` builds the zip and copies it into your local Factorio mods directory. By default the install script auto-detects:
 
 - macOS: `~/Library/Application Support/factorio/mods`
