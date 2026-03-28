@@ -151,14 +151,7 @@ local function build_surface_map_gen_settings(square_size)
   }
 end
 
-local function validate_anchor_prototypes()
-  if not game.entity_prototypes[ITEM_ANCHOR_PROTOTYPE_NAME] then
-    error("Missing starter item anchor prototype: " .. ITEM_ANCHOR_PROTOTYPE_NAME)
-  end
-end
-
 local function ensure_bootstrap_surface()
-  validate_anchor_prototypes()
   local square_size = get_square_size()
   local surface = game.surfaces[SURFACE_NAME]
 
