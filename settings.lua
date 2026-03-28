@@ -14,5 +14,12 @@ data:extend({
     setting_type = "runtime-per-user",
     default_value = false,
     order = "b"
+  },
+  {
+    type = "bool-setting",
+    name = "fes-ingress-placement-debug",
+    setting_type = "runtime-per-user",
+    default_value = false,
+    order = "c"
   }
 })

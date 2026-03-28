@@ -1,13 +1,14 @@
 local SURFACE_NAME = "fes-bootstrap"
 local SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 local SETTING_DEV_MODE = "fes-dev-mode"
+local SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
 local FLOOR_TILE_NAME = "grass-1"
 local VOID_TILE_NAME = "out-of-map"
 local CHART_MARGIN = 1
 local ITEM_ANCHOR_INTERVAL_TICKS = 8
 local FLUID_ANCHOR_AMOUNT_PER_INTERVAL = 160
 local STARTER_ANCHOR_OUTER_RING_WIDTH = 2
-local STARTER_ANCHOR_LAYOUT_VERSION = 4
+local STARTER_ANCHOR_LAYOUT_VERSION = 7
 local DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
 local DEBUG_FRAME_NAME = "fes_debug_frame"
 local UTILIZATION_UPDATE_INTERVAL_TICKS = 60
@@ -52,10 +53,18 @@ local OFFSET_BY_SIDE = {
   west = {x = -1, y = 0}
 }
 
-local ITEM_ANCHOR_PROTOTYPE_NAME = "transport-belt"
-local FLUID_ANCHOR_PROTOTYPE_NAME = "pipe"
 local update_utilization_metrics
 local refresh_all_debug_guis
+local print_ingress_placement_debug
+local snap_entity_position_to_tile
+
+local function get_ingress_item_name(resource)
+  return "fes-" .. resource .. "-ingress"
+end
+
+local function get_ingress_entity_name(resource)
+  return "fes-" .. resource .. "-ingress-anchor"
+end
 
 local function build_empty_category_breakdown()
   local categories = {}
@@ -223,7 +232,9 @@ local function build_starter_anchor_layout(square_size)
         kind = definition.kind,
         side = side,
         direction = DIRECTION_BY_SIDE[side],
-        position = chosen_positions[index]
+        position = chosen_positions[index],
+        item_name = get_ingress_item_name(definition.resource),
+        entity_name = get_ingress_entity_name(definition.resource)
       }
     end
   end
@@ -262,17 +273,37 @@ local function move_position(position, side, distance)
   }
 end
 
-local function build_anchor_position_lookup(anchors)
-  local positions = {}
+local function get_anchor_side_for_position(square_size, position)
+  local bounds = get_anchor_bounds(square_size)
+  local min_x = bounds.left_top.x
+  local min_y = bounds.left_top.y
+  local max_x = bounds.right_bottom.x - 1
+  local max_y = bounds.right_bottom.y - 1
 
-  for _, anchor in ipairs(anchors or {}) do
-    positions[get_position_key(anchor.position)] = true
+  if position.y == min_y and position.x > min_x and position.x < max_x then
+    return "north"
   end
 
-  return positions
+  if position.x == max_x and position.y > min_y and position.y < max_y then
+    return "east"
+  end
+
+  if position.y == max_y and position.x > min_x and position.x < max_x then
+    return "south"
+  end
+
+  if position.x == min_x and position.y > min_y and position.y < max_y then
+    return "west"
+  end
+
+  return nil
 end
 
-local function get_managed_tile_name(square_size, surface_size, anchor_positions, position)
+local function is_anchor_ring_position(square_size, position)
+  return get_anchor_side_for_position(square_size, position) ~= nil
+end
+
+local function get_managed_tile_name(square_size, surface_size, position)
   local square_bounds = get_square_bounds(square_size)
 
   if is_inside_bounds(square_bounds, position) then
@@ -282,7 +313,7 @@ local function get_managed_tile_name(square_size, surface_size, anchor_positions
   local surface_bounds = get_square_bounds(surface_size)
 
   if is_inside_bounds(surface_bounds, position) then
-    if anchor_positions[get_position_key(position)] then
+    if is_anchor_ring_position(square_size, position) then
       return FLOOR_TILE_NAME
     end
 
@@ -295,7 +326,6 @@ end
 local function build_anchor_ring_tiles(square_size, surface_size, anchors)
   local surface_bounds = get_square_bounds(surface_size)
   local tiles = {}
-  local anchor_positions = build_anchor_position_lookup(anchors)
 
   for y = surface_bounds.left_top.y, surface_bounds.right_bottom.y - 1 do
     for x = surface_bounds.left_top.x, surface_bounds.right_bottom.x - 1 do
@@ -303,7 +333,7 @@ local function build_anchor_ring_tiles(square_size, surface_size, anchors)
 
       if not is_inside_bounds(get_square_bounds(square_size), position) then
         tiles[#tiles + 1] = {
-          name = get_managed_tile_name(square_size, surface_size, anchor_positions, position),
+          name = get_managed_tile_name(square_size, surface_size, position),
           position = position
         }
       end
@@ -512,7 +542,6 @@ end
 
 local function build_resize_tile_updates(old_square_size, old_surface_size, new_square_size, new_surface_size, anchors)
   local tiles = {}
-  local anchor_positions = build_anchor_position_lookup(anchors)
   local old_bounds = get_square_bounds(old_surface_size)
   local new_bounds = get_square_bounds(new_surface_size)
   local min_x = math.min(old_bounds.left_top.x, new_bounds.left_top.x)
@@ -523,8 +552,8 @@ local function build_resize_tile_updates(old_square_size, old_surface_size, new_
   for y = min_y, max_y do
     for x = min_x, max_x do
       local position = {x = x, y = y}
-      local previous_tile_name = get_managed_tile_name(old_square_size, old_surface_size, {}, position)
-      local next_tile_name = get_managed_tile_name(new_square_size, new_surface_size, anchor_positions, position)
+      local previous_tile_name = get_managed_tile_name(old_square_size, old_surface_size, position)
+      local next_tile_name = get_managed_tile_name(new_square_size, new_surface_size, position)
 
       if next_tile_name and next_tile_name ~= previous_tile_name then
         tiles[#tiles + 1] = {
@@ -626,82 +655,177 @@ local function find_entity_at_position(surface, prototype_name, position)
   return entities[1]
 end
 
-local function configure_source_anchor_entity(entity)
-  entity.minable = false
-  entity.destructible = false
-  entity.operable = false
-end
-
-local function release_anchor_entity(entity)
+local function configure_source_anchor_entity(entity, direction)
   if not (entity and entity.valid) then
     return
   end
 
-  entity.minable = true
-  entity.destructible = true
-  entity.operable = true
+  if direction and entity.direction ~= direction then
+    entity.direction = direction
+  end
+
+  entity.destructible = false
+  entity.operable = false
 end
 
-local function ensure_item_anchor(surface, anchor)
+local function is_ingress_entity_name(entity_name)
+  for _, definition in ipairs(STARTER_INPUT_DEFINITIONS) do
+    if entity_name == get_ingress_entity_name(definition.resource) then
+      return true
+    end
+  end
+
+  return false
+end
+
+local function find_matching_stashed_anchor(item_or_entity_name)
+  local starter_anchors = storage.starter_anchors
+
+  if not starter_anchors then
+    return nil
+  end
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    if not anchor.position and (anchor.item_name == item_or_entity_name or anchor.entity_name == item_or_entity_name) then
+      return anchor
+    end
+  end
+
+  return nil
+end
+
+local function find_anchor_by_entity(entity)
+  local starter_anchors = storage.starter_anchors
+
+  if not starter_anchors or not (entity and entity.valid) then
+    return nil
+  end
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    if anchor.entity == entity then
+      return anchor
+    end
+  end
+
+  return nil
+end
+
+local function find_anchor_by_entity_name_and_position(entity_name, position)
+  local starter_anchors = storage.starter_anchors
+
+  if not starter_anchors or not position then
+    return nil
+  end
+
+  local position_key = get_position_key(position)
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    if anchor.entity_name == entity_name and anchor.position and get_position_key(anchor.position) == position_key then
+      return anchor
+    end
+  end
+
+  return nil
+end
+
+local function clear_anchor_entity(anchor)
+  if anchor then
+    anchor.entity = nil
+  end
+end
+
+local function stash_anchor(anchor)
+  if not anchor then
+    return
+  end
+
+  anchor.position = nil
+  anchor.side = nil
+  clear_anchor_entity(anchor)
+end
+
+local function place_anchor(anchor, entity, square_size)
+  if not (anchor and entity and entity.valid) then
+    return false
+  end
+
+  local tile_position = snap_entity_position_to_tile(entity.position)
+  local side = get_anchor_side_for_position(square_size, tile_position)
+
+  if not side then
+    return false
+  end
+
+  anchor.position = tile_position
+  anchor.side = side
+  anchor.direction = DIRECTION_BY_SIDE[side]
+  anchor.entity = entity
+  configure_source_anchor_entity(entity, anchor.direction)
+
+  return true
+end
+
+local function destroy_entities_at_anchor_position(surface, anchor)
+  if not (surface and anchor and anchor.position) then
+    return
+  end
+
+  for _, entity in ipairs(surface.find_entities_filtered({position = anchor.position})) do
+    if entity.valid and entity.name ~= anchor.entity_name and entity.force == game.forces.player then
+      entity.destroy({raise_destroy = false})
+    end
+  end
+end
+
+local function ensure_anchor_entity(surface, anchor)
+  if not (surface and anchor and anchor.position) then
+    return nil
+  end
+
   local entity = anchor.entity
 
   if entity and entity.valid then
-    if entity.direction ~= anchor.direction then
-      entity.direction = anchor.direction
-    end
-
-    configure_source_anchor_entity(entity)
+    configure_source_anchor_entity(entity, anchor.direction)
     return entity
   end
 
-  entity = find_entity_at_position(surface, ITEM_ANCHOR_PROTOTYPE_NAME, anchor.position)
+  destroy_entities_at_anchor_position(surface, anchor)
+
+  entity = find_entity_at_position(surface, anchor.entity_name, anchor.position)
 
   if entity and entity.valid then
-    entity.direction = anchor.direction
-    configure_source_anchor_entity(entity)
     anchor.entity = entity
+    configure_source_anchor_entity(entity, anchor.direction)
     return entity
   end
 
   entity = surface.create_entity({
-    name = ITEM_ANCHOR_PROTOTYPE_NAME,
+    name = anchor.entity_name,
     position = anchor.position,
     direction = anchor.direction,
     force = game.forces.player
   })
 
-  configure_source_anchor_entity(entity)
-  anchor.entity = entity
+  if entity then
+    anchor.entity = entity
+    configure_source_anchor_entity(entity, anchor.direction)
+  end
 
   return entity
 end
 
-local function ensure_fluid_anchor(surface, anchor)
-  local entity = anchor.entity
-
-  if entity and entity.valid then
-    configure_source_anchor_entity(entity)
-    return entity
+local function migrate_anchor_to_anchor_ring(square_size, anchor)
+  if not (anchor and anchor.position and anchor.side) then
+    return
   end
 
-  entity = find_entity_at_position(surface, FLUID_ANCHOR_PROTOTYPE_NAME, anchor.position)
-
-  if entity and entity.valid then
-    configure_source_anchor_entity(entity)
-    anchor.entity = entity
-    return entity
+  if get_anchor_side_for_position(square_size, anchor.position) then
+    return
   end
 
-  entity = surface.create_entity({
-    name = FLUID_ANCHOR_PROTOTYPE_NAME,
-    position = anchor.position,
-    force = game.forces.player
-  })
-
-  configure_source_anchor_entity(entity)
-  anchor.entity = entity
-
-  return entity
+  anchor.position = move_position(anchor.position, anchor.side, 1)
+  anchor.direction = DIRECTION_BY_SIDE[anchor.side]
+  anchor.entity = nil
 end
 
 local function ensure_starter_anchor_state()
@@ -712,10 +836,26 @@ local function ensure_starter_anchor_state()
   end
 
   if storage.starter_anchors and storage.starter_anchors.layout_version ~= STARTER_ANCHOR_LAYOUT_VERSION then
-    storage.starter_anchors = nil
+    local migrated_anchors = storage.starter_anchors.anchors or {}
+
+    for _, anchor in ipairs(migrated_anchors) do
+      anchor.item_name = anchor.item_name or get_ingress_item_name(anchor.resource)
+      anchor.entity_name = anchor.entity_name or get_ingress_entity_name(anchor.resource)
+      anchor.entity = nil
+      migrate_anchor_to_anchor_ring(bootstrap.square_size, anchor)
+    end
+
+    storage.starter_anchors = {
+      layout_version = STARTER_ANCHOR_LAYOUT_VERSION,
+      anchors = migrated_anchors
+    }
   end
 
   storage.starter_anchors = storage.starter_anchors or create_starter_anchor_state(bootstrap.square_size)
+
+  for _, anchor in ipairs(storage.starter_anchors.anchors) do
+    migrate_anchor_to_anchor_ring(bootstrap.square_size, anchor)
+  end
 
   return storage.starter_anchors
 end
@@ -740,10 +880,8 @@ local function ensure_starter_anchors()
   end
 
   for _, anchor in ipairs(starter_anchors.anchors) do
-    if anchor.kind == "item" then
-      ensure_item_anchor(surface, anchor)
-    else
-      ensure_fluid_anchor(surface, anchor)
+    if anchor.position then
+      ensure_anchor_entity(surface, anchor)
     end
   end
 end
@@ -756,7 +894,7 @@ local function pump_starter_anchors()
   end
 
   for _, anchor in ipairs(starter_anchors.anchors) do
-    local entity = anchor.entity
+    local entity = anchor.position and anchor.entity or nil
 
     if entity and entity.valid then
       if anchor.kind == "item" then
@@ -776,17 +914,118 @@ local function pump_starter_anchors()
 end
 
 local function reset_rotated_anchor(entity)
-  local starter_anchors = storage.starter_anchors
+  local anchor = find_anchor_by_entity(entity)
 
-  if not starter_anchors or not (entity and entity.valid) then
+  if not anchor or not (entity and entity.valid) then
     return
   end
 
-  for _, anchor in ipairs(starter_anchors.anchors) do
-    if anchor.entity == entity and entity.direction ~= anchor.direction then
-      entity.direction = anchor.direction
-      return
+  if entity.direction ~= anchor.direction then
+    entity.direction = anchor.direction
+  end
+end
+
+local function refund_entity_to_player(player, entity_name)
+  if not (player and player.valid and entity_name) then
+    return
+  end
+
+  player.insert({name = entity_name, count = 1})
+end
+
+local function refund_entity_to_robot(robot, entity_name)
+  if not (robot and robot.valid and entity_name) then
+    return
+  end
+
+  if robot.get_inventory(defines.inventory.robot_cargo) then
+    robot.get_inventory(defines.inventory.robot_cargo).insert({name = entity_name, count = 1})
+  end
+end
+
+local function reject_anchor_placement(entity, actor, message_key)
+  if not (entity and entity.valid) then
+    return
+  end
+
+  local item_name = string.gsub(entity.name, "-anchor$", "")
+
+  if actor and actor.valid then
+    if actor.object_name == "LuaPlayer" then
+      refund_entity_to_player(actor, item_name)
+      actor.print({message_key})
+    elseif actor.object_name == "LuaEntity" and actor.type == "construction-robot" then
+      refund_entity_to_robot(actor, item_name)
     end
+  end
+
+  entity.destroy({raise_destroy = false})
+end
+
+local function handle_ingress_built(entity, actor)
+  if not (entity and entity.valid) then
+    return
+  end
+
+  local bootstrap = storage.bootstrap
+
+  if not bootstrap then
+    return
+  end
+
+  if entity.surface.name ~= bootstrap.surface_name then
+    reject_anchor_placement(entity, actor, "message.fes-ingress-invalid-surface")
+    return
+  end
+
+  if actor and actor.valid and actor.object_name == "LuaPlayer" then
+    print_ingress_placement_debug(actor, bootstrap.square_size, entity.position)
+  end
+
+  local side = get_anchor_side_for_position(
+    bootstrap.square_size,
+    snap_entity_position_to_tile(entity.position)
+  )
+
+  if not side then
+    reject_anchor_placement(entity, actor, "message.fes-ingress-invalid-edge")
+    return
+  end
+
+  local anchor = find_matching_stashed_anchor(entity.name)
+
+  if not anchor then
+    reject_anchor_placement(entity, actor, "message.fes-ingress-unowned")
+    return
+  end
+
+  place_anchor(anchor, entity, bootstrap.square_size)
+end
+
+local function handle_anchor_mined(entity)
+  if not (entity and entity.valid) then
+    return
+  end
+
+  local anchor = find_anchor_by_entity(entity) or find_anchor_by_entity_name_and_position(entity.name, entity.position)
+
+  if anchor then
+    stash_anchor(anchor)
+  end
+end
+
+local function handle_entity_built(event)
+  local entity = event.entity or event.created_entity
+
+  if not (entity and entity.valid) then
+    return
+  end
+
+  local player = event.player_index and game.get_player(event.player_index) or nil
+  local robot = event.robot
+
+  if is_ingress_entity_name(entity.name) then
+    handle_ingress_built(entity, player or robot)
   end
 end
 
@@ -832,19 +1071,6 @@ local function add_growth_progress(amount)
   storage.bootstrap.growth_progress = (storage.bootstrap.growth_progress or 0) + amount
 end
 
-local function release_starter_anchor_entities()
-  local starter_anchors = storage.starter_anchors
-
-  if not starter_anchors then
-    return
-  end
-
-  for _, anchor in ipairs(starter_anchors.anchors) do
-    release_anchor_entity(anchor.entity)
-    anchor.entity = nil
-  end
-end
-
 local function move_starter_anchors_outward()
   local starter_anchors = storage.starter_anchors
 
@@ -853,7 +1079,67 @@ local function move_starter_anchors_outward()
   end
 
   for _, anchor in ipairs(starter_anchors.anchors) do
-    anchor.position = move_position(anchor.position, anchor.side, 1)
+    if anchor.position and anchor.side then
+      anchor.position = move_position(anchor.position, anchor.side, 1)
+      anchor.direction = DIRECTION_BY_SIDE[anchor.side]
+      anchor.entity = nil
+    end
+  end
+end
+
+local function get_trailing_entity_name(anchor)
+  if not anchor then
+    return nil
+  end
+
+  if anchor.kind == "fluid" then
+    return "pipe"
+  end
+
+  return "transport-belt"
+end
+
+local function leave_trailing_ingress_stub(surface, anchor)
+  if not (surface and anchor and anchor.position) then
+    return
+  end
+
+  local trailing_entity_name = get_trailing_entity_name(anchor)
+  local existing_anchor = anchor.entity
+
+  if existing_anchor and existing_anchor.valid then
+    existing_anchor.destroy({raise_destroy = false})
+  else
+    existing_anchor = find_entity_at_position(surface, anchor.entity_name, anchor.position)
+
+    if existing_anchor and existing_anchor.valid then
+      existing_anchor.destroy({raise_destroy = false})
+    end
+  end
+
+  if find_entity_at_position(surface, trailing_entity_name, anchor.position) then
+    return
+  end
+
+  surface.create_entity({
+    name = trailing_entity_name,
+    position = anchor.position,
+    direction = anchor.direction,
+    force = game.forces.player
+  })
+end
+
+local function leave_trailing_stubs_for_expansion(surface)
+  local starter_anchors = storage.starter_anchors
+
+  if not starter_anchors then
+    return
+  end
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    if anchor.position then
+      leave_trailing_ingress_stub(surface, anchor)
+    end
   end
 end
 
@@ -894,7 +1180,7 @@ local function expand_square(player)
   local next_surface_size = get_surface_size(next_square_size)
   local newly_unlocked_tiles = get_next_expansion_tile_reward(previous_square_size)
 
-  release_starter_anchor_entities()
+  leave_trailing_stubs_for_expansion(surface)
   move_starter_anchors_outward()
 
   bootstrap.square_size = next_square_size
@@ -934,6 +1220,69 @@ end
 
 local function is_dev_mode_enabled(player)
   return settings.get_player_settings(player)[SETTING_DEV_MODE].value
+end
+
+local function is_ingress_placement_debug_enabled(player)
+  return player
+    and player.valid
+    and settings.get_player_settings(player)[SETTING_INGRESS_PLACEMENT_DEBUG].value
+end
+
+local function format_position(position)
+  if not position then
+    return "(nil)"
+  end
+
+  return "(" .. position.x .. ", " .. position.y .. ")"
+end
+
+snap_entity_position_to_tile = function(position)
+  if not position then
+    return nil
+  end
+
+  return {
+    x = math.floor(position.x),
+    y = math.floor(position.y)
+  }
+end
+
+local function build_ingress_edge_check_debug(square_size, position)
+  local tile_position = snap_entity_position_to_tile(position)
+  local bounds = get_anchor_bounds(square_size)
+  local min_x = bounds.left_top.x
+  local min_y = bounds.left_top.y
+  local max_x = bounds.right_bottom.x - 1
+  local max_y = bounds.right_bottom.y - 1
+  local north_match = tile_position.y == min_y and tile_position.x > min_x and tile_position.x < max_x
+  local east_match = tile_position.x == max_x and tile_position.y > min_y and tile_position.y < max_y
+  local south_match = tile_position.y == max_y and tile_position.x > min_x and tile_position.x < max_x
+  local west_match = tile_position.x == min_x and tile_position.y > min_y and tile_position.y < max_y
+  local detected_side = get_anchor_side_for_position(square_size, tile_position)
+
+  return table.concat({
+    "[Expanding Square] Ingress placement debug",
+    "raw_position=" .. format_position(position),
+    "tile_position=" .. format_position(tile_position),
+    "square_size=" .. square_size,
+    "anchor_bounds.left_top=" .. format_position(bounds.left_top),
+    "anchor_bounds.right_bottom=" .. format_position(bounds.right_bottom),
+    "min=(" .. min_x .. ", " .. min_y .. ")",
+    "max=(" .. max_x .. ", " .. max_y .. ")",
+    "north=" .. tostring(north_match),
+    "east=" .. tostring(east_match),
+    "south=" .. tostring(south_match),
+    "west=" .. tostring(west_match),
+    "detected_side=" .. tostring(detected_side)
+  }, " | ")
+end
+
+print_ingress_placement_debug = function(player, square_size, position)
+  if not is_ingress_placement_debug_enabled(player) then
+    return
+  end
+
+  player.print(build_ingress_edge_check_debug(square_size, position))
 end
 
 local function ensure_debug_frame(player)
@@ -1223,6 +1572,34 @@ end)
 
 script.on_event(defines.events.on_player_flipped_entity, function(event)
   reset_rotated_anchor(event.entity)
+end)
+
+script.on_event(defines.events.on_built_entity, function(event)
+  handle_entity_built(event)
+end)
+
+script.on_event(defines.events.on_robot_built_entity, function(event)
+  handle_entity_built(event)
+end)
+
+script.on_event(defines.events.script_raised_built, function(event)
+  handle_entity_built(event)
+end)
+
+script.on_event(defines.events.script_raised_revive, function(event)
+  handle_entity_built(event)
+end)
+
+script.on_event(defines.events.on_player_mined_entity, function(event)
+  handle_anchor_mined(event.entity)
+end)
+
+script.on_event(defines.events.on_robot_mined_entity, function(event)
+  handle_anchor_mined(event.entity)
+end)
+
+script.on_event(defines.events.on_entity_died, function(event)
+  handle_anchor_mined(event.entity)
 end)
 
 script.on_event(defines.events.on_gui_click, function(event)
