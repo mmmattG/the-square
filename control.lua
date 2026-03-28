@@ -5,8 +5,8 @@ local VOID_TILE_NAME = "out-of-map"
 local CHART_MARGIN = 1
 local ITEM_ANCHOR_INTERVAL_TICKS = 8
 local FLUID_ANCHOR_AMOUNT_PER_INTERVAL = 160
-local STARTER_ANCHOR_OUTER_RING_WIDTH = 1
-local STARTER_ANCHOR_LAYOUT_VERSION = 2
+local STARTER_ANCHOR_OUTER_RING_WIDTH = 2
+local STARTER_ANCHOR_LAYOUT_VERSION = 3
 
 local STARTER_INPUT_DEFINITIONS = {
   {resource = "iron-ore", kind = "item", side = "north"},
@@ -42,6 +42,10 @@ end
 
 local function get_surface_size(square_size)
   return square_size + (STARTER_ANCHOR_OUTER_RING_WIDTH * 2)
+end
+
+local function get_anchor_bounds(square_size)
+  return get_square_bounds(square_size + 2)
 end
 
 local function is_inside_bounds(bounds, position)
@@ -144,7 +148,7 @@ local function choose_spread_positions(positions, count, side)
 end
 
 local function build_starter_anchor_layout(square_size, surface_size)
-  local bounds = get_square_bounds(surface_size or square_size)
+  local bounds = get_anchor_bounds(square_size)
   local resources_by_side = {}
   local anchors = {}
 
