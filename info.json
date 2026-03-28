@@ -1,0 +1,8 @@
+{
+  "name": "factorio-expanding-square",
+  "version": "0.1.0",
+  "title": "Factorio Expanding Square",
+  "author": "mmmatt",
+  "factorio_version": "2.0",
+  "description": "Bootstrap scenario for an expanding-square Factorio challenge."
+}
