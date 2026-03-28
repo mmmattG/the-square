@@ -7,7 +7,7 @@ local CHART_MARGIN = 1
 local ITEM_ANCHOR_INTERVAL_TICKS = 8
 local FLUID_ANCHOR_AMOUNT_PER_INTERVAL = 160
 local STARTER_ANCHOR_OUTER_RING_WIDTH = 2
-local STARTER_ANCHOR_LAYOUT_VERSION = 5
+local STARTER_ANCHOR_LAYOUT_VERSION = 6
 local DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
 local DEBUG_FRAME_NAME = "fes_debug_frame"
 local UTILIZATION_UPDATE_INTERVAL_TICKS = 60
@@ -93,10 +93,6 @@ end
 
 local function get_surface_size(square_size)
   return square_size + (STARTER_ANCHOR_OUTER_RING_WIDTH * 2)
-end
-
-local function get_anchor_bounds(square_size)
-  return get_square_bounds(square_size + 2)
 end
 
 local function get_square_area(square_size)
@@ -209,7 +205,7 @@ local function choose_spread_positions(positions, count, side)
 end
 
 local function build_starter_anchor_layout(square_size)
-  local bounds = get_anchor_bounds(square_size)
+  local bounds = get_square_bounds(square_size)
   local resources_by_side = {}
   local anchors = {}
 
@@ -271,7 +267,7 @@ local function move_position(position, side, distance)
 end
 
 local function get_anchor_side_for_position(square_size, position)
-  local bounds = get_anchor_bounds(square_size)
+  local bounds = get_square_bounds(square_size)
   local min_x = bounds.left_top.x
   local min_y = bounds.left_top.y
   local max_x = bounds.right_bottom.x - 1
@@ -298,18 +294,6 @@ end
 
 local function is_anchor_ring_position(square_size, position)
   return get_anchor_side_for_position(square_size, position) ~= nil
-end
-
-local function build_anchor_position_lookup(anchors)
-  local positions = {}
-
-  for _, anchor in ipairs(anchors or {}) do
-    if anchor.position then
-      positions[get_position_key(anchor.position)] = true
-    end
-  end
-
-  return positions
 end
 
 local function get_managed_tile_name(square_size, surface_size, position)
@@ -822,6 +806,20 @@ local function ensure_anchor_entity(surface, anchor)
   return entity
 end
 
+local function migrate_anchor_to_current_edge(square_size, anchor)
+  if not (anchor and anchor.position and anchor.side) then
+    return
+  end
+
+  if get_anchor_side_for_position(square_size, anchor.position) then
+    return
+  end
+
+  anchor.position = move_position(anchor.position, anchor.side, -1)
+  anchor.direction = DIRECTION_BY_SIDE[anchor.side]
+  anchor.entity = nil
+end
+
 local function ensure_starter_anchor_state()
   local bootstrap = storage.bootstrap
 
@@ -836,6 +834,7 @@ local function ensure_starter_anchor_state()
       anchor.item_name = anchor.item_name or get_ingress_item_name(anchor.resource)
       anchor.entity_name = anchor.entity_name or get_ingress_entity_name(anchor.resource)
       anchor.entity = nil
+      migrate_anchor_to_current_edge(bootstrap.square_size, anchor)
     end
 
     storage.starter_anchors = {
@@ -845,6 +844,10 @@ local function ensure_starter_anchor_state()
   end
 
   storage.starter_anchors = storage.starter_anchors or create_starter_anchor_state(bootstrap.square_size)
+
+  for _, anchor in ipairs(storage.starter_anchors.anchors) do
+    migrate_anchor_to_current_edge(bootstrap.square_size, anchor)
+  end
 
   return storage.starter_anchors
 end
@@ -1005,23 +1008,6 @@ local function handle_entity_built(event)
 
   local player = event.player_index and game.get_player(event.player_index) or nil
   local robot = event.robot
-  local bootstrap = storage.bootstrap
-
-  if bootstrap
-    and entity.surface.name == bootstrap.surface_name
-    and is_anchor_ring_position(bootstrap.square_size, entity.position)
-    and not is_ingress_entity_name(entity.name)
-  then
-    if player then
-      refund_entity_to_player(player, entity.name)
-      player.print({"message.fes-edge-reserved"})
-    elseif robot then
-      refund_entity_to_robot(robot, entity.name)
-    end
-
-    entity.destroy({raise_destroy = false})
-    return
-  end
 
   if is_ingress_entity_name(entity.name) then
     handle_ingress_built(entity, player or robot)
