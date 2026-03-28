@@ -86,14 +86,57 @@ end
 local function choose_spread_positions(positions, count, side)
   local chosen = {}
   local position_count = #positions
+  local selected_indexes = {}
 
   if count > position_count then
     error("Not enough border tiles available for starter input anchors on side " .. side)
   end
 
-  for i = 1, count do
-    local index = math.floor((i * (position_count + 1)) / (count + 1))
-    index = math.max(1, math.min(position_count, index))
+  if count == 0 then
+    return chosen
+  end
+
+  if position_count % 2 == 1 then
+    local center = math.floor((position_count + 1) / 2)
+    local step = 1
+
+    if count % 2 == 1 then
+      selected_indexes[#selected_indexes + 1] = center
+    end
+
+    while #selected_indexes < count do
+      selected_indexes[#selected_indexes + 1] = center - step
+
+      if #selected_indexes < count then
+        selected_indexes[#selected_indexes + 1] = center + step
+      end
+
+      step = step + 1
+    end
+  else
+    local left = position_count / 2
+    local right = left + 1
+    local step = 0
+
+    if count % 2 == 1 then
+      selected_indexes[#selected_indexes + 1] = left
+      step = 1
+    end
+
+    while #selected_indexes < count do
+      selected_indexes[#selected_indexes + 1] = left - step
+
+      if #selected_indexes < count then
+        selected_indexes[#selected_indexes + 1] = right + step
+      end
+
+      step = step + 1
+    end
+  end
+
+  table.sort(selected_indexes)
+
+  for _, index in ipairs(selected_indexes) do
     chosen[#chosen + 1] = positions[index]
   end
 
