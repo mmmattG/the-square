@@ -55,6 +55,7 @@ local OFFSET_BY_SIDE = {
 
 local update_utilization_metrics
 local refresh_all_debug_guis
+local print_ingress_placement_debug
 
 local function get_ingress_item_name(resource)
   return "fes-" .. resource .. "-ingress"
