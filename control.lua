@@ -7,7 +7,7 @@ local CHART_MARGIN = 1
 local ITEM_ANCHOR_INTERVAL_TICKS = 8
 local FLUID_ANCHOR_AMOUNT_PER_INTERVAL = 160
 local STARTER_ANCHOR_OUTER_RING_WIDTH = 2
-local STARTER_ANCHOR_LAYOUT_VERSION = 6
+local STARTER_ANCHOR_LAYOUT_VERSION = 7
 local DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
 local DEBUG_FRAME_NAME = "fes_debug_frame"
 local UTILIZATION_UPDATE_INTERVAL_TICKS = 60
@@ -93,6 +93,10 @@ end
 
 local function get_surface_size(square_size)
   return square_size + (STARTER_ANCHOR_OUTER_RING_WIDTH * 2)
+end
+
+local function get_anchor_bounds(square_size)
+  return get_square_bounds(square_size + 2)
 end
 
 local function get_square_area(square_size)
@@ -205,7 +209,7 @@ local function choose_spread_positions(positions, count, side)
 end
 
 local function build_starter_anchor_layout(square_size)
-  local bounds = get_square_bounds(square_size)
+  local bounds = get_anchor_bounds(square_size)
   local resources_by_side = {}
   local anchors = {}
 
@@ -267,7 +271,7 @@ local function move_position(position, side, distance)
 end
 
 local function get_anchor_side_for_position(square_size, position)
-  local bounds = get_square_bounds(square_size)
+  local bounds = get_anchor_bounds(square_size)
   local min_x = bounds.left_top.x
   local min_y = bounds.left_top.y
   local max_x = bounds.right_bottom.x - 1
@@ -806,7 +810,7 @@ local function ensure_anchor_entity(surface, anchor)
   return entity
 end
 
-local function migrate_anchor_to_current_edge(square_size, anchor)
+local function migrate_anchor_to_anchor_ring(square_size, anchor)
   if not (anchor and anchor.position and anchor.side) then
     return
   end
@@ -815,7 +819,7 @@ local function migrate_anchor_to_current_edge(square_size, anchor)
     return
   end
 
-  anchor.position = move_position(anchor.position, anchor.side, -1)
+  anchor.position = move_position(anchor.position, anchor.side, 1)
   anchor.direction = DIRECTION_BY_SIDE[anchor.side]
   anchor.entity = nil
 end
@@ -834,7 +838,7 @@ local function ensure_starter_anchor_state()
       anchor.item_name = anchor.item_name or get_ingress_item_name(anchor.resource)
       anchor.entity_name = anchor.entity_name or get_ingress_entity_name(anchor.resource)
       anchor.entity = nil
-      migrate_anchor_to_current_edge(bootstrap.square_size, anchor)
+      migrate_anchor_to_anchor_ring(bootstrap.square_size, anchor)
     end
 
     storage.starter_anchors = {
@@ -846,7 +850,7 @@ local function ensure_starter_anchor_state()
   storage.starter_anchors = storage.starter_anchors or create_starter_anchor_state(bootstrap.square_size)
 
   for _, anchor in ipairs(storage.starter_anchors.anchors) do
-    migrate_anchor_to_current_edge(bootstrap.square_size, anchor)
+    migrate_anchor_to_anchor_ring(bootstrap.square_size, anchor)
   end
 
   return storage.starter_anchors
