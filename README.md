@@ -11,7 +11,9 @@ make install
 
 The starting square size is a per-save map setting (`runtime-global` in Factorio terms). Set it when creating a run. Changing it after the bootstrap surface already exists does not resize the current save.
 
-For manual testing of square growth, enable the per-player `Developer mode` runtime setting. That adds an `Expand square` button to the top-left UI which performs one symmetric ring expansion and moves the active input anchors outward by one tile.
+Square growth now runs continuously in the background. Once per second the mod evaluates current counted-machine utilization inside the unlocked square, converts that into stored growth progress, and expands the square automatically whenever enough progress has accumulated for the next full ring.
+
+For manual testing, enable the per-player `Developer mode` runtime setting. That adds an `Expand square` button to the top-left UI plus a debug panel showing utilization, growth progress, growth rate, and the counted-footprint breakdown by category and entity type.
 
 `make install` builds the zip and copies it into your local Factorio mods directory. By default the install script auto-detects:
 
