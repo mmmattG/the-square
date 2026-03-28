@@ -969,6 +969,10 @@ local function build_debug_lines()
   lines[#lines + 1] = "Active entities: " .. metrics.active_entity_count
   lines[#lines + 1] = "Growth rate: " .. format_decimal(metrics.growth_rate_per_second) .. " tiles/s"
     .. " (" .. format_decimal(metrics.growth_rate_per_minute) .. " tiles/min)"
+  lines[#lines + 1] = "Formula: growth/s = utilization x (square size / " .. GROWTH_RATE_SIZE_DIVISOR .. ")"
+  lines[#lines + 1] = "Current: " .. format_decimal(metrics.growth_rate_per_second)
+    .. " = " .. format_decimal(metrics.utilization_ratio)
+    .. " x (" .. bootstrap.square_size .. " / " .. GROWTH_RATE_SIZE_DIVISOR .. ")"
   lines[#lines + 1] = "Progress: " .. format_decimal(bootstrap.growth_progress or 0)
     .. " / " .. next_reward
   lines[#lines + 1] = "Next reward: " .. next_reward .. " expansion points"
