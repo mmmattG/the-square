@@ -3,14 +3,16 @@ local SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 local FLOOR_TILE_NAME = "grass-1"
 local CHART_MARGIN = 1
 
-local function get_square_size()
-  local value = settings.startup[SETTING_STARTING_SQUARE_SIZE].value
-
+local function normalize_square_size(value)
   if value % 2 == 0 then
     value = value + 1
   end
 
   return value
+end
+
+local function get_square_size()
+  return normalize_square_size(settings.global[SETTING_STARTING_SQUARE_SIZE].value)
 end
 
 local function get_square_bounds(size)
@@ -151,6 +153,25 @@ local function refresh_spawn_routing()
   end
 end
 
+local function notify_square_size_change_applies_to_new_saves()
+  local requested_size = normalize_square_size(settings.global[SETTING_STARTING_SQUARE_SIZE].value)
+
+  if storage.bootstrap and storage.bootstrap.square_size == requested_size then
+    return
+  end
+
+  game.print(
+    {"",
+      "[Expanding Square] Starting square size changes only apply to new saves. ",
+      "This save remains at ",
+      storage.bootstrap and storage.bootstrap.square_size or "?",
+      " and the current map setting is ",
+      requested_size,
+      "."
+    }
+  )
+end
+
 script.on_init(function()
   bootstrap_world()
 end)
@@ -177,5 +198,15 @@ script.on_event(defines.events.on_player_respawned, function(event)
 
   if player then
     teleport_player_to_square(player)
+  end
+end)
+
+script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
+  if event.setting ~= SETTING_STARTING_SQUARE_SIZE then
+    return
+  end
+
+  if storage.bootstrap then
+    notify_square_size_change_applies_to_new_saves()
   end
 end)
