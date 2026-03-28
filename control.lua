@@ -52,18 +52,22 @@ local function destroy_noise_entities(surface)
   end
 end
 
+local function build_surface_map_gen_settings(square_size)
+  return {
+    width = square_size,
+    height = square_size,
+    starting_points = {{x = 0, y = 0}},
+    peaceful_mode = true,
+    no_enemies_mode = true
+  }
+end
+
 local function ensure_bootstrap_surface()
   local square_size = get_square_size()
   local surface = game.surfaces[SURFACE_NAME]
 
   if not surface then
-    local map_gen_settings = table.deepcopy(game.default_map_gen_settings)
-    map_gen_settings.width = square_size
-    map_gen_settings.height = square_size
-    map_gen_settings.starting_points = {{x = 0, y = 0}}
-    map_gen_settings.peaceful_mode = true
-    map_gen_settings.no_enemies_mode = true
-    surface = game.create_surface(SURFACE_NAME, map_gen_settings)
+    surface = game.create_surface(SURFACE_NAME, build_surface_map_gen_settings(square_size))
   end
 
   surface.peaceful_mode = true
