@@ -9,6 +9,25 @@ local FLUID_ANCHOR_AMOUNT_PER_INTERVAL = 160
 local STARTER_ANCHOR_OUTER_RING_WIDTH = 2
 local STARTER_ANCHOR_LAYOUT_VERSION = 4
 local DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
+local DEBUG_FRAME_NAME = "fes_debug_frame"
+local UTILIZATION_UPDATE_INTERVAL_TICKS = 60
+local GROWTH_RATE_SIZE_DIVISOR = 12
+
+local COUNTED_CATEGORY_ORDER = {
+  "crafting",
+  "lab",
+  "rocket-silo",
+  "beacon",
+  "power"
+}
+
+local COUNTED_CATEGORY_LABELS = {
+  crafting = "Crafting",
+  lab = "Labs",
+  ["rocket-silo"] = "Rocket silos",
+  beacon = "Beacons",
+  power = "Power"
+}
 
 local STARTER_INPUT_DEFINITIONS = {
   {resource = "iron-ore", kind = "item", side = "north"},
@@ -35,6 +54,23 @@ local OFFSET_BY_SIDE = {
 
 local ITEM_ANCHOR_PROTOTYPE_NAME = "transport-belt"
 local FLUID_ANCHOR_PROTOTYPE_NAME = "pipe"
+local update_utilization_metrics
+local refresh_all_debug_guis
+
+local function build_empty_category_breakdown()
+  local categories = {}
+
+  for _, key in ipairs(COUNTED_CATEGORY_ORDER) do
+    categories[key] = {
+      key = key,
+      label = COUNTED_CATEGORY_LABELS[key],
+      entity_count = 0,
+      footprint_tiles = 0
+    }
+  end
+
+  return categories
+end
 
 local function get_square_size()
   return settings.global[SETTING_STARTING_SQUARE_SIZE].value
@@ -55,6 +91,16 @@ end
 
 local function get_anchor_bounds(square_size)
   return get_square_bounds(square_size + 2)
+end
+
+local function get_square_area(square_size)
+  return square_size * square_size
+end
+
+local function get_next_expansion_tile_reward(square_size)
+  local next_square_size = square_size + 2
+
+  return get_square_area(next_square_size) - get_square_area(square_size)
 end
 
 local function is_inside_bounds(bounds, position)
@@ -278,6 +324,192 @@ local function build_bootstrap_tiles(square_size, surface_size, anchors)
   return tiles
 end
 
+local function get_entity_footprint_tiles(entity)
+  return entity.tile_width * entity.tile_height
+end
+
+local function is_active_crafting_machine(entity)
+  return entity.status == defines.entity_status.working and entity.is_crafting()
+end
+
+local function is_active_lab(entity)
+  return entity.status == defines.entity_status.working
+end
+
+local function is_active_rocket_silo(entity)
+  return entity.status == defines.entity_status.working
+    or entity.status == defines.entity_status.preparing_rocket_for_launch
+    or entity.status == defines.entity_status.launching_rocket
+end
+
+local function is_active_power_entity(entity)
+  return entity.status == defines.entity_status.working
+end
+
+local function evaluate_counted_entity_category(entity)
+  if entity.type == "assembling-machine" or entity.type == "furnace" then
+    if is_active_crafting_machine(entity) then
+      return "crafting"
+    end
+
+    return nil
+  end
+
+  if entity.type == "lab" then
+    if is_active_lab(entity) then
+      return "lab"
+    end
+
+    return nil
+  end
+
+  if entity.type == "rocket-silo" then
+    if is_active_rocket_silo(entity) then
+      return "rocket-silo"
+    end
+
+    return nil
+  end
+
+  if entity.type == "generator"
+    or entity.type == "boiler"
+    or entity.type == "reactor"
+    or entity.type == "solar-panel"
+    or entity.type == "burner-generator"
+    or entity.type == "fusion-generator"
+  then
+    if is_active_power_entity(entity) then
+      return "power"
+    end
+
+    return nil
+  end
+
+  return nil
+end
+
+local function record_breakdown_entry(storage_table, key, label, footprint_tiles)
+  local entry = storage_table[key]
+
+  if not entry then
+    entry = {
+      key = key,
+      label = label,
+      entity_count = 0,
+      footprint_tiles = 0
+    }
+    storage_table[key] = entry
+  end
+
+  entry.entity_count = entry.entity_count + 1
+  entry.footprint_tiles = entry.footprint_tiles + footprint_tiles
+end
+
+local function add_entity_to_breakdown(metrics, category_key, entity)
+  local footprint_tiles = get_entity_footprint_tiles(entity)
+
+  metrics.active_footprint_tiles = metrics.active_footprint_tiles + footprint_tiles
+  metrics.active_entity_count = metrics.active_entity_count + 1
+  metrics.categories[category_key].entity_count = metrics.categories[category_key].entity_count + 1
+  metrics.categories[category_key].footprint_tiles = metrics.categories[category_key].footprint_tiles + footprint_tiles
+
+  record_breakdown_entry(metrics.entity_types, entity.name, entity.name, footprint_tiles)
+end
+
+local function collect_active_beacons_from_machine(entity, active_beacons)
+  local success, beacons = pcall(entity.get_beacons, entity)
+
+  if not success or not beacons then
+    return
+  end
+
+  for _, beacon in ipairs(beacons) do
+    if beacon.valid and beacon.unit_number then
+      active_beacons[beacon.unit_number] = beacon
+    end
+  end
+end
+
+local function compute_growth_rate_per_second(square_size, utilization_ratio)
+  return utilization_ratio * (square_size / GROWTH_RATE_SIZE_DIVISOR)
+end
+
+local function sort_breakdown_entries(entries_by_key)
+  local entries = {}
+
+  for _, entry in pairs(entries_by_key) do
+    entries[#entries + 1] = entry
+  end
+
+  table.sort(entries, function(left, right)
+    if left.footprint_tiles == right.footprint_tiles then
+      if left.entity_count == right.entity_count then
+        return left.key < right.key
+      end
+
+      return left.entity_count > right.entity_count
+    end
+
+    return left.footprint_tiles > right.footprint_tiles
+  end)
+
+  return entries
+end
+
+local function evaluate_utilization(surface, square_size)
+  local square_bounds = get_square_bounds(square_size)
+  local total_tiles = get_square_area(square_size)
+  local metrics = {
+    tick = game.tick,
+    square_size = square_size,
+    total_tiles = total_tiles,
+    active_footprint_tiles = 0,
+    active_entity_count = 0,
+    utilization_ratio = 0,
+    growth_rate_per_second = 0,
+    growth_rate_per_minute = 0,
+    categories = build_empty_category_breakdown(),
+    entity_types = {}
+  }
+  local active_beacons = {}
+
+  for _, entity in ipairs(surface.find_entities_filtered({area = square_bounds})) do
+    if entity.valid then
+      local category_key = evaluate_counted_entity_category(entity)
+
+      if category_key then
+        add_entity_to_breakdown(metrics, category_key, entity)
+
+        if category_key ~= "power" then
+          collect_active_beacons_from_machine(entity, active_beacons)
+        end
+      end
+    end
+  end
+
+  for _, beacon in pairs(active_beacons) do
+    add_entity_to_breakdown(metrics, "beacon", beacon)
+  end
+
+  if total_tiles > 0 then
+    metrics.utilization_ratio = metrics.active_footprint_tiles / total_tiles
+  end
+
+  metrics.growth_rate_per_second = compute_growth_rate_per_second(square_size, metrics.utilization_ratio)
+  metrics.growth_rate_per_minute = metrics.growth_rate_per_second * 60
+  metrics.sorted_entity_types = sort_breakdown_entries(metrics.entity_types)
+
+  return metrics
+end
+
+local function format_ratio_percent(ratio)
+  return string.format("%.1f%%", ratio * 100)
+end
+
+local function format_decimal(value)
+  return string.format("%.2f", value)
+end
+
 local function build_resize_tile_updates(old_square_size, old_surface_size, new_square_size, new_surface_size, anchors)
   local tiles = {}
   local anchor_positions = build_anchor_position_lookup(anchors)
@@ -342,6 +574,7 @@ local function ensure_bootstrap_state_defaults()
   storage.bootstrap.surface_size = storage.bootstrap.surface_size or get_surface_size(storage.bootstrap.square_size)
   storage.bootstrap.expansion_points = storage.bootstrap.expansion_points or 0
   storage.bootstrap.expansions_completed = storage.bootstrap.expansions_completed or 0
+  storage.bootstrap.growth_progress = storage.bootstrap.growth_progress or 0
 end
 
 local function ensure_surface_dimensions(surface, target_surface_size)
@@ -595,6 +828,10 @@ local function add_expansion_points(amount)
   storage.bootstrap.expansion_points = (storage.bootstrap.expansion_points or 0) + amount
 end
 
+local function add_growth_progress(amount)
+  storage.bootstrap.growth_progress = (storage.bootstrap.growth_progress or 0) + amount
+end
+
 local function release_starter_anchor_entities()
   local starter_anchors = storage.starter_anchors
 
@@ -655,7 +892,7 @@ local function expand_square(player)
   local previous_surface_size = bootstrap.surface_size or get_surface_size(previous_square_size)
   local next_square_size = previous_square_size + 2
   local next_surface_size = get_surface_size(next_square_size)
-  local newly_unlocked_tiles = (next_square_size * next_square_size) - (previous_square_size * previous_square_size)
+  local newly_unlocked_tiles = get_next_expansion_tile_reward(previous_square_size)
 
   release_starter_anchor_entities()
   move_starter_anchors_outward()
@@ -690,10 +927,106 @@ local function expand_square(player)
   if player and player.valid then
     player.play_sound({path = "utility/new_objective"})
   end
+
+  update_utilization_metrics()
+  refresh_all_debug_guis()
 end
 
 local function is_dev_mode_enabled(player)
   return settings.get_player_settings(player)[SETTING_DEV_MODE].value
+end
+
+local function ensure_debug_frame(player)
+  local frame = player.gui.left[DEBUG_FRAME_NAME]
+
+  if frame then
+    return frame
+  end
+
+  return player.gui.left.add({
+    type = "frame",
+    name = DEBUG_FRAME_NAME,
+    direction = "vertical",
+    caption = {"gui.fes-debug-title"}
+  })
+end
+
+local function build_debug_lines()
+  local bootstrap = storage.bootstrap
+  local metrics = storage.utilization_metrics
+  local lines = {}
+
+  if not bootstrap or not metrics then
+    lines[#lines + 1] = "No utilization data yet."
+    return lines
+  end
+
+  local next_reward = get_next_expansion_tile_reward(bootstrap.square_size)
+
+  lines[#lines + 1] = "Square: " .. bootstrap.square_size .. "x" .. bootstrap.square_size
+  lines[#lines + 1] = "Utilization: " .. format_ratio_percent(metrics.utilization_ratio)
+    .. " (" .. metrics.active_footprint_tiles .. " / " .. metrics.total_tiles .. " tiles)"
+  lines[#lines + 1] = "Active entities: " .. metrics.active_entity_count
+  lines[#lines + 1] = "Growth rate: " .. format_decimal(metrics.growth_rate_per_second) .. " tiles/s"
+    .. " (" .. format_decimal(metrics.growth_rate_per_minute) .. " tiles/min)"
+  lines[#lines + 1] = "Formula: growth/s = utilization x (square size / " .. GROWTH_RATE_SIZE_DIVISOR .. ")"
+  lines[#lines + 1] = "Current: " .. format_decimal(metrics.growth_rate_per_second)
+    .. " = " .. format_decimal(metrics.utilization_ratio)
+    .. " x (" .. bootstrap.square_size .. " / " .. GROWTH_RATE_SIZE_DIVISOR .. ")"
+  lines[#lines + 1] = "Progress: " .. format_decimal(bootstrap.growth_progress or 0)
+    .. " / " .. next_reward
+  lines[#lines + 1] = "Next reward: " .. next_reward .. " expansion points"
+  lines[#lines + 1] = "Breakdown:"
+
+  for _, key in ipairs(COUNTED_CATEGORY_ORDER) do
+    local category = metrics.categories[key]
+
+    if category.entity_count > 0 then
+      lines[#lines + 1] = "  " .. category.label .. ": "
+        .. category.footprint_tiles .. " tiles across " .. category.entity_count .. " entities"
+    end
+  end
+
+  if #metrics.sorted_entity_types > 0 then
+    lines[#lines + 1] = "Top entity types:"
+
+    local max_rows = math.min(8, #metrics.sorted_entity_types)
+
+    for index = 1, max_rows do
+      local entry = metrics.sorted_entity_types[index]
+      lines[#lines + 1] = "  " .. entry.label .. ": "
+        .. entry.footprint_tiles .. " tiles across " .. entry.entity_count
+    end
+  end
+
+  return lines
+end
+
+local function refresh_debug_gui(player)
+  if not (player and player.valid) then
+    return
+  end
+
+  local frame = player.gui.left[DEBUG_FRAME_NAME]
+
+  if not frame then
+    return
+  end
+
+  frame.clear()
+
+  for _, line in ipairs(build_debug_lines()) do
+    frame.add({
+      type = "label",
+      caption = line
+    })
+  end
+end
+
+refresh_all_debug_guis = function()
+  for _, player in pairs(game.players) do
+    refresh_debug_gui(player)
+  end
 end
 
 local function sync_dev_gui(player)
@@ -702,6 +1035,7 @@ local function sync_dev_gui(player)
   end
 
   local button = player.gui.top[DEV_EXPAND_BUTTON_NAME]
+  local frame = player.gui.left[DEBUG_FRAME_NAME]
 
   if is_dev_mode_enabled(player) then
     if not button then
@@ -711,8 +1045,18 @@ local function sync_dev_gui(player)
         caption = {"gui.fes-dev-expand-button"}
       })
     end
+
+    if not frame then
+      ensure_debug_frame(player)
+    end
+
+    refresh_debug_gui(player)
   elseif button then
     button.destroy()
+  end
+
+  if not is_dev_mode_enabled(player) and frame then
+    frame.destroy()
   end
 end
 
@@ -720,6 +1064,59 @@ local function sync_all_dev_guis()
   for _, player in pairs(game.players) do
     sync_dev_gui(player)
   end
+end
+
+update_utilization_metrics = function()
+  local bootstrap = storage.bootstrap
+
+  if not bootstrap then
+    return nil
+  end
+
+  local surface = game.surfaces[bootstrap.surface_name]
+
+  if not surface then
+    return nil
+  end
+
+  local metrics = evaluate_utilization(surface, bootstrap.square_size)
+
+  storage.utilization_metrics = metrics
+
+  return metrics
+end
+
+local function advance_growth_from_utilization()
+  local bootstrap = storage.bootstrap
+
+  if not bootstrap then
+    return
+  end
+
+  ensure_bootstrap_state_defaults()
+
+  local metrics = update_utilization_metrics()
+
+  if not metrics then
+    return
+  end
+
+  local interval_seconds = UTILIZATION_UPDATE_INTERVAL_TICKS / 60
+  local progress_gain = metrics.growth_rate_per_second * interval_seconds
+
+  if progress_gain > 0 then
+    add_growth_progress(progress_gain)
+  end
+
+  local player = game.players[1]
+
+  while (bootstrap.growth_progress or 0) >= get_next_expansion_tile_reward(bootstrap.square_size) do
+    bootstrap.growth_progress = bootstrap.growth_progress - get_next_expansion_tile_reward(bootstrap.square_size)
+    expand_square(player)
+    metrics = update_utilization_metrics() or metrics
+  end
+
+  refresh_all_debug_guis()
 end
 
 local function bootstrap_world()
@@ -736,6 +1133,7 @@ local function bootstrap_world()
     teleport_player_to_square(player)
   end
 
+  update_utilization_metrics()
   sync_all_dev_guis()
 end
 
@@ -763,6 +1161,7 @@ local function refresh_spawn_routing()
     teleport_player_to_square(player)
   end
 
+  update_utilization_metrics()
   sync_all_dev_guis()
 end
 
@@ -857,4 +1256,8 @@ end)
 script.on_nth_tick(ITEM_ANCHOR_INTERVAL_TICKS, function()
   ensure_starter_anchors()
   pump_starter_anchors()
+end)
+
+script.on_nth_tick(UTILIZATION_UPDATE_INTERVAL_TICKS, function()
+  advance_growth_from_utilization()
 end)
