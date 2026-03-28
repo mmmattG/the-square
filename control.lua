@@ -56,6 +56,7 @@ local OFFSET_BY_SIDE = {
 local update_utilization_metrics
 local refresh_all_debug_guis
 local print_ingress_placement_debug
+local snap_entity_position_to_tile
 
 local function get_ingress_item_name(resource)
   return "fes-" .. resource .. "-ingress"
@@ -1235,7 +1236,7 @@ local function format_position(position)
   return "(" .. position.x .. ", " .. position.y .. ")"
 end
 
-local function snap_entity_position_to_tile(position)
+snap_entity_position_to_tile = function(position)
   if not position then
     return nil
   end
