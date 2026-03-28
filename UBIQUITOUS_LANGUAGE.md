@@ -32,7 +32,6 @@
 | **Starter Inputs** | The free initial Input Lines available at game start. | Starting resources, default lines |
 | **Unlocked Resource** | A resource type for which the player owns at least one Input Line. | Bought resource, enabled resource |
 | **Relocation** | Moving an Input Line to a new side and coordinate on the Boundary. | Repositioning, moving input |
-| **Disabled Input** | An owned Input Line that remains assigned but emits nothing. | Turned-off line, inactive input |
 | **Stashed Input** | An owned Input Line removed from the map and holding no coordinate. | Backpack input, stored line |
 | **Raw Input** | A source resource that can arrive directly from outside the Square. | Free resource, void resource |
 
@@ -63,7 +62,6 @@
 - **Utilization** is calculated from **Active Footprint** divided by all **Unlocked Tiles**.
 - **Active Footprint** is composed only of tiles occupied by **Active Machines** that belong to a **Counted Machine** class.
 - Every placed **Input Line** owns exactly one **Input Anchor**.
-- A **Disabled Input** keeps ownership of the **Input Line** but does not emit resources.
 - A **Stashed Input** keeps ownership of the **Input Line** and releases any previous **Input Anchor** coordinate.
 - The current **Ingress Tier** applies to all owned **Input Lines**, including **Stashed Inputs**.
 - **Expansion-Speed Research** increases **Growth Rate**, while **Dummy Research** only preserves lab activity.
@@ -72,7 +70,7 @@
 
 > **Dev:** "When the **Square** grows, do I move every **Input Anchor** even if the line is disconnected from the factory?"
 >
-> **Domain expert:** "Yes. Any enabled **Input Line** follows the **Boundary** during a **Ring Expansion**. Only disabled or stashed lines skip auto-connection behavior."
+> **Domain expert:** "Yes. Any placed **Input Line** follows the **Boundary** during a **Ring Expansion**. A **Stashed Input** has no border presence, so it does not participate until it is placed again."
 >
 > **Dev:** "And **Utilization** only counts the footprint of an **Active Machine**, not belts or chests around it?"
 >
@@ -87,4 +85,4 @@
 - "expansion rate" was used for both continuous **Growth Rate** and discrete growth events; use **Growth Rate** for continuous progress and **Ring Expansion** for the event.
 - "machine utilization" and "map utilization" can be confused; use **Utilization** only for the map-wide active-footprint ratio and use "machine uptime" when referring to how often a specific machine is active.
 - "line", "lane", and "input" were used interchangeably; use **Input Line** for the owned resource ingress object and reserve "lane" for belt-lane throughput.
-- "disabled" and "stashed" are distinct concepts; use **Disabled Input** for an off-but-placed line and **Stashed Input** for an owned line with no current coordinate.
+- "disabled" was discussed earlier, but the living spec no longer uses it; use **Stashed Input** for an owned line with no current coordinate.

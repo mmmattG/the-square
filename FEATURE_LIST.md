@@ -58,7 +58,6 @@ This document lists planned features for `factorio-expanding-square`, grouped fi
 - Inputs can be moved to any side for free
 - Multiple inputs may share a side
 - Inputs cannot overlap or collide on corners
-- Inputs can be disabled
 - Inputs can be stashed off-map
 - Stashed inputs free their border coordinates
 - Re-placing a stashed input is a fresh placement

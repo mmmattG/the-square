@@ -24,7 +24,7 @@ The player earns expansion points whenever the square grows, based on the number
 - buying additional lines for already unlocked resources
 - upgrading the global ingress tier that affects all item and fluid inputs
 
-Resources come from movable edge anchors rather than ore patches. Starter inputs are available from the beginning, additional resources are purchased later, and all inputs can be moved, disabled, or stashed for free. Logistic bots and the logistic chest ecosystem are disabled by default so the puzzle remains about compact visible automation. Construction and deconstruction bots remain allowed to support frequent redesign.
+Resources come from movable edge anchors rather than ore patches. Starter inputs are available from the beginning, additional resources are purchased later, and all inputs can be moved or stashed for free. Logistic bots and the logistic chest ecosystem are disabled by default so the puzzle remains about compact visible automation. Construction and deconstruction bots remain allowed to support frequent redesign.
 
 The result should feel like vanilla Factorio played inside a hostile optimization box: vanilla recipes and progression remain largely intact, but every tile, machine footprint, and second of machine uptime matter.
 
@@ -46,7 +46,7 @@ The result should feel like vanilla Factorio played inside a hostile optimizatio
 14. As a compact-layout player, I want starter inputs to arrive from the edge and be freely movable, so that I can reshape the border around the design I am pursuing.
 15. As a compact-layout player, I want multiple inputs on the same side when space allows, so that I can create intentionally skewed, dense layouts.
 16. As a compact-layout player, I want inputs to move outward automatically when the square expands, so that the mod preserves the border contract without breaking my factory every growth event.
-17. As a compact-layout player, I want disabled inputs to stay owned and movable, so that I can simplify the current layout without losing future options.
+17. As a compact-layout player, I want stashed inputs to stay owned and re-placeable, so that I can simplify the current layout without losing future options.
 18. As a planner, I want stashed inputs to free their border coordinates completely, so that I can reserve edge space only for the lines I actively need.
 19. As a planner, I want stashed inputs to inherit current global ingress upgrades when placed later, so that early purchases remain strategically useful.
 20. As an economy optimizer, I want expansion points to come from newly unlocked tiles, so that larger expansions naturally produce larger strategic budgets.
@@ -86,9 +86,9 @@ The result should feel like vanilla Factorio played inside a hostile optimizatio
 - Starter inputs are iron ore, copper ore, coal, stone, water, and wood; each starts as one free ingress line at the base tier.
 - Additional resources are unlocked by buying their first line with expansion points. V1 progression is crude oil first, then uranium ore.
 - Only raw or source resources arrive from outside. Processed items and fluids remain internal production responsibilities.
-- Inputs may be relocated to any side for free, disabled, or stashed off-map for later placement. No refund system exists.
+- Inputs may be relocated to any side for free or stashed off-map for later placement. No refund system exists.
 - Manual input relocation is detach-and-replace. Automatic extension only occurs when the square expands.
-- Enabled inputs move outward with every expansion and preserve a simple direct border connection. Disabled or stashed inputs do not auto-extend connections.
+- Placed inputs move outward with every expansion and preserve a simple direct border connection. Stashed inputs do not auto-extend connections because they are off-map.
 - Each purchased input line is independent. Additional lines are flat-cost in v1. Global ingress upgrades scale by level.
 - Global ingress upgrades apply retroactively to all existing and future owned lines, including stashed lines.
 - Item lines start as single-lane throughput and can be improved by later global upgrades, including a double-lane upgrade while still using one anchor tile.
@@ -118,7 +118,7 @@ The result should feel like vanilla Factorio played inside a hostile optimizatio
 - The highest-value automated tests are the ones around deterministic rules with large combinatorial risk:
   - utilization counting behavior for included versus excluded entity classes
   - ring-expansion progression and reward calculations
-  - anchor movement, stashing, disabling, and expansion-time preservation rules
+  - anchor movement, stashing, and expansion-time preservation rules
   - pricing and upgrade application for line purchases and global ingress tiers
   - research effects on growth-rate multiplication and dummy-research availability
   - settings-driven startup behavior such as square size and logistics-network disabling
