@@ -1,10 +1,12 @@
-local starter_inputs = {
+local ingress_resources = {
   {resource = "iron-ore", kind = "item", icon = "__base__/graphics/icons/iron-ore.png", order = "a[ingress]-a[iron-ore]"},
   {resource = "copper-ore", kind = "item", icon = "__base__/graphics/icons/copper-ore.png", order = "a[ingress]-b[copper-ore]"},
   {resource = "coal", kind = "item", icon = "__base__/graphics/icons/coal.png", order = "a[ingress]-c[coal]"},
   {resource = "stone", kind = "item", icon = "__base__/graphics/icons/stone.png", order = "a[ingress]-d[stone]"},
-  {resource = "water", kind = "fluid", icon = "__base__/graphics/icons/pipe.png", order = "a[ingress]-e[water]"},
-  {resource = "wood", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "a[ingress]-f[wood]"}
+  {resource = "water", kind = "fluid", icon = "__base__/graphics/icons/fluid/water.png", order = "a[ingress]-e[water]"},
+  {resource = "wood", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "a[ingress]-f[wood]"},
+  {resource = "crude-oil", kind = "fluid", icon = "__base__/graphics/icons/fluid/crude-oil.png", order = "a[ingress]-g[crude-oil]"},
+  {resource = "uranium-ore", kind = "item", icon = "__base__/graphics/icons/uranium-ore.png", order = "a[ingress]-h[uranium-ore]"}
 }
 
 local function ingress_item_name(resource)
@@ -48,7 +50,7 @@ end
 
 local prototypes = {}
 
-for _, definition in ipairs(starter_inputs) do
+for _, definition in ipairs(ingress_resources) do
   prototypes[#prototypes + 1] = build_ingress_item(definition)
   prototypes[#prototypes + 1] = build_ingress_entity(definition)
 end
