@@ -748,13 +748,14 @@ local function place_anchor(anchor, entity, square_size)
     return false
   end
 
-  local side = get_anchor_side_for_position(square_size, entity.position)
+  local tile_position = snap_entity_position_to_tile(entity.position)
+  local side = get_anchor_side_for_position(square_size, tile_position)
 
   if not side then
     return false
   end
 
-  anchor.position = {x = entity.position.x, y = entity.position.y}
+  anchor.position = tile_position
   anchor.side = side
   anchor.direction = DIRECTION_BY_SIDE[side]
   anchor.entity = entity
@@ -980,7 +981,10 @@ local function handle_ingress_built(entity, actor)
     print_ingress_placement_debug(actor, bootstrap.square_size, entity.position)
   end
 
-  local side = get_anchor_side_for_position(bootstrap.square_size, entity.position)
+  local side = get_anchor_side_for_position(
+    bootstrap.square_size,
+    snap_entity_position_to_tile(entity.position)
+  )
 
   if not side then
     reject_anchor_placement(entity, actor, "message.fes-ingress-invalid-edge")
@@ -1231,21 +1235,34 @@ local function format_position(position)
   return "(" .. position.x .. ", " .. position.y .. ")"
 end
 
+local function snap_entity_position_to_tile(position)
+  if not position then
+    return nil
+  end
+
+  return {
+    x = math.floor(position.x),
+    y = math.floor(position.y)
+  }
+end
+
 local function build_ingress_edge_check_debug(square_size, position)
+  local tile_position = snap_entity_position_to_tile(position)
   local bounds = get_anchor_bounds(square_size)
   local min_x = bounds.left_top.x
   local min_y = bounds.left_top.y
   local max_x = bounds.right_bottom.x - 1
   local max_y = bounds.right_bottom.y - 1
-  local north_match = position.y == min_y and position.x > min_x and position.x < max_x
-  local east_match = position.x == max_x and position.y > min_y and position.y < max_y
-  local south_match = position.y == max_y and position.x > min_x and position.x < max_x
-  local west_match = position.x == min_x and position.y > min_y and position.y < max_y
-  local detected_side = get_anchor_side_for_position(square_size, position)
+  local north_match = tile_position.y == min_y and tile_position.x > min_x and tile_position.x < max_x
+  local east_match = tile_position.x == max_x and tile_position.y > min_y and tile_position.y < max_y
+  local south_match = tile_position.y == max_y and tile_position.x > min_x and tile_position.x < max_x
+  local west_match = tile_position.x == min_x and tile_position.y > min_y and tile_position.y < max_y
+  local detected_side = get_anchor_side_for_position(square_size, tile_position)
 
   return table.concat({
     "[Expanding Square] Ingress placement debug",
-    "position=" .. format_position(position),
+    "raw_position=" .. format_position(position),
+    "tile_position=" .. format_position(tile_position),
     "square_size=" .. square_size,
     "anchor_bounds.left_top=" .. format_position(bounds.left_top),
     "anchor_bounds.right_bottom=" .. format_position(bounds.right_bottom),
