@@ -1072,6 +1072,62 @@ local function move_starter_anchors_outward()
   end
 end
 
+local function get_trailing_entity_name(anchor)
+  if not anchor then
+    return nil
+  end
+
+  if anchor.kind == "fluid" then
+    return "pipe"
+  end
+
+  return "transport-belt"
+end
+
+local function leave_trailing_ingress_stub(surface, anchor)
+  if not (surface and anchor and anchor.position) then
+    return
+  end
+
+  local trailing_entity_name = get_trailing_entity_name(anchor)
+  local existing_anchor = anchor.entity
+
+  if existing_anchor and existing_anchor.valid then
+    existing_anchor.destroy({raise_destroy = false})
+  else
+    existing_anchor = find_entity_at_position(surface, anchor.entity_name, anchor.position)
+
+    if existing_anchor and existing_anchor.valid then
+      existing_anchor.destroy({raise_destroy = false})
+    end
+  end
+
+  if find_entity_at_position(surface, trailing_entity_name, anchor.position) then
+    return
+  end
+
+  surface.create_entity({
+    name = trailing_entity_name,
+    position = anchor.position,
+    direction = anchor.direction,
+    force = game.forces.player
+  })
+end
+
+local function leave_trailing_stubs_for_expansion(surface)
+  local starter_anchors = storage.starter_anchors
+
+  if not starter_anchors then
+    return
+  end
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    if anchor.position then
+      leave_trailing_ingress_stub(surface, anchor)
+    end
+  end
+end
+
 local function apply_square_resize(surface, old_square_size, old_surface_size, new_square_size, new_surface_size)
   ensure_surface_dimensions(surface, new_surface_size)
 
@@ -1109,6 +1165,7 @@ local function expand_square(player)
   local next_surface_size = get_surface_size(next_square_size)
   local newly_unlocked_tiles = get_next_expansion_tile_reward(previous_square_size)
 
+  leave_trailing_stubs_for_expansion(surface)
   move_starter_anchors_outward()
 
   bootstrap.square_size = next_square_size
