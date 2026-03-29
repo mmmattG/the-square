@@ -1611,6 +1611,16 @@ local function get_trailing_entity_name(anchor)
     return "pipe"
   end
 
+  local belt_tier_key = ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER[get_current_ingress_tier_level()] or "yellow"
+
+  if belt_tier_key == "red" then
+    return "fast-transport-belt"
+  end
+
+  if belt_tier_key == "blue" then
+    return "express-transport-belt"
+  end
+
   return "transport-belt"
 end
 
