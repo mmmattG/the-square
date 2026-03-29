@@ -216,8 +216,10 @@ function bootstrap_runtime.ensure_bootstrap_state_defaults()
     return
   end
 
+  local target_surface_size = defs.get_surface_size(storage.bootstrap.square_size)
+
   storage.bootstrap.surface_name = storage.bootstrap.surface_name or defs.SURFACE_NAME
-  storage.bootstrap.surface_size = storage.bootstrap.surface_size or defs.get_surface_size(storage.bootstrap.square_size)
+  storage.bootstrap.surface_size = target_surface_size
   storage.bootstrap.expansion_points = storage.bootstrap.expansion_points or 0
   storage.bootstrap.expansions_completed = storage.bootstrap.expansions_completed or 0
   storage.bootstrap.ingress_tier = storage.bootstrap.ingress_tier or 1
@@ -518,6 +520,7 @@ function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
   call_freeplay("set_skip_intro", true)
   call_freeplay("set_disable_crashsite", true)
   game.forces.player.set_spawn_position({x = 0, y = 0}, surface)
+  ensure_surface_dimensions(surface, bootstrap.surface_size or defs.get_surface_size(bootstrap.square_size))
 
   if anchor_runtime then
     anchor_runtime.ensure_starter_anchors()
