@@ -50,7 +50,8 @@ runtime_defs.INGRESS_RESEARCH_DEFINITIONS = {
   }
 }
 runtime_defs.EXPANSION_RESEARCH_LEVELS_PER_TIER = 10
-runtime_defs.MAX_EXPANSION_RESEARCH_LEVEL = expansion_research.MAX_LEVEL
+runtime_defs.FINAL_FINITE_EXPANSION_RESEARCH_LEVEL = expansion_research.FINAL_FINITE_LEVEL
+runtime_defs.INFINITE_EXPANSION_RESEARCH_START_LEVEL = expansion_research.INFINITE_START_LEVEL
 runtime_defs.EXPANSION_RESEARCH_BANDS = {
   {
     name = "Automation science",
@@ -402,7 +403,7 @@ function runtime_defs.get_expansion_research_band_for_level(level)
 end
 
 function runtime_defs.is_expansion_research_name(research_name)
-  return string.match(research_name or "", "^fes%-square%-expansion%-%d%d%d%d$") ~= nil
+  return expansion_research.is_expansion_technology_name(research_name)
 end
 
 function runtime_defs.is_inside_bounds(bounds, position)

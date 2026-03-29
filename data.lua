@@ -101,7 +101,7 @@ local tips_and_tricks_items = {
     name = "fes-mod",
     order = "a[mod]",
     category = "fes-rules",
-    icon = "__base__/graphics/icons/info.png",
+    icon = "__base__/graphics/icons/landfill.png",
     is_title = true
   },
   {
@@ -115,7 +115,7 @@ local tips_and_tricks_items = {
     name = "fes-expansion-research",
     order = "c[expansion-research]",
     category = "fes-rules",
-    icon = "__base__/graphics/icons/lab.png",
+    icon = "__base__/graphics/icons/landfill.png",
     indent = 1
   },
   {
@@ -140,8 +140,15 @@ local tips_and_tricks_items = {
     indent = 1
   },
   {
+    name = "fes-anchor-upgrades",
+    order = "g[anchor-upgrades]",
+    category = "fes-rules",
+    icon = "__base__/graphics/icons/fast-transport-belt.png",
+    indent = 1
+  },
+  {
     name = "fes-logistics-rule",
-    order = "g[logistics-rule]",
+    order = "h[logistics-rule]",
     category = "fes-rules",
     icon = "__base__/graphics/icons/logistic-robot.png",
     indent = 1
@@ -299,21 +306,29 @@ local function build_egress_entity(definition)
 end
 
 local function build_square_expansion_technology(definition)
+  local unit = {
+    ingredients = definition.ingredients,
+    time = 30
+  }
+
+  if definition.count_formula then
+    unit.count_formula = definition.count_formula
+  else
+    unit.count = definition.count
+  end
+
   return {
     type = "technology",
     name = definition.name,
     localised_name = {"technology-name.fes-square-expansion"},
     localised_description = {"technology-description.fes-square-expansion"},
-    icon = "__base__/graphics/icons/lab.png",
+    icon = "__base__/graphics/icons/landfill.png",
     icon_size = 64,
     order = definition.order,
     upgrade = true,
     prerequisites = definition.prerequisites,
-    unit = {
-      count = definition.count,
-      ingredients = definition.ingredients,
-      time = 30
-    },
+    max_level = definition.max_level,
+    unit = unit,
     effects = {
       {
         type = "nothing",
@@ -346,7 +361,7 @@ local function build_ingress_research_technology(definition)
     localised_name = definition.localised_name,
     localised_description = definition.localised_description,
     icon = definition.icon,
-    icon_size = 64,
+    icon_size = definition.icon_size or 64,
     order = "c-b[" .. definition.name .. "]",
     prerequisites = prerequisites,
     unit = copy_technology_unit(definition.prerequisite_technology_name),
@@ -385,7 +400,8 @@ local function build_tips_item(definition)
     localised_name = {"tips-and-tricks-item-name." .. definition.name},
     localised_description = {"tips-and-tricks-item-description." .. definition.name},
     icon = definition.icon,
-    icon_size = 64
+    icon_size = definition.icon_size or 64,
+    image = definition.image
   }
 end
 
@@ -424,7 +440,7 @@ end
 local starting_square_size = expansion_research.DEFAULT_STARTING_SQUARE_SIZE
 local tiles_per_research = settings.startup["fes-expansion-tiles-per-research"].value
 
-for level = 1, expansion_research.MAX_LEVEL do
+for level = 1, expansion_research.FINAL_FINITE_LEVEL do
   local band = get_expansion_research_band(level)
 
   prototypes[#prototypes + 1] = build_square_expansion_technology({
@@ -435,6 +451,15 @@ for level = 1, expansion_research.MAX_LEVEL do
     count = expansion_research.get_research_unit_count(starting_square_size, tiles_per_research, level)
   })
 end
+
+prototypes[#prototypes + 1] = build_square_expansion_technology({
+  name = expansion_research.get_technology_name(expansion_research.INFINITE_START_LEVEL),
+  order = string.format("c-a[square-expansion]-%04d", expansion_research.INFINITE_START_LEVEL),
+  prerequisites = {expansion_research.get_technology_name(expansion_research.INFINITE_START_LEVEL - 1)},
+  ingredients = get_expansion_research_band(expansion_research.INFINITE_START_LEVEL).ingredients,
+  count_formula = expansion_research.get_infinite_research_unit_formula(starting_square_size, tiles_per_research),
+  max_level = "infinite"
+})
 
 for _, definition in ipairs(ingress_research_definitions) do
   prototypes[#prototypes + 1] = build_ingress_research_technology(definition)

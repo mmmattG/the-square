@@ -20,9 +20,9 @@ make test LUA=lua
 
 The starting square size is a per-save map setting (`runtime-global` in Factorio terms). Set it when creating a run. Changing it after the bootstrap surface already exists does not resize the current save.
 
-`Tiles per research pack` is also a startup setting. It defaults to `7`, which means each required science pack in square-expansion research pays for about seven newly unlocked tiles. The first expansion level is fixed at `5` packs, and later levels round up to the next `10`.
+`Tiles per research pack` is also a startup setting. It defaults to `7`, which means each required science pack in square-expansion research pays for about seven newly unlocked tiles.
 
-Because square-expansion technologies are generated in the data stage, their precomputed costs use the default starting square size of `7` even if a save overrides the map setting. That mismatch is acceptable in practice because the ring costs quickly converge toward the same values as the square grows.
+Because square-expansion technologies are generated in the data stage, their precomputed finite costs and infinite count formula use the default starting square size of `7` even if a save overrides the map setting. That mismatch is acceptable in practice because the ring costs quickly converge toward the same values as the square grows.
 
 `Ingress and egress line cost` is a per-save map setting. It defaults to `1000` expansion points for each additional owned ingress or egress line.
 
@@ -34,8 +34,10 @@ Square growth is now driven directly by research. Each completed level of `Squar
 
 Research now includes custom expanding-square technologies:
 
-- `Square expansion` is a repeatable research line that starts with red science, then steps up to broader science-pack bands every 10 completed levels.
+- `Square expansion` is a repeatable research line that uses science bands in blocks: levels `1-10`, `11-20`, `21-30`, and `31-40` step through broader pack sets, then level `41+` continues infinitely with all science through space.
 - `Dual-lane ingress`, `Red ingress`, and `Blue ingress` are one-time researches unlocked after `Logistics`, `Logistics 2`, and `Logistics 3`. Each copies the science cost of the logistics technology that gates it.
+
+Tips and tricks are currently text-first and use base-game icons as placeholders. Proper custom instructional art is deferred for later work.
 
 For manual testing, enable the per-player `Developer mode` runtime setting. That adds an `Expand square` button to the top-left UI plus a debug panel showing the current square-expansion progression state.
 

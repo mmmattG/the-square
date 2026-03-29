@@ -1,10 +1,14 @@
 local expansion_research = {}
 
 expansion_research.DEFAULT_STARTING_SQUARE_SIZE = 7
-expansion_research.MAX_LEVEL = 1000
+expansion_research.FINAL_FINITE_LEVEL = 40
+expansion_research.INFINITE_START_LEVEL = 41
 
-local function round_up_to_nearest_10(value)
-  return math.ceil(value / 10) * 10
+local function get_unlocked_tiles_for_level(starting_square_size, level)
+  local square_size = expansion_research.get_square_size_before_level(starting_square_size, level)
+  local next_square_size = square_size + 2
+
+  return (next_square_size * next_square_size) - (square_size * square_size)
 end
 
 function expansion_research.get_starting_square_size(current_square_size, completed_levels)
@@ -16,25 +20,36 @@ function expansion_research.get_square_size_before_level(starting_square_size, l
 end
 
 function expansion_research.get_tiles_unlocked_for_level(starting_square_size, level)
-  local square_size = expansion_research.get_square_size_before_level(starting_square_size, level)
-  local next_square_size = square_size + 2
-
-  return (next_square_size * next_square_size) - (square_size * square_size)
+  return get_unlocked_tiles_for_level(starting_square_size, level)
 end
 
 function expansion_research.get_research_unit_count(starting_square_size, tiles_per_research, level)
-  local unlocked_tiles = expansion_research.get_tiles_unlocked_for_level(starting_square_size, level)
+  local unlocked_tiles = get_unlocked_tiles_for_level(starting_square_size, level)
   local raw_count = unlocked_tiles / math.max(tiles_per_research, 1)
-
-  if level == 1 then
-    return 5
-  end
-
-  return math.max(10, round_up_to_nearest_10(raw_count))
+  return math.max(1, raw_count)
 end
 
 function expansion_research.get_technology_name(level)
   return string.format("fes-square-expansion-%04d", level)
+end
+
+function expansion_research.get_level_from_technology_name(technology_name)
+  return tonumber(string.match(technology_name or "", "^fes%-square%-expansion%-(%d%d%d%d)$"))
+end
+
+function expansion_research.is_expansion_technology_name(technology_name)
+  return expansion_research.get_level_from_technology_name(technology_name) ~= nil
+end
+
+function expansion_research.get_infinite_research_unit_formula(starting_square_size, tiles_per_research)
+  local safe_tiles_per_research = math.max(tiles_per_research, 1)
+  local numerator_constant = (4 * starting_square_size) - 4
+
+  return string.format(
+    "max(1, ((8 * L) + %d) / %d)",
+    numerator_constant,
+    safe_tiles_per_research
+  )
 end
 
 return expansion_research

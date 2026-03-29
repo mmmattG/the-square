@@ -56,3 +56,21 @@ run_test("checkerboard still keeps the border out of map", function()
     "checkerboard should not replace the managed void border"
   )
 end)
+
+run_test("expansion research name detection accepts the finite and infinite prototype name", function()
+  assert_equal(
+    runtime_defs.is_expansion_research_name("fes-square-expansion-0007"),
+    true,
+    "finite chain names should match"
+  )
+  assert_equal(
+    runtime_defs.is_expansion_research_name("fes-square-expansion-0041"),
+    true,
+    "the infinite prototype name should still match"
+  )
+  assert_equal(
+    runtime_defs.is_expansion_research_name("logistics"),
+    false,
+    "other technology names should not match"
+  )
+end)
