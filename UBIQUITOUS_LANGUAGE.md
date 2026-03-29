@@ -1,108 +1,114 @@
 # Ubiquitous Language
 
-## Core World Model
+## Product Direction
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
-| **Square** | The entire currently unlocked playable area. | Base, map, arena |
-| **Boundary** | The current outer edge of the Square where managed lines may be placed. | Border zone, wall |
-| **Void** | The inaccessible non-play-space outside the Square. | Outside map, wilderness |
-| **Unlocked Tile** | A buildable tile currently inside the Square. | Owned tile, active tile |
-| **Ring** | The outermost layer of tiles added by one growth step of the Square. | Expansion layer, outer band |
-| **Newly Unlocked Tiles** | The set of tiles in the newest Ring. | Expansion tiles, gained area |
+| **Challenge Variant** | The mod as a harsh constraint-focused version of Factorio rather than a broad overhaul. | Total conversion, overhaul mode |
+| **Vanilla-First Support** | The commitment that Nauvis-only play remains a complete first-class mode. | Legacy mode, fallback mode |
+| **Space Age-Aware Support** | The extension of the same mod rules across supported Space Age planets. | Separate DLC version, fork |
 
-## Expansion And Progression
+## Planet Model
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
-| **Square Expansion** | The repeatable research line that grows the Square by one Ring per completed level. | Growth meter, expansion tick |
-| **Expansion Level** | One completed level of **Square Expansion** research. | Research tick, growth stage |
-| **Expansion Points** | The currency awarded when a Ring is unlocked and spent on buying additional managed lines. | Points, expansion currency |
-| **Tiles per Research Pack** | The world setting that controls how much science each future **Expansion Level** costs relative to its Ring reward. | Expansion cost, science ratio |
-| **Expansion Reward** | The **Expansion Points** awarded for a completed **Expansion Level**, equal to its **Newly Unlocked Tiles**. | Tile payout, ring payout |
+| **Planet** | The primary gameplay unit that owns one local square challenge and its progression. | Surface, map, level |
+| **Planet Instance** | The runtime state for one managed Planet in the current save. | Bootstrap, singleton state |
+| **Planet Config** | The static rules and tuning values that define how one Planet behaves. | Special case code, hardcoded planet logic |
+| **Planet Progression** | The local research, square size, and economy state for one Planet. | Global progress, empire progress |
 
-## Managed Lines
-
-| Term | Definition | Aliases to avoid |
-| --- | --- | --- |
-| **Managed Line** | An owned border line controlled by the mod, either ingress or egress. | Port, lane, connector |
-| **Ingress Line** | A **Managed Line** that brings a raw resource into the Square from the Void. | Input line, source |
-| **Egress Line** | A **Managed Line** that removes a managed output from the Square into the Void. | Output line, drain |
-| **Anchor** | The single Boundary tile where a **Managed Line** is currently placed. | Port tile, input tile |
-| **Starter Ingress** | A free **Ingress Line** owned at the start of a run. | Starting resource, default line |
-| **Unlocked Resource** | A resource type for which the player owns at least one **Managed Line**. | Bought resource, enabled resource |
-| **Stashed Line** | An owned **Managed Line** with no current Anchor on the map. | Disabled line, backpack line |
-| **Relocation** | Moving a **Managed Line** to a new valid Anchor on the Boundary. | Repositioning, moving input |
-| **Anchor Shift** | The automatic outward movement of a placed **Managed Line** when the Square expands. | Auto-move, border slide |
-
-## Throughput And Research
+## Square And Growth
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
-| **Ingress Tier** | The current global throughput level shared by all owned ingress lines. | Belt tier, pipe tier, lane tier |
-| **Dual-Lane Ingress** | The research upgrade that makes item ingress use both yellow-belt lanes while keeping one Anchor tile. | Yellow upgrade, second lane |
-| **Red Ingress** | The research upgrade that raises item ingress to red-belt throughput and fluid ingress to the matching tier. | Red tier, tier 3 ingress |
-| **Blue Ingress** | The research upgrade that raises item ingress to blue-belt throughput and fluid ingress to the matching tier. | Blue tier, tier 4 ingress |
-| **Line Cost** | The **Expansion Point** price of buying one additional ingress or egress line. | Lane cost, input price |
+| **Square** | The current unlocked playable area on one Planet. | Base, arena, map |
+| **Boundary** | The outer edge of a Planet's Square where managed lines may be placed. | Border zone, wall |
+| **Void** | The inaccessible area outside a Planet's Square. | Outside map, wilderness |
+| **Ring** | The outer layer of tiles added by one completed square expansion on one Planet. | Expansion layer, band |
+| **Square Expansion** | The repeatable Planet-local research line that unlocks one new Ring. | Growth meter, expansion tick |
+| **Expansion Reward** | The Planet-local Expansion Points awarded for one new Ring. | Tile payout, ring payout |
+| **Planet-Local Expansion** | A square growth event that affects only the current Planet. | Global expansion, empire growth |
 
-## Resource Rules
-
-| Term | Definition | Aliases to avoid |
-| --- | --- | --- |
-| **Raw Resource** | A resource type allowed to enter directly through an **Ingress Line** from outside the Square. | Free resource, external item |
-| **Managed Output** | A resource type intentionally removed through an **Egress Line** because another rule depends on it. | Output drain, exported resource |
-| **Sulfuric Acid Egress** | The managed sulfuric acid output line used to enable uranium ingress. | Acid drain, uranium output |
-| **Uranium Allowance** | The shared uranium-ore budget created by actual sulfuric acid egress and consumed by all active uranium ingress lines. | Uranium budget, acid credit |
-
-## Counted Production
+## Economy And Throughput
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
-| **Counted Machine** | An entity class eligible to contribute to utilization when active. | Working machine, productive entity |
-| **Active Machine** | A **Counted Machine** that is actively crafting, researching, processing, launching, or generating power on the current tick. | Busy machine, running machine |
-| **Active Footprint** | The tile area occupied by currently active counted machines. | Used tiles, productive area |
-| **Utilization** | The ratio of **Active Footprint** to all **Unlocked Tiles** in the Square. | Efficiency, density |
-| **Support Infrastructure** | Non-counted entities that enable production without contributing to Utilization. | Utility infrastructure, logistics footprint |
+| **Expansion Points** | The Planet-local currency earned from Ring growth and spent on local ingress capacity. | Global points, universal currency |
+| **Ingress Tier** | The current throughput level shared by a Planet's owned ingress lines. | Belt tier, pipe tier, lane tier |
+| **Difficulty Preset** | A named package of tuning values that changes harshness without changing core rules. | Rule set, mode variant |
+| **Expert Preset** | The intended default high-harshness tuning for the mod. | Normal mode, standard mode |
+| **Easy Preset** | A softer tuning preset that mainly increases starting area and eases pacing. | Casual mode, sandbox mode |
 
-## Challenge Framing
+## Managed Logistics
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
-| **Compression Challenge** | The deliberate pressure to fit more effective production into a tightly bounded Square. | Difficulty, cramped mode |
-| **Rebuild Loop** | The repeated act of tearing down and improving the factory as the Square grows. | Refactor cycle, redesign loop |
-| **Rocket Benchmark** | Vanilla rocket launch time used as the default comparative measure for a run. | Score, ranking |
+| **Managed Line** | A Planet-local border line owned by the mod, either ingress or egress. | Port, connector, lane |
+| **Ingress Line** | A Managed Line that brings a Planet-native external resource into the Square. | Input line, source |
+| **Egress Line** | A Managed Line that sends a specific local support resource out of the Square. | Output line, export line |
+| **Anchor** | The single Boundary tile where a Managed Line is currently placed. | Port tile, input tile |
+| **Starter Layout** | The authored initial placement of a Planet's pre-owned free anchors. | Default spread, generated layout |
+| **Stashed Line** | An owned Managed Line with no current Anchor on the map. | Disabled line, hidden line |
+| **Anchor Shift** | The automatic outward movement of a placed Managed Line after a Ring is added. | Auto-move, border slide |
+
+## Resource Model
+
+| Term | Definition | Aliases to avoid |
+| --- | --- | --- |
+| **Native Free Resource** | A Planet-native raw resource granted as free ingress on that Planet. | Universal starter resource, free import |
+| **Cultivated Resource** | A resource that vanilla expects the player to grow or farm inside the Square. | Native crop ingress, free farm input |
+| **External Sourcing** | The act of bringing a Planet-native raw resource into the Square through ingress. | Importing, shipping |
+| **Support Material Dependency** | A rule where one external source requires a specific local material to be sent out through egress. | Extraction tax, hidden requirement |
+| **Opt-In Egress Resource** | A resource definition that explicitly uses the generic egress system. | Automatic egress, default output |
+
+## Interplanetary Logistics
+
+| Term | Definition | Aliases to avoid |
+| --- | --- | --- |
+| **Vanilla Rocket Logistics** | The unmodified Space Age system for moving items between planets. | Ingress import, custom shipping |
+| **Planet-Local Logistics** | Managed ingress and egress that affect only one Planet's Square. | Interplanetary logistics, rocket network |
+| **Rocket Footprint Pressure** | The local space cost of rocket and landing infrastructure inside a Planet's Square. | Free logistics, off-map transport |
+
+## Delivery Strategy
+
+| Term | Definition | Aliases to avoid |
+| --- | --- | --- |
+| **Planet-Scoped Refactor** | The architectural change from one global bootstrap model to per-Planet state and rules. | Minor extension, small patch |
+| **Proof Planet** | The first non-Nauvis Planet used to prove the new shared model. | Pilot map, demo case |
+| **Alpha Breaking Change** | An intentional compatibility break accepted in service of cleaner architecture during alpha. | Regression, accidental break |
 
 ## Relationships
 
-- The **Square** is bounded by exactly one **Boundary** and everything outside it is **Void**.
-- One completed **Expansion Level** of **Square Expansion** unlocks exactly one new **Ring**.
-- The **Expansion Reward** for an **Expansion Level** equals the number of **Newly Unlocked Tiles** in that Ring.
-- Every placed **Managed Line** owns exactly one **Anchor**; a **Stashed Line** owns none.
-- An **Ingress Tier** applies globally to all owned ingress lines, including **Stashed Lines**.
-- **Dual-Lane Ingress**, **Red Ingress**, and **Blue Ingress** each raise the global **Ingress Tier**.
-- **Raw Resources** enter through **Ingress Lines**; **Managed Outputs** leave through **Egress Lines**.
-- **Sulfuric Acid Egress** creates **Uranium Allowance**, and all active uranium ingress lines draw from that shared pool.
-- **Utilization** is calculated from **Active Footprint** divided by all **Unlocked Tiles**.
-- **Support Infrastructure** consumes space inside the **Square** but never contributes to **Active Footprint**.
+- A **Challenge Variant** may support both **Vanilla-First Support** and **Space Age-Aware Support** without becoming a separate product.
+- One **Planet** owns exactly one local **Square**, one **Planet Config**, and one **Planet Progression**.
+- One completed **Square Expansion** adds exactly one **Ring** to one **Planet**.
+- An **Expansion Reward** becomes **Expansion Points** for that same **Planet** only.
+- A **Difficulty Preset** changes tuning such as starting size and pacing without changing the invariant Square rules.
+- A **Starter Layout** places a Planet's initial **Managed Lines** on its **Boundary**.
+- A **Native Free Resource** enters through an **Ingress Line**; a **Cultivated Resource** stays inside the **Square**.
+- A **Support Material Dependency** is satisfied by an **Opt-In Egress Resource** through an **Egress Line**.
+- **Planet-Local Logistics** never replace **Vanilla Rocket Logistics**.
+- **Rocket Footprint Pressure** is one of the ways vanilla Space Age systems still consume scarce local Square space.
+- The **Planet-Scoped Refactor** should be proven first on Nauvis and then on a **Proof Planet**.
 
 ## Example Dialogue
 
-> **Dev:** "When **Square Expansion** level 12 completes, do all placed **Ingress Lines** move automatically?"
+> **Dev:** "If Vulcanus is the first **Proof Planet**, does it get a different ruleset from Nauvis?"
 >
-> **Domain expert:** "Yes. Each placed **Managed Line** performs an **Anchor Shift** to the new **Boundary**. A **Stashed Line** stays owned but has no map presence to move."
+> **Domain expert:** "No. It uses the same core **Challenge Variant** rules, but with its own **Planet Config** for starting size, native resources, and research pacing."
 >
-> **Dev:** "If I finish **Red Ingress**, do I need to replace older anchors to get the faster throughput?"
+> **Dev:** "So a rocket import to Vulcanus should consume an **Ingress Line** there?"
 >
-> **Domain expert:** "No. **Ingress Tier** is global, so every owned ingress line upgrades immediately, including ones that are currently stashed."
+> **Domain expert:** "No. That's **Vanilla Rocket Logistics**. **Ingress Lines** are only for **Planet-Local Logistics** and native external sourcing."
 >
-> **Dev:** "Why does uranium stop if the sulfuric line is idle?"
+> **Dev:** "What about something like sulfuric acid supporting extraction?"
 >
-> **Domain expert:** "Because uranium ingress spends from the shared **Uranium Allowance**, and that allowance only exists when **Sulfuric Acid Egress** is actually removing acid from the factory."
+> **Domain expert:** "That's a **Support Material Dependency**. The affected resource explicitly opts into the generic **Egress Line** system on that Planet."
 
 ## Flagged Ambiguities
 
-- "expansion" was used for both the research and the map-change event; use **Square Expansion** for the research line and **Expansion Level** for one completed level that causes the growth.
-- "input", "ingress", and "line" were used interchangeably; use **Ingress Line** for the owned resource entry object and reserve "input" for informal player-facing prose only when precision is not needed.
-- "disabled" previously covered multiple states; use **Stashed Line** for an owned line with no current Anchor, and avoid "disabled" unless you mean a placed line that is temporarily not flowing.
-- "tier" was previously too vague; use **Ingress Tier** for the shared throughput state, and use **Dual-Lane Ingress**, **Red Ingress**, or **Blue Ingress** for the specific upgrade researches.
-- "reward" and "points" were blurred together; use **Expansion Reward** for the event payout and **Expansion Points** for the currency balance itself.
+- "planet" and "surface" were starting to blur together; use **Planet** for the gameplay concept and keep raw surface handling as an internal implementation detail.
+- "expansion" was previously used for both the research and the area gain; use **Square Expansion** for the research line and **Ring** or **Planet-Local Expansion** for the resulting map change.
+- "free resources" was too vague; use **Native Free Resource** for planet-native raw ingress and **Cultivated Resource** for resources that must stay in-square.
+- "imports" was ambiguous between local external sourcing and interplanetary shipping; use **External Sourcing** for ingress and **Vanilla Rocket Logistics** for off-planet movement.
+- "egress" risked meaning any export; use **Egress Line** only for Planet-local support-material rules, not for interplanetary trade.
