@@ -283,7 +283,7 @@ local function build_anchor_place_input()
 end
 
 local function build_egress_entity(definition)
-  local source = table.deepcopy(data.raw["offshore-pump"]["offshore-pump"])
+  local source = table.deepcopy(data.raw["pipe-to-ground"]["pipe-to-ground"])
   local item_name = egress_item_name(definition.resource)
 
   source.name = egress_entity_name(definition.resource)

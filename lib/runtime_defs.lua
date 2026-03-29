@@ -275,6 +275,10 @@ function runtime_defs.get_anchor_direction_for_side(flow, kind, side)
   end
 
   if kind == "fluid" then
+    if flow == "egress" then
+      return runtime_defs.DIRECTION_BY_SIDE[side]
+    end
+
     return runtime_defs.REVERSED_DIRECTION_BY_SIDE[side]
   end
 
