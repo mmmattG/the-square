@@ -2,6 +2,166 @@
 
 This file captures the design interview that led to the current PRD and glossary.
 
+## Space Age Future-Direction Interview
+
+This section records the later design interview that replaced the old single-surface PRD with the current multi-planet direction.
+
+### Starting Intent
+
+**User:** Grill me on future directions for this project.
+
+### Top-Level Product Direction
+
+**Assistant:** Should the mod become a broader overhaul or stay a challenge variant?
+
+**User:** Just a challenge variant. Not broad overhaul. But incorporating in Space Age is planned.
+
+**Assistant:** Should Space Age support be a separate variant or the same core mod?
+
+**User:** Same core mod, space age aware. Also with space age it will still be expanding squares just multiple of them on different planets. Not sure about space ships yet.
+
+### Planet Model
+
+**Assistant:** Should progression be one shared empire-wide system or one independent square per planet?
+
+**User:** Independent expanding squares per planet. With rocket launches like normal space age. Space ships can remain vanilla for now.
+
+**Assistant:** Should planet unlocks stay vanilla?
+
+**User:** Same as vanilla technologies. For unlocking. Progression on the planets themselves will be specific to the planets.
+
+**Assistant:** Should expansion research be local per planet?
+
+**User:** Should simply be research like on base planet Nauvis. But with the planets specific research also required. That planet + prereq. Which means that Aquilo will be all of em except prometheum.
+
+### Rules And Tuning
+
+**Assistant:** Should the same core rules apply everywhere or should planets get distinct square rules?
+
+**User:** Same rules everywhere. Square expands. Costs research although square expansion will be research specific to planets.
+
+**Assistant:** Should expansion curve and starting size be standardized?
+
+**User:** Expansion curve tuned. Especially with playtesting. Same with starter size for planets as might need bigger or smaller for diff planets.
+
+**Assistant:** How harsh should the starting position be?
+
+**User:** Minimum size possible is ideal.
+
+**Assistant:** Expert-only theoretical minimum or realistic minimum?
+
+**User:** Expert, but tunable for an easy mode setting.
+
+**Assistant:** Presets or many knobs?
+
+**User:** A couple of presets.
+
+### Resource Model
+
+**Assistant:** Should the main puzzle remain resource purchasing or local processing?
+
+**User:** Same raw resources for free but job is to process em.
+
+**Assistant:** Should expansion points remain?
+
+**User:** Resources free, resource rate ie. more ingress still costs expansion points. But specific expansion points to that planet.
+
+**Assistant:** Should those points come only from that planet's growth?
+
+**User:** Only that planet.
+
+**Assistant:** Should free resources be universal or planet-native?
+
+**User:** Native. But up to consideration when implementing as Gleba fruit for example is farmable.
+
+**Assistant:** Should cultivated resources get free ingress?
+
+**User:** Cultivated don't get to be free ingress.
+
+### Interplanetary Logistics
+
+**Assistant:** Should imports use the ingress system?
+
+**User:** Imports are just based on normal Space Age. Ingress has nothing to do with rockets.
+
+**Assistant:** Then should vanilla imports simply be allowed, with footprint as the constraint?
+
+**User:** lgtm
+
+**Assistant:** Should the square challenge begin immediately on landing?
+
+**User:** lgtm
+
+### Starter Layouts And Egress
+
+**Assistant:** Should planet starter anchors be pre-owned, manually placed, or auto-placed?
+
+**User:** Pre-placed like on default planet Nauvis. But freely moveable by stashing and placing.
+
+**Assistant:** Hand-authored or generic per-planet layouts?
+
+**User:** Per planet implementation.
+
+**Assistant:** Should egress stay planet local?
+
+**User:** Egress is only planet local. Does not effect other planets. To effect other planets need to launch rockets.
+
+**Assistant:** What is egress for?
+
+**User:** Egress is only in the case where mining would normally consume a material like with sulfuric acid and uranium.
+
+**Assistant:** Should that be generic or explicit?
+
+**User:** Make it a reusable system for more such resources, but specific resources have to choose to use it.
+
+### Documentation And UX
+
+**Assistant:** Where should these special rules be explained?
+
+**User:** Just in the tips menu is okay.
+
+**Assistant:** Should tips hold rules and runtime UI hold live facts?
+
+**User:** lgtm
+
+### Architecture And Delivery
+
+**Assistant:** Should the code refactor to a planet-scoped model first?
+
+**User:** lgtm
+
+**Assistant:** Should the domain concept be planet-first?
+
+**User:** Just by planet is good.
+
+**Assistant:** Common implementation template or early custom code?
+
+**User:** lgtm
+
+**Assistant:** What order should planets land in?
+
+**User:** Vulcanus -> Fulgora -> Gleba -> Aquilo is good order.
+
+**Assistant:** Are breaking changes acceptable during alpha?
+
+**User:** Breaking change is okay. Its space age vs vanilla anyway. Breaking changes are okay until we get out of alpha anyway.
+
+### Final Direction
+
+The interview converged on these decisions:
+
+- The mod remains a challenge variant, not a broad overhaul.
+- The codebase remains unified and DLC-aware.
+- Nauvis remains first-class.
+- Space Age support means one independent expanding square per supported planet.
+- Planet unlocks remain vanilla; local square progression is planet-specific.
+- Expansion research, expansion points, ingress, and optional egress are local to each planet.
+- Native raw resources can be free ingress; cultivated resources stay in-square.
+- Rockets and other interplanetary logistics remain vanilla Space Age systems.
+- Egress is a reusable local mechanism that only specific resources opt into.
+- The implementation should refactor to a planet-scoped model first, then move Nauvis, then add Vulcanus, Fulgora, Gleba, and Aquilo in that order.
+- Breaking changes are acceptable during alpha.
+
 ## Initial Request
 
 **User:** Help me spec out an idea for a factorio mod with an expanding square. The square should expand in each direction 1 tile every now and then. The rate of expansion should be related (not necessarily proportional) to the percentage of the current unlocked map taken up by active machines. It should heavily incentivise automating your factorio with good space efficiency. ie. Expansion rate is much worse when a lower ratio of the map is being used. Maybe make it logarithmic/exponential? As for resources, they should be free/come in from belts/pipes off the edge of the map. And when the map expands the sources automatically moves out and adds a belt/pipe in between to keep things working. Start off with Iron on the left, copper on the right, coal above and stone below. But the player can move the resource inputs around for free. Also water should come in from another spot too. Rate starts out at 1 yellow belt, but can be upgraded. Upgrades are done manually by the player, but cost expansion points, which are received each time the map expands. Balancing is subject to playtesting. Resource inputs are raw ores. Can also buy oil/uranium/etc later. Working machines includes assembly machines, furnaces, etc, but importantly not belts, or inserters. Bots are disabled, this is a challenge. Construction bots are okay. Grill me. I just want a spec for now, don't care about implementation yet.
