@@ -1,5 +1,6 @@
 local SURFACE_NAME = "fes-bootstrap"
 local SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
+local SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
 local SETTING_DEV_MODE = "fes-dev-mode"
 local SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
 local FLOOR_TILE_NAME = "grass-1"
@@ -28,6 +29,12 @@ local DIRECTION_BY_SIDE
 local OFFSET_BY_SIDE
 local INGRESS_TIER_DEFINITIONS
 local ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER
+local FORBIDDEN_LOGISTIC_CONTAINER_NAMES = {
+  ["active-provider-chest"] = true,
+  ["buffer-chest"] = true,
+  ["requester-chest"] = true,
+  ["storage-chest"] = true
+}
 
 local COUNTED_CATEGORY_ORDER = {
   "crafting",
@@ -196,6 +203,10 @@ end
 
 local function get_square_size()
   return settings.global[SETTING_STARTING_SQUARE_SIZE].value
+end
+
+local function is_logistic_network_automation_enabled()
+  return settings.global[SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION].value
 end
 
 local function get_square_bounds(size)
@@ -1246,7 +1257,39 @@ local function get_entity_refund_item_name(entity)
   return items_to_place[1].name
 end
 
-local function reject_anchor_placement(entity, actor, message_key)
+local function is_forbidden_logistic_container(entity)
+  return entity
+    and entity.valid
+    and entity.type == "logistic-container"
+    and FORBIDDEN_LOGISTIC_CONTAINER_NAMES[entity.name] == true
+end
+
+local function apply_logistic_network_setting_to_force(force)
+  if not (force and force.valid) then
+    return
+  end
+
+  if is_logistic_network_automation_enabled() then
+    force.reset_technology_effects()
+    return
+  end
+
+  for recipe_name in pairs(FORBIDDEN_LOGISTIC_CONTAINER_NAMES) do
+    local recipe = force.recipes[recipe_name]
+
+    if recipe then
+      recipe.enabled = false
+    end
+  end
+end
+
+local function apply_logistic_network_setting_to_all_forces()
+  for _, force in pairs(game.forces) do
+    apply_logistic_network_setting_to_force(force)
+  end
+end
+
+local function reject_anchor_placement(entity, actor, message)
   if not (entity and entity.valid) then
     return
   end
@@ -1259,7 +1302,9 @@ local function reject_anchor_placement(entity, actor, message_key)
         refund_entity_to_player(actor, item_name)
       end
 
-      actor.print({message_key})
+      if message then
+        actor.print(message)
+      end
     elseif actor.object_name == "LuaEntity" and actor.type == "construction-robot" then
       if item_name then
         refund_entity_to_robot(actor, item_name)
@@ -1270,7 +1315,7 @@ local function reject_anchor_placement(entity, actor, message_key)
   entity.destroy({raise_destroy = false})
 end
 
-local function reject_reserved_ring_placement(entity, actor, message_key)
+local function reject_reserved_ring_placement(entity, actor, message)
   if not (entity and entity.valid) then
     return
   end
@@ -1283,7 +1328,9 @@ local function reject_reserved_ring_placement(entity, actor, message_key)
         player_insert_or_spill(actor, item_name)
       end
 
-      actor.print({message_key})
+      if message then
+        actor.print(message)
+      end
     elseif actor.object_name == "LuaEntity" and actor.type == "construction-robot" and item_name then
       refund_entity_to_robot(actor, item_name)
     end
@@ -1466,7 +1513,7 @@ local function handle_ingress_built(entity, actor)
   end
 
   if entity.surface.name ~= bootstrap.surface_name then
-    reject_anchor_placement(entity, actor, "message.fes-ingress-invalid-surface")
+    reject_anchor_placement(entity, actor, {"message.fes-ingress-invalid-surface"})
     return
   end
 
@@ -1480,24 +1527,24 @@ local function handle_ingress_built(entity, actor)
   )
 
   if not side then
-    reject_anchor_placement(entity, actor, "message.fes-ingress-invalid-edge")
+    reject_anchor_placement(entity, actor, {"message.fes-ingress-invalid-edge"})
     return
   end
 
   local anchor = find_matching_stashed_anchor(entity.name)
 
   if not anchor then
-    reject_anchor_placement(entity, actor, "message.fes-ingress-unowned")
+    reject_anchor_placement(entity, actor, {"message.fes-ingress-unowned"})
     return
   end
 
   if is_fluid_anchor_too_close(anchor, snap_entity_position_to_tile(entity.position), side) then
-    reject_anchor_placement(entity, actor, "message.fes-ingress-fluid-gap-required")
+    reject_anchor_placement(entity, actor, {"message.fes-ingress-fluid-gap-required"})
     return
   end
 
   if not place_anchor(anchor, entity, bootstrap.square_size) then
-    reject_anchor_placement(entity, actor, "message.fes-ingress-invalid-edge")
+    reject_anchor_placement(entity, actor, {"message.fes-ingress-invalid-edge"})
     return
   end
 
@@ -1535,7 +1582,16 @@ local function handle_entity_built(event)
     and not is_ingress_entity_name(entity.name)
     and entity_overlaps_anchor_ring(bootstrap.square_size, entity)
   then
-    reject_reserved_ring_placement(entity, actor, "message.fes-edge-reserved")
+    reject_reserved_ring_placement(entity, actor, {"message.fes-edge-reserved"})
+    return
+  end
+
+  if is_forbidden_logistic_container(entity) and not is_logistic_network_automation_enabled() then
+    reject_reserved_ring_placement(
+      entity,
+      actor,
+      {"message.fes-logistic-network-disabled", {"entity-name." .. entity.name}}
+    )
     return
   end
 
@@ -2189,6 +2245,7 @@ local function bootstrap_world()
     teleport_player_to_square(player)
   end
 
+  apply_logistic_network_setting_to_all_forces()
   update_utilization_metrics()
   sync_all_dev_guis()
   sync_all_shop_guis()
@@ -2218,6 +2275,7 @@ local function refresh_spawn_routing()
     teleport_player_to_square(player)
   end
 
+  apply_logistic_network_setting_to_all_forces()
   update_utilization_metrics()
   sync_all_dev_guis()
   sync_all_shop_guis()
@@ -2363,6 +2421,11 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
     return
   end
 
+  if event.setting == SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION then
+    apply_logistic_network_setting_to_all_forces()
+    return
+  end
+
   if event.setting == SETTING_DEV_MODE then
     local player = game.get_player(event.player_index)
 
@@ -2387,8 +2450,12 @@ script.on_event(defines.events.on_research_finished, function(event)
       update_utilization_metrics()
       refresh_all_debug_guis()
       announce_expansion_speed_research(research.force)
-      return
+      break
     end
+  end
+
+  if not is_logistic_network_automation_enabled() then
+    apply_logistic_network_setting_to_force(research.force)
   end
 end)
 

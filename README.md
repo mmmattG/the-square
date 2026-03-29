@@ -11,6 +11,8 @@ make install
 
 The starting square size is a per-save map setting (`runtime-global` in Factorio terms). Set it when creating a run. Changing it after the bootstrap surface already exists does not resize the current save.
 
+`Enable logistic network automation` is also a per-save map setting. It is off by default, which blocks `active provider`, `buffer`, `requester`, and `storage` chests while still allowing passive providers, roboports, and logistic/construction bots.
+
 Square growth now runs continuously in the background. Once per second the mod evaluates current counted-machine utilization inside the unlocked square, converts that into stored growth progress, and expands the square automatically whenever enough progress has accumulated for the next full ring.
 
 Research now includes custom expanding-square technologies:
