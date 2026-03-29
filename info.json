@@ -1,8 +1,8 @@
 {
-  "name": "factorio-expanding-square",
+  "name": "the-square",
   "version": "0.1.0",
-  "title": "The Square",
+  "title": "the-square",
   "author": "mmmatt",
   "factorio_version": "2.0",
-  "description": "Bootstrap scenario for The Square Factorio challenge."
+  "description": "Bootstrap scenario for the-square Factorio challenge."
 }

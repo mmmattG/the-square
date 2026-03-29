@@ -16,7 +16,7 @@ local function build_ingress_edge_check_debug(square_size, position)
   local detected_side = defs.get_anchor_side_for_position(square_size, tile_position)
 
   return table.concat({
-    "[The Square] Ingress placement debug",
+    "[the-square] Ingress placement debug",
     "raw_position=" .. defs.format_position(position),
     "tile_position=" .. defs.format_position(tile_position),
     "square_size=" .. square_size,
