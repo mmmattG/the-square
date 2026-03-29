@@ -9,6 +9,10 @@ local ingress_resources = {
   {resource = "uranium-ore", kind = "item", icon = "__base__/graphics/icons/uranium-ore.png", order = "a[ingress]-h[uranium-ore]"}
 }
 
+local egress_resources = {
+  {resource = "sulfuric-acid", kind = "fluid", icon = "__base__/graphics/icons/fluid/sulfuric-acid.png", order = "b[egress]-a[sulfuric-acid]"}
+}
+
 local item_ingress_belt_tiers = {
   {key = "yellow", prototype_name = "transport-belt"},
   {key = "red", prototype_name = "fast-transport-belt"},
@@ -203,12 +207,20 @@ local function ingress_item_name(resource)
   return "fes-" .. resource .. "-ingress"
 end
 
+local function egress_item_name(resource)
+  return "fes-" .. resource .. "-egress"
+end
+
 local function ingress_entity_name(resource, belt_tier_key)
   if not belt_tier_key or belt_tier_key == "yellow" then
     return "fes-" .. resource .. "-ingress-anchor"
   end
 
   return "fes-" .. resource .. "-ingress-anchor-" .. belt_tier_key
+end
+
+local function egress_entity_name(resource)
+  return "fes-" .. resource .. "-egress-anchor"
 end
 
 local function build_ingress_item(definition)
@@ -233,6 +245,35 @@ local function build_ingress_entity(definition, belt_tier_key, belt_prototype_na
 
   source.name = ingress_entity_name(definition.resource, belt_tier_key)
   source.localised_description = {"entity-description.fes-ingress-anchor"}
+  source.icon = definition.icon
+  source.icon_size = 64
+  source.minable = {mining_time = 0.1, result = item_name}
+  source.placeable_by = {item = item_name, count = 1}
+  source.next_upgrade = nil
+
+  return source
+end
+
+local function build_egress_item(definition)
+  return {
+    type = "item",
+    name = egress_item_name(definition.resource),
+    localised_description = {"item-description.fes-egress-item"},
+    icon = definition.icon,
+    icon_size = 64,
+    subgroup = "energy-pipe-distribution",
+    order = definition.order,
+    stack_size = 50,
+    place_result = egress_entity_name(definition.resource)
+  }
+end
+
+local function build_egress_entity(definition)
+  local source = table.deepcopy(data.raw.pipe.pipe)
+  local item_name = egress_item_name(definition.resource)
+
+  source.name = egress_entity_name(definition.resource)
+  source.localised_description = {"entity-description.fes-egress-anchor"}
   source.icon = definition.icon
   source.icon_size = 64
   source.minable = {mining_time = 0.1, result = item_name}
@@ -330,6 +371,11 @@ for _, definition in ipairs(ingress_resources) do
   else
     prototypes[#prototypes + 1] = build_ingress_entity(definition)
   end
+end
+
+for _, definition in ipairs(egress_resources) do
+  prototypes[#prototypes + 1] = build_egress_item(definition)
+  prototypes[#prototypes + 1] = build_egress_entity(definition)
 end
 
 for _, definition in ipairs(expansion_speed_research_bands) do

@@ -1,4 +1,5 @@
 local SURFACE_NAME = "fes-bootstrap"
+local resource_balance = require("lib.resource_balance")
 local SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 local SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
 local SETTING_DEV_MODE = "fes-dev-mode"
@@ -62,6 +63,10 @@ local INPUT_DEFINITIONS = {
   {resource = "wood", kind = "item", starter_side = "east", prerequisite_resource = nil},
   {resource = "crude-oil", kind = "fluid", starter_side = nil, prerequisite_resource = nil},
   {resource = "uranium-ore", kind = "item", starter_side = nil, prerequisite_resource = "crude-oil"}
+}
+
+local OUTPUT_DEFINITIONS = {
+  {resource = "sulfuric-acid", kind = "fluid", starter_side = nil, prerequisite_resource = "uranium-ore"}
 }
 
 DIRECTION_BY_SIDE = {
@@ -176,15 +181,58 @@ local function get_input_definition(resource)
   return nil
 end
 
-local function create_ingress_anchor(definition, side, position)
+local function get_output_definition(resource)
+  for _, definition in ipairs(OUTPUT_DEFINITIONS) do
+    if definition.resource == resource then
+      return definition
+    end
+  end
+
+  return nil
+end
+
+local function get_line_definition(resource)
+  local input_definition = get_input_definition(resource)
+
+  if input_definition then
+    return input_definition, "ingress"
+  end
+
+  local output_definition = get_output_definition(resource)
+
+  if output_definition then
+    return output_definition, "egress"
+  end
+
+  return nil, nil
+end
+
+local function get_egress_item_name(resource)
+  return "fes-" .. resource .. "-egress"
+end
+
+local function get_egress_entity_name(resource)
+  return "fes-" .. resource .. "-egress-anchor"
+end
+
+local function is_egress_entity_name_for_resource(resource, entity_name)
+  return entity_name == get_egress_entity_name(resource)
+end
+
+local function create_managed_anchor(definition, flow, side, position)
   return {
     resource = definition.resource,
     kind = definition.kind,
+    flow = flow,
     side = side,
     direction = side and DIRECTION_BY_SIDE[side] or nil,
     position = position,
-    item_name = get_ingress_item_name(definition.resource),
-    entity_name = get_ingress_entity_name(definition.resource)
+    item_name = flow == "egress"
+      and get_egress_item_name(definition.resource)
+      or get_ingress_item_name(definition.resource),
+    entity_name = flow == "egress"
+      and get_egress_entity_name(definition.resource)
+      or get_ingress_entity_name(definition.resource)
   }
 end
 
@@ -401,7 +449,7 @@ local function build_starter_anchor_layout(square_size)
     local chosen_positions = choose_spread_positions(side_positions, #side_resources, side)
 
     for index, definition in ipairs(side_resources) do
-      anchors[#anchors + 1] = create_ingress_anchor(definition, side, chosen_positions[index])
+      anchors[#anchors + 1] = create_managed_anchor(definition, "ingress", side, chosen_positions[index])
     end
   end
 
@@ -809,6 +857,7 @@ local function ensure_bootstrap_state_defaults()
   storage.bootstrap.growth_progress = storage.bootstrap.growth_progress or 0
   storage.bootstrap.ingress_tier = storage.bootstrap.ingress_tier or 1
   storage.bootstrap.expansion_speed_research_levels = storage.bootstrap.expansion_speed_research_levels or 0
+  storage.bootstrap.uranium_ore_progress_carry = storage.bootstrap.uranium_ore_progress_carry or 0
 end
 
 local function ensure_surface_dimensions(surface, target_surface_size)
@@ -883,6 +932,32 @@ local function is_ingress_entity_name(entity_name)
   return false
 end
 
+local function is_egress_entity_name(entity_name)
+  for _, definition in ipairs(OUTPUT_DEFINITIONS) do
+    if is_egress_entity_name_for_resource(definition.resource, entity_name) then
+      return true
+    end
+  end
+
+  return false
+end
+
+local function is_managed_anchor_entity_name(entity_name)
+  return is_ingress_entity_name(entity_name) or is_egress_entity_name(entity_name)
+end
+
+local function does_anchor_match_entity_name(anchor, entity_name)
+  if not anchor then
+    return false
+  end
+
+  if anchor.flow == "egress" then
+    return is_egress_entity_name_for_resource(anchor.resource, entity_name)
+  end
+
+  return is_ingress_entity_name_for_resource(anchor.resource, entity_name)
+end
+
 local function find_matching_stashed_anchor(item_or_entity_name)
   local starter_anchors = storage.starter_anchors
 
@@ -893,7 +968,7 @@ local function find_matching_stashed_anchor(item_or_entity_name)
   for _, anchor in ipairs(starter_anchors.anchors) do
     if not anchor.position and (
       anchor.item_name == item_or_entity_name
-      or is_ingress_entity_name_for_resource(anchor.resource, item_or_entity_name)
+      or does_anchor_match_entity_name(anchor, item_or_entity_name)
     ) then
       return anchor
     end
@@ -930,7 +1005,7 @@ local function find_anchor_by_entity_name_and_position(entity_name, position)
   for _, anchor in ipairs(starter_anchors.anchors) do
     if anchor.position
       and get_position_key(anchor.position) == position_key
-      and is_ingress_entity_name_for_resource(anchor.resource, entity_name)
+      and does_anchor_match_entity_name(anchor, entity_name)
     then
       return anchor
     end
@@ -1046,6 +1121,10 @@ get_anchor_entity_name_for_current_tier = function(anchor)
     return nil
   end
 
+  if anchor.flow == "egress" then
+    return get_egress_entity_name(anchor.resource)
+  end
+
   if anchor.kind == "item" then
     return get_ingress_entity_name(anchor.resource, get_current_ingress_tier_level())
   end
@@ -1122,8 +1201,17 @@ local function ensure_starter_anchor_state()
     local migrated_anchors = storage.starter_anchors.anchors or {}
 
     for _, anchor in ipairs(migrated_anchors) do
-      anchor.item_name = anchor.item_name or get_ingress_item_name(anchor.resource)
-      anchor.entity_name = anchor.entity_name or get_ingress_entity_name(anchor.resource, 1)
+      anchor.flow = anchor.flow or "ingress"
+      anchor.item_name = anchor.item_name or (
+        anchor.flow == "egress"
+          and get_egress_item_name(anchor.resource)
+          or get_ingress_item_name(anchor.resource)
+      )
+      anchor.entity_name = anchor.entity_name or (
+        anchor.flow == "egress"
+          and get_egress_entity_name(anchor.resource)
+          or get_ingress_entity_name(anchor.resource, 1)
+      )
       anchor.entity = nil
       migrate_anchor_to_anchor_ring(bootstrap.square_size, anchor)
     end
@@ -1137,6 +1225,7 @@ local function ensure_starter_anchor_state()
   storage.starter_anchors = storage.starter_anchors or create_starter_anchor_state(bootstrap.square_size)
 
   for _, anchor in ipairs(storage.starter_anchors.anchors) do
+    anchor.flow = anchor.flow or "ingress"
     migrate_anchor_to_anchor_ring(bootstrap.square_size, anchor)
   end
 
@@ -1171,22 +1260,146 @@ end
 
 local function pump_item_anchor(entity, resource, lane_index, item_count)
   if item_count <= 0 then
-    return
+    return 0
   end
 
   local line = entity.get_transport_line(lane_index)
 
   if not line then
-    return
+    return 0
   end
+
+  local inserted = 0
 
   for _ = 1, item_count do
     if not line.can_insert_at_back() then
-      return
+      return inserted
     end
 
     line.insert_at_back({name = resource, count = 1})
+    inserted = inserted + 1
   end
+
+  return inserted
+end
+
+local function drain_fluid_anchor(entity, resource, amount)
+  if not (entity and entity.valid) or amount <= 0 then
+    return 0
+  end
+
+  local removed = entity.remove_fluid({
+    name = resource,
+    amount = amount
+  })
+
+  return removed or 0
+end
+
+local function get_player_force()
+  return game and game.forces and game.forces.player or nil
+end
+
+local function get_mining_productivity_bonus()
+  local player_force = get_player_force()
+
+  if not (player_force and player_force.valid) then
+    return 0
+  end
+
+  return player_force.mining_drill_productivity_bonus or 0
+end
+
+local function get_active_uranium_anchors(ingress_tier)
+  local anchors = {}
+
+  for _, anchor in ipairs(storage.starter_anchors.anchors) do
+    local entity = anchor.position and anchor.entity or nil
+
+    if anchor.flow == "ingress"
+      and anchor.resource == "uranium-ore"
+      and entity
+      and entity.valid
+    then
+      anchors[#anchors + 1] = {
+        anchor = anchor,
+        entity = entity,
+        capacity = (ingress_tier.item_lane_counts[1] or 0) + (ingress_tier.item_lane_counts[2] or 0)
+      }
+    end
+  end
+
+  return anchors
+end
+
+local function get_active_uranium_budget_per_interval(uranium_anchors)
+  local bootstrap = storage.bootstrap
+
+  if not bootstrap or #uranium_anchors == 0 then
+    return 0
+  end
+
+  local ingress_tier = get_current_ingress_tier()
+  local mining_productivity_bonus = get_mining_productivity_bonus()
+  local total_capacity = 0
+
+  for _, uranium_anchor in ipairs(uranium_anchors) do
+    total_capacity = total_capacity + uranium_anchor.capacity
+  end
+
+  if total_capacity <= 0 then
+    return 0
+  end
+
+  local sulfuric_acid_needed = total_capacity / (
+    resource_balance.URANIUM_ORE_PER_SULFURIC_ACID * (1 + mining_productivity_bonus)
+  )
+  local sulfuric_acid_egressed = 0
+
+  for _, anchor in ipairs(storage.starter_anchors.anchors) do
+    local entity = anchor.position and anchor.entity or nil
+
+    if anchor.flow == "egress"
+      and anchor.resource == "sulfuric-acid"
+      and entity
+      and entity.valid
+    then
+      local remaining_needed = sulfuric_acid_needed - sulfuric_acid_egressed
+
+      if remaining_needed <= 0 then
+        break
+      end
+
+      sulfuric_acid_egressed = sulfuric_acid_egressed + drain_fluid_anchor(
+        entity,
+        anchor.resource,
+        math.min(ingress_tier.fluid_amount_per_interval, remaining_needed)
+      )
+    end
+  end
+
+  local budget = resource_balance.compute_uranium_budget(
+    sulfuric_acid_egressed,
+    mining_productivity_bonus,
+    bootstrap.uranium_ore_progress_carry or 0
+  )
+
+  bootstrap.uranium_ore_progress_carry = budget.remaining_ore_progress
+  return budget.ore_budget
+end
+
+local function pump_uranium_ingress_anchor(entity, ingress_tier, shared_budget)
+  if shared_budget <= 0 then
+    return 0
+  end
+
+  local lane_one_target = math.min(shared_budget, ingress_tier.item_lane_counts[1] or 0)
+  local inserted = pump_item_anchor(entity, "uranium-ore", 1, lane_one_target)
+  local remaining_budget = shared_budget - inserted
+  local lane_two_target = math.min(remaining_budget, ingress_tier.item_lane_counts[2] or 0)
+
+  inserted = inserted + pump_item_anchor(entity, "uranium-ore", 2, lane_two_target)
+  return inserted
 end
 
 local function pump_starter_anchors()
@@ -1197,14 +1410,30 @@ local function pump_starter_anchors()
   end
 
   local ingress_tier = get_current_ingress_tier()
+  local uranium_anchors = get_active_uranium_anchors(ingress_tier)
+  local uranium_budget = get_active_uranium_budget_per_interval(uranium_anchors)
+  local uranium_capacities = {}
+
+  for index, uranium_anchor in ipairs(uranium_anchors) do
+    uranium_capacities[index] = uranium_anchor.capacity
+  end
+
+  local uranium_allocations = resource_balance.allocate_shared_budget(uranium_budget, uranium_capacities).allocations
+  local uranium_anchor_index = 1
 
   for _, anchor in ipairs(starter_anchors.anchors) do
     local entity = anchor.position and anchor.entity or nil
 
-    if entity and entity.valid then
+    if entity and entity.valid and anchor.flow == "ingress" then
       if anchor.kind == "item" then
-        pump_item_anchor(entity, anchor.resource, 1, ingress_tier.item_lane_counts[1] or 0)
-        pump_item_anchor(entity, anchor.resource, 2, ingress_tier.item_lane_counts[2] or 0)
+        if anchor.resource == "uranium-ore" then
+          local allocated_budget = uranium_allocations[uranium_anchor_index] or 0
+          pump_uranium_ingress_anchor(entity, ingress_tier, allocated_budget)
+          uranium_anchor_index = uranium_anchor_index + 1
+        else
+          pump_item_anchor(entity, anchor.resource, 1, ingress_tier.item_lane_counts[1] or 0)
+          pump_item_anchor(entity, anchor.resource, 2, ingress_tier.item_lane_counts[2] or 0)
+        end
       else
         entity.insert_fluid({
           name = anchor.resource,
@@ -1392,7 +1621,7 @@ local function is_resource_unlocked(resource)
 end
 
 local function can_purchase_line(resource)
-  local definition = get_input_definition(resource)
+  local definition = get_input_definition(resource) or get_output_definition(resource)
 
   if not definition then
     return false, "message.fes-shop-resource-unknown", nil
@@ -1420,11 +1649,28 @@ local function spend_expansion_points(amount)
   return true
 end
 
-local function purchase_ingress_line(player, resource)
-  local bootstrap = storage.bootstrap
-  local definition = get_input_definition(resource)
+local function get_shop_item_name(resource)
+  local input_definition = get_input_definition(resource)
 
-  if not bootstrap or not definition then
+  if input_definition then
+    return get_ingress_item_name(resource)
+  end
+
+  local output_definition = get_output_definition(resource)
+
+  if output_definition then
+    return get_egress_item_name(resource)
+  end
+
+  return nil
+end
+
+local function purchase_managed_line(player, resource)
+  local bootstrap = storage.bootstrap
+  local definition, flow = get_line_definition(resource)
+  local item_name = get_shop_item_name(resource)
+
+  if not bootstrap or not definition or not item_name then
     return
   end
 
@@ -1433,9 +1679,9 @@ local function purchase_ingress_line(player, resource)
   if not can_purchase then
     if player and player.valid then
       if message_resource then
-        player.print({message_key, {"item-name." .. get_ingress_item_name(message_resource)}})
+        player.print({message_key, {"item-name." .. get_shop_item_name(message_resource)}})
       else
-        player.print({message_key, {"item-name." .. get_ingress_item_name(resource)}})
+        player.print({message_key, {"item-name." .. item_name}})
       end
     end
 
@@ -1451,13 +1697,13 @@ local function purchase_ingress_line(player, resource)
   end
 
   storage.starter_anchors = storage.starter_anchors or create_starter_anchor_state(bootstrap.square_size)
-  storage.starter_anchors.anchors[#storage.starter_anchors.anchors + 1] = create_ingress_anchor(definition, nil, nil)
+  storage.starter_anchors.anchors[#storage.starter_anchors.anchors + 1] = create_managed_anchor(definition, flow, nil, nil)
 
   if player and player.valid then
-    player_insert_or_spill(player, get_ingress_item_name(resource))
+    player_insert_or_spill(player, item_name)
     player.print({
       "message.fes-shop-purchased-line",
-      {"item-name." .. get_ingress_item_name(resource)},
+      {"item-name." .. item_name},
       LINE_PURCHASE_COST,
       bootstrap.expansion_points
     })
@@ -1503,7 +1749,7 @@ local function purchase_ingress_tier_upgrade(player)
   end
 end
 
-local function handle_ingress_built(entity, actor)
+local function handle_managed_anchor_built(entity, actor)
   if not (entity and entity.valid) then
     return
   end
@@ -1515,7 +1761,7 @@ local function handle_ingress_built(entity, actor)
   end
 
   if entity.surface.name ~= bootstrap.surface_name then
-    reject_anchor_placement(entity, actor, {"message.fes-ingress-invalid-surface"})
+    reject_anchor_placement(entity, actor, {"message.fes-managed-line-invalid-surface"})
     return
   end
 
@@ -1529,24 +1775,24 @@ local function handle_ingress_built(entity, actor)
   )
 
   if not side then
-    reject_anchor_placement(entity, actor, {"message.fes-ingress-invalid-edge"})
+    reject_anchor_placement(entity, actor, {"message.fes-managed-line-invalid-edge"})
     return
   end
 
   local anchor = find_matching_stashed_anchor(entity.name)
 
   if not anchor then
-    reject_anchor_placement(entity, actor, {"message.fes-ingress-unowned"})
+    reject_anchor_placement(entity, actor, {"message.fes-managed-line-unowned"})
     return
   end
 
   if is_fluid_anchor_too_close(anchor, snap_entity_position_to_tile(entity.position), side) then
-    reject_anchor_placement(entity, actor, {"message.fes-ingress-fluid-gap-required"})
+    reject_anchor_placement(entity, actor, {"message.fes-managed-line-fluid-gap-required"})
     return
   end
 
   if not place_anchor(anchor, entity, bootstrap.square_size) then
-    reject_anchor_placement(entity, actor, {"message.fes-ingress-invalid-edge"})
+    reject_anchor_placement(entity, actor, {"message.fes-managed-line-invalid-edge"})
     return
   end
 
@@ -1581,7 +1827,7 @@ local function handle_entity_built(event)
 
   if bootstrap
     and entity.surface.name == bootstrap.surface_name
-    and not is_ingress_entity_name(entity.name)
+    and not is_managed_anchor_entity_name(entity.name)
     and entity_overlaps_anchor_ring(bootstrap.square_size, entity)
   then
     reject_reserved_ring_placement(entity, actor, {"message.fes-edge-reserved"})
@@ -1597,8 +1843,8 @@ local function handle_entity_built(event)
     return
   end
 
-  if is_ingress_entity_name(entity.name) then
-    handle_ingress_built(entity, actor)
+  if is_managed_anchor_entity_name(entity.name) then
+    handle_managed_anchor_built(entity, actor)
   end
 end
 
@@ -2051,7 +2297,7 @@ local function ensure_shop_button(player)
 end
 
 local function build_shop_status_caption(resource)
-  local definition = get_input_definition(resource)
+  local definition = get_input_definition(resource) or get_output_definition(resource)
   local counts = get_owned_line_counts(resource)
 
   if not definition then
@@ -2158,6 +2404,26 @@ local function refresh_shop_gui(player)
       type = "button",
       name = "fes_shop_buy__" .. definition.resource,
       caption = {"gui.fes-shop-buy", {"item-name." .. get_ingress_item_name(definition.resource)}}
+    })
+
+    button.enabled = can_purchase and (bootstrap.expansion_points or 0) >= LINE_PURCHASE_COST
+
+    flow.add({
+      type = "label",
+      caption = build_shop_status_caption(definition.resource)
+    })
+  end
+
+  for _, definition in ipairs(OUTPUT_DEFINITIONS) do
+    local flow = frame.add({
+      type = "flow",
+      direction = "horizontal"
+    })
+    local can_purchase = can_purchase_line(definition.resource)
+    local button = flow.add({
+      type = "button",
+      name = "fes_shop_buy__" .. definition.resource,
+      caption = {"gui.fes-shop-buy", {"item-name." .. get_egress_item_name(definition.resource)}}
     })
 
     button.enabled = can_purchase and (bootstrap.expansion_points or 0) >= LINE_PURCHASE_COST
@@ -2480,7 +2746,7 @@ script.on_event(defines.events.on_gui_click, function(event)
   local resource = string.match(event.element.name, "^fes_shop_buy__(.+)$")
 
   if resource and player then
-    purchase_ingress_line(player, resource)
+    purchase_managed_line(player, resource)
     refresh_shop_gui(player)
     refresh_all_debug_guis()
     sync_all_shop_guis()
