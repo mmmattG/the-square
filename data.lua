@@ -244,6 +244,37 @@ local function build_ingress_item(definition)
   }
 end
 
+local function remove_collision_layers(collision_mask, layers_to_remove)
+  if not collision_mask then
+    return collision_mask
+  end
+
+  if collision_mask.layers then
+    for layer_name in pairs(layers_to_remove) do
+      collision_mask.layers[layer_name] = nil
+    end
+
+    return collision_mask
+  end
+
+  local filtered_mask = {}
+
+  for _, layer_name in ipairs(collision_mask) do
+    if not layers_to_remove[layer_name] then
+      filtered_mask[#filtered_mask + 1] = layer_name
+    end
+  end
+
+  return filtered_mask
+end
+
+local function allow_anchor_on_out_of_map(source)
+  source.collision_mask = remove_collision_layers(source.collision_mask, {
+    ["ground-tile"] = true,
+    ground_tile = true
+  })
+end
+
 local function build_ingress_entity(definition, belt_tier_key, belt_prototype_name)
   local source = definition.kind == "fluid"
     and table.deepcopy(data.raw.pipe.pipe)
@@ -257,6 +288,7 @@ local function build_ingress_entity(definition, belt_tier_key, belt_prototype_na
   source.minable = {mining_time = 0.1, result = item_name}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
+  allow_anchor_on_out_of_map(source)
 
   return source
 end
@@ -286,6 +318,7 @@ local function build_egress_entity(definition)
   source.minable = {mining_time = 0.1, result = item_name}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
+  allow_anchor_on_out_of_map(source)
 
   return source
 end

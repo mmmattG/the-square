@@ -1,4 +1,5 @@
 local SURFACE_NAME = "fes-bootstrap"
+local bootstrap_layout = require("lib.bootstrap_layout")
 local resource_balance = require("lib.resource_balance")
 local SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 local SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
@@ -260,20 +261,15 @@ local function is_logistic_network_automation_enabled()
 end
 
 local function get_square_bounds(size)
-  local left = -math.floor(size / 2)
-
-  return {
-    left_top = {x = left, y = left},
-    right_bottom = {x = left + size, y = left + size}
-  }
+  return bootstrap_layout.get_square_bounds(size)
 end
 
 local function get_surface_size(square_size)
-  return square_size + (STARTER_ANCHOR_OUTER_RING_WIDTH * 2)
+  return bootstrap_layout.get_surface_size(square_size, STARTER_ANCHOR_OUTER_RING_WIDTH)
 end
 
 local function get_anchor_bounds(square_size)
-  return get_square_bounds(square_size + 2)
+  return bootstrap_layout.get_anchor_bounds(square_size)
 end
 
 local function get_square_area(square_size)
@@ -333,10 +329,7 @@ local function get_next_expansion_tile_reward(square_size)
 end
 
 local function is_inside_bounds(bounds, position)
-  return position.x >= bounds.left_top.x
-    and position.x < bounds.right_bottom.x
-    and position.y >= bounds.left_top.y
-    and position.y < bounds.right_bottom.y
+  return bootstrap_layout.is_inside_bounds(bounds, position)
 end
 
 local function get_position_key(position)
@@ -488,53 +481,21 @@ local function move_position(position, side, distance)
 end
 
 local function get_anchor_side_for_position(square_size, position)
-  local bounds = get_anchor_bounds(square_size)
-  local min_x = bounds.left_top.x
-  local min_y = bounds.left_top.y
-  local max_x = bounds.right_bottom.x - 1
-  local max_y = bounds.right_bottom.y - 1
-
-  if position.y == min_y and position.x > min_x and position.x < max_x then
-    return "north"
-  end
-
-  if position.x == max_x and position.y > min_y and position.y < max_y then
-    return "east"
-  end
-
-  if position.y == max_y and position.x > min_x and position.x < max_x then
-    return "south"
-  end
-
-  if position.x == min_x and position.y > min_y and position.y < max_y then
-    return "west"
-  end
-
-  return nil
+  return bootstrap_layout.get_anchor_side_for_position(square_size, position)
 end
 
 local function is_anchor_ring_position(square_size, position)
-  return get_anchor_side_for_position(square_size, position) ~= nil
+  return bootstrap_layout.is_anchor_ring_position(square_size, position)
 end
 
 local function get_managed_tile_name(square_size, surface_size, position)
-  local square_bounds = get_square_bounds(square_size)
-
-  if is_inside_bounds(square_bounds, position) then
-    return FLOOR_TILE_NAME
-  end
-
-  local surface_bounds = get_square_bounds(surface_size)
-
-  if is_inside_bounds(surface_bounds, position) then
-    if is_anchor_ring_position(square_size, position) then
-      return FLOOR_TILE_NAME
-    end
-
-    return VOID_TILE_NAME
-  end
-
-  return nil
+  return bootstrap_layout.get_managed_tile_name(
+    square_size,
+    surface_size,
+    FLOOR_TILE_NAME,
+    VOID_TILE_NAME,
+    position
+  )
 end
 
 local function build_anchor_ring_tiles(square_size, surface_size, anchors)
@@ -555,6 +516,18 @@ local function build_anchor_ring_tiles(square_size, surface_size, anchors)
   end
 
   return tiles
+end
+
+local function refresh_managed_surface_tiles(surface, square_size, surface_size)
+  if not surface then
+    return
+  end
+
+  local tile_updates = build_anchor_ring_tiles(square_size, surface_size, {})
+
+  if #tile_updates > 0 then
+    surface.set_tiles(tile_updates, false, true, true, false)
+  end
 end
 
 local function build_bootstrap_tiles(square_size, surface_size, anchors)
@@ -2647,6 +2620,12 @@ script.on_configuration_changed(function()
   if storage.bootstrap then
     ensure_bootstrap_state_defaults()
     ensure_starter_anchor_state()
+    local surface = game.surfaces[storage.bootstrap.surface_name]
+
+    if surface then
+      refresh_managed_surface_tiles(surface, storage.bootstrap.square_size, storage.bootstrap.surface_size)
+    end
+
     refresh_spawn_routing()
     return
   end
