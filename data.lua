@@ -16,9 +16,9 @@ local egress_resources = {
 }
 
 local item_ingress_belt_tiers = {
-  {key = "yellow", prototype_name = "transport-belt"},
-  {key = "red", prototype_name = "fast-transport-belt"},
-  {key = "blue", prototype_name = "express-transport-belt"}
+  {key = "yellow", prototype_name = "underground-belt"},
+  {key = "red", prototype_name = "fast-underground-belt"},
+  {key = "blue", prototype_name = "express-underground-belt"}
 }
 
 local square_expansion_research_bands = {
@@ -215,8 +215,8 @@ end
 
 local function build_ingress_entity(definition, belt_tier_key, belt_prototype_name)
   local source = definition.kind == "fluid"
-    and table.deepcopy(data.raw.pipe.pipe)
-    or table.deepcopy(data.raw["transport-belt"][belt_prototype_name or "transport-belt"])
+    and table.deepcopy(data.raw["offshore-pump"]["offshore-pump"])
+    or table.deepcopy(data.raw["underground-belt"][belt_prototype_name or "underground-belt"])
   local item_name = ingress_item_name(definition.resource)
 
   source.name = ingress_entity_name(definition.resource, belt_tier_key)
@@ -283,7 +283,7 @@ local function build_anchor_place_input()
 end
 
 local function build_egress_entity(definition)
-  local source = table.deepcopy(data.raw.pipe.pipe)
+  local source = table.deepcopy(data.raw["offshore-pump"]["offshore-pump"])
   local item_name = egress_item_name(definition.resource)
 
   source.name = egress_entity_name(definition.resource)

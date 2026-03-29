@@ -25,7 +25,7 @@ runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS = 8
 runtime_defs.ANCHOR_SLOT_PROXY_NAME = "fes-anchor-slot-proxy"
 runtime_defs.PLACE_MANAGED_ANCHOR_INPUT_NAME = "fes-place-managed-anchor"
 runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH = 1
-runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION = 8
+runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION = 12
 runtime_defs.DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
 runtime_defs.DEBUG_FRAME_NAME = "fes_debug_frame"
 runtime_defs.STATUS_FRAME_NAME = "fes_status_frame"
@@ -116,6 +116,12 @@ runtime_defs.DIRECTION_BY_SIDE = {
   east = defines.direction.west,
   south = defines.direction.north,
   west = defines.direction.east
+}
+runtime_defs.REVERSED_DIRECTION_BY_SIDE = {
+  north = defines.direction.north,
+  east = defines.direction.east,
+  south = defines.direction.south,
+  west = defines.direction.west
 }
 runtime_defs.OFFSET_BY_SIDE = {
   north = {x = 0, y = -1},
@@ -251,7 +257,7 @@ function runtime_defs.create_managed_anchor(definition, flow, side, position)
     kind = definition.kind,
     flow = flow,
     side = side,
-    direction = side and runtime_defs.DIRECTION_BY_SIDE[side] or nil,
+    direction = side and runtime_defs.get_anchor_direction_for_side(flow, definition.kind, side) or nil,
     position = position,
     item_name = flow == "egress"
       and runtime_defs.get_egress_item_name(definition.resource)
@@ -261,6 +267,18 @@ function runtime_defs.create_managed_anchor(definition, flow, side, position)
       or runtime_defs.get_ingress_entity_name(definition.resource),
     item_progress = {0, 0}
   }
+end
+
+function runtime_defs.get_anchor_direction_for_side(flow, kind, side)
+  if not side then
+    return nil
+  end
+
+  if kind == "fluid" then
+    return runtime_defs.REVERSED_DIRECTION_BY_SIDE[side]
+  end
+
+  return runtime_defs.DIRECTION_BY_SIDE[side]
 end
 
 function runtime_defs.get_square_size()
