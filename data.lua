@@ -323,14 +323,12 @@ local function build_anchor_slot_proxy()
     selectable_in_game = true,
     collision_box = {{0, 0}, {0, 0}},
     collision_mask = {layers = {}},
-    selection_box = {{-0.45, -0.45}, {0.45, 0.45}},
+    selection_box = {{-0.5, -0.5}, {0.5, 0.5}},
     max_health = 1,
     render_layer = "object",
     picture = {
-      filename = "__base__/graphics/icons/info.png",
-      size = 64,
-      scale = 0.35,
-      tint = {r = 0.85, g = 0.85, b = 0.85, a = 0.35}
+      filename = "__core__/graphics/empty.png",
+      size = 1
     }
   }
 end
