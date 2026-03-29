@@ -154,6 +154,51 @@ local dummy_research_definitions = {
   }
 }
 
+local tips_and_tricks_items = {
+  {
+    name = "fes-mod",
+    order = "a[mod]",
+    category = "fes-rules",
+    icon = "__base__/graphics/icons/info.png",
+    is_title = true
+  },
+  {
+    name = "fes-overview",
+    order = "b[overview]",
+    category = "fes-rules",
+    icon = "__base__/graphics/icons/info.png",
+    indent = 1
+  },
+  {
+    name = "fes-utilization-and-growth",
+    order = "c[utilization-and-growth]",
+    category = "fes-rules",
+    icon = "__base__/graphics/icons/lab.png",
+    indent = 1
+  },
+  {
+    name = "fes-ingress-lines",
+    order = "d[ingress-lines]",
+    category = "fes-rules",
+    icon = "__base__/graphics/icons/transport-belt.png",
+    indent = 1
+  },
+  {
+    name = "fes-research-and-rewards",
+    order = "e[research-and-rewards]",
+    category = "fes-rules",
+    icon = "__base__/graphics/icons/utility-science-pack.png",
+    indent = 1
+  },
+  {
+    name = "fes-logistics-rule",
+    order = "f[logistics-rule]",
+    category = "fes-rules",
+    icon = "__base__/graphics/icons/logistic-robot.png",
+    indent = 1
+  }
+}
+
 local function ingress_item_name(resource)
   return "fes-" .. resource .. "-ingress"
 end
@@ -247,7 +292,29 @@ local function build_dummy_research(definition)
   }
 end
 
+local function build_tips_item(definition)
+  return {
+    type = "tips-and-tricks-item",
+    name = definition.name,
+    order = definition.order,
+    category = definition.category,
+    starting_status = "unlocked",
+    indent = definition.indent,
+    is_title = definition.is_title,
+    localised_name = {"tips-and-tricks-item-name." .. definition.name},
+    localised_description = {"tips-and-tricks-item-description." .. definition.name},
+    icon = definition.icon,
+    icon_size = 64
+  }
+end
+
 local prototypes = {}
+
+prototypes[#prototypes + 1] = {
+  type = "tips-and-tricks-item-category",
+  name = "fes-rules",
+  order = "o[factorio-expanding-square]"
+}
 
 for _, definition in ipairs(ingress_resources) do
   prototypes[#prototypes + 1] = build_ingress_item(definition)
@@ -271,6 +338,10 @@ end
 
 for _, definition in ipairs(dummy_research_definitions) do
   prototypes[#prototypes + 1] = build_dummy_research(definition)
+end
+
+for _, definition in ipairs(tips_and_tricks_items) do
+  prototypes[#prototypes + 1] = build_tips_item(definition)
 end
 
 data:extend(prototypes)
