@@ -7,6 +7,7 @@ local runtime_defs = {}
 runtime_defs.SURFACE_NAME = "fes-bootstrap"
 runtime_defs.SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH = "fes-expansion-tiles-per-research"
+runtime_defs.SETTING_LINE_PURCHASE_COST = "fes-line-purchase-cost"
 runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
 runtime_defs.SETTING_DEV_MODE = "fes-dev-mode"
 runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
@@ -23,8 +24,24 @@ runtime_defs.DEBUG_FRAME_NAME = "fes_debug_frame"
 runtime_defs.STATUS_FRAME_NAME = "fes_status_frame"
 runtime_defs.SHOP_BUTTON_NAME = "fes_shop_button"
 runtime_defs.SHOP_FRAME_NAME = "fes_shop_frame"
-runtime_defs.LINE_PURCHASE_COST = 12
 runtime_defs.MAX_INGRESS_TIER = 4
+runtime_defs.INGRESS_RESEARCH_DEFINITIONS = {
+  {
+    technology_name = "fes-ingress-dual-lane",
+    prerequisite_technology_name = "logistics",
+    tier_level = 2
+  },
+  {
+    technology_name = "fes-ingress-red",
+    prerequisite_technology_name = "logistics-2",
+    tier_level = 3
+  },
+  {
+    technology_name = "fes-ingress-blue",
+    prerequisite_technology_name = "logistics-3",
+    tier_level = 4
+  }
+}
 runtime_defs.EXPANSION_RESEARCH_LEVELS_PER_TIER = 10
 runtime_defs.MAX_EXPANSION_RESEARCH_LEVEL = expansion_research.MAX_LEVEL
 runtime_defs.EXPANSION_RESEARCH_BANDS = {
@@ -247,6 +264,10 @@ function runtime_defs.get_expansion_tiles_per_research()
   return settings.startup[runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH].value
 end
 
+function runtime_defs.get_line_purchase_cost()
+  return settings.global[runtime_defs.SETTING_LINE_PURCHASE_COST].value
+end
+
 function runtime_defs.is_logistic_network_automation_enabled()
   return settings.global[runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION].value
 end
@@ -295,22 +316,22 @@ function runtime_defs.get_current_ingress_tier()
   return runtime_defs.get_ingress_tier_definition(runtime_defs.get_current_ingress_tier_level())
 end
 
-function runtime_defs.get_next_ingress_tier_level()
-  local next_level = runtime_defs.get_current_ingress_tier_level() + 1
+function runtime_defs.get_ingress_tier_level_for_force(force)
+  local tier_level = 1
 
-  if next_level > runtime_defs.MAX_INGRESS_TIER then
-    return nil
+  if not (force and force.valid and force.technologies) then
+    return tier_level
   end
 
-  return next_level
-end
+  for _, definition in ipairs(runtime_defs.INGRESS_RESEARCH_DEFINITIONS) do
+    local technology = force.technologies[definition.technology_name]
 
-function runtime_defs.get_ingress_tier_upgrade_cost(next_tier_level)
-  if not next_tier_level then
-    return nil
+    if technology and technology.researched and definition.tier_level > tier_level then
+      tier_level = definition.tier_level
+    end
   end
 
-  return runtime_defs.LINE_PURCHASE_COST * next_tier_level
+  return tier_level
 end
 
 function runtime_defs.get_next_expansion_tile_reward(square_size)

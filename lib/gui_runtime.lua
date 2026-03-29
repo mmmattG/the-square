@@ -224,28 +224,6 @@ local function build_shop_status_caption(resource, anchor_runtime)
   return "Not yet unlocked"
 end
 
-local function build_ingress_upgrade_caption(next_tier_level)
-  local next_tier = next_tier_level and defs.get_ingress_tier_definition(next_tier_level) or nil
-
-  if not next_tier then
-    return "Ingress tier maxed"
-  end
-
-  return "Upgrade to " .. next_tier.label
-end
-
-local function build_ingress_upgrade_status_caption()
-  local current_tier = defs.get_current_ingress_tier()
-  local next_tier_level = defs.get_next_ingress_tier_level()
-  local next_cost = defs.get_ingress_tier_upgrade_cost(next_tier_level)
-
-  if not next_tier_level or not next_cost then
-    return "Current: " .. current_tier.label .. " (maximum tier)"
-  end
-
-  return "Current: " .. current_tier.label .. " | Next cost: " .. next_cost
-end
-
 local function ensure_shop_frame(player)
   local frame = player.gui.left[defs.SHOP_FRAME_NAME]
 
@@ -280,28 +258,8 @@ function gui_runtime.refresh_shop_gui(player, anchor_runtime)
   })
   frame.add({
     type = "label",
-    caption = {"gui.fes-shop-line-cost", defs.LINE_PURCHASE_COST}
+    caption = {"gui.fes-shop-line-cost", defs.get_line_purchase_cost()}
   })
-  do
-    local flow = frame.add({
-      type = "flow",
-      direction = "horizontal"
-    })
-    local next_tier_level = defs.get_next_ingress_tier_level()
-    local next_upgrade_cost = defs.get_ingress_tier_upgrade_cost(next_tier_level)
-    local button = flow.add({
-      type = "button",
-      name = "fes_shop_upgrade_ingress",
-      caption = build_ingress_upgrade_caption(next_tier_level)
-    })
-
-    button.enabled = next_upgrade_cost ~= nil and (bootstrap.expansion_points or 0) >= next_upgrade_cost
-
-    flow.add({
-      type = "label",
-      caption = build_ingress_upgrade_status_caption()
-    })
-  end
 
   for _, definition in ipairs(defs.INPUT_DEFINITIONS) do
     local flow = frame.add({
@@ -315,7 +273,7 @@ function gui_runtime.refresh_shop_gui(player, anchor_runtime)
       caption = {"gui.fes-shop-buy", {"item-name." .. defs.get_ingress_item_name(definition.resource)}}
     })
 
-    button.enabled = can_purchase and (bootstrap.expansion_points or 0) >= defs.LINE_PURCHASE_COST
+    button.enabled = can_purchase and (bootstrap.expansion_points or 0) >= defs.get_line_purchase_cost()
 
     flow.add({
       type = "label",
@@ -335,7 +293,7 @@ function gui_runtime.refresh_shop_gui(player, anchor_runtime)
       caption = {"gui.fes-shop-buy", {"item-name." .. defs.get_egress_item_name(definition.resource)}}
     })
 
-    button.enabled = can_purchase and (bootstrap.expansion_points or 0) >= defs.LINE_PURCHASE_COST
+    button.enabled = can_purchase and (bootstrap.expansion_points or 0) >= defs.get_line_purchase_cost()
 
     flow.add({
       type = "label",

@@ -750,6 +750,25 @@ local function spend_expansion_points(amount)
   return true
 end
 
+function anchor_runtime.sync_ingress_tier_from_research(force)
+  local bootstrap = storage.bootstrap
+
+  if not bootstrap then
+    return false
+  end
+
+  local target_tier_level = defs.get_ingress_tier_level_for_force(force or defs.get_player_force())
+
+  if bootstrap.ingress_tier == target_tier_level then
+    return false
+  end
+
+  bootstrap.ingress_tier = target_tier_level
+  anchor_runtime.ensure_starter_anchors()
+
+  return true
+end
+
 local function get_shop_item_name(resource)
   local input_definition = defs.get_input_definition(resource)
 
@@ -770,6 +789,7 @@ function anchor_runtime.purchase_managed_line_for_resource(player, resource)
   local bootstrap = storage.bootstrap
   local definition, flow = defs.get_line_definition(resource)
   local item_name = get_shop_item_name(resource)
+  local line_purchase_cost = defs.get_line_purchase_cost()
 
   if not bootstrap or not definition or not item_name then
     return
@@ -789,9 +809,9 @@ function anchor_runtime.purchase_managed_line_for_resource(player, resource)
     return
   end
 
-  if not spend_expansion_points(defs.LINE_PURCHASE_COST) then
+  if not spend_expansion_points(line_purchase_cost) then
     if player and player.valid then
-      player.print({"message.fes-shop-not-enough-points", defs.LINE_PURCHASE_COST})
+      player.print({"message.fes-shop-not-enough-points", line_purchase_cost})
     end
 
     return
@@ -808,46 +828,7 @@ function anchor_runtime.purchase_managed_line_for_resource(player, resource)
     player.print({
       "message.fes-shop-purchased-line",
       {"item-name." .. item_name},
-      defs.LINE_PURCHASE_COST,
-      bootstrap.expansion_points
-    })
-  end
-end
-
-function anchor_runtime.purchase_ingress_tier_upgrade(player)
-  local bootstrap = storage.bootstrap
-  local next_tier_level = defs.get_next_ingress_tier_level()
-  local next_tier = next_tier_level and defs.get_ingress_tier_definition(next_tier_level) or nil
-  local upgrade_cost = defs.get_ingress_tier_upgrade_cost(next_tier_level)
-
-  if not bootstrap then
-    return
-  end
-
-  if not next_tier_level or not next_tier or not upgrade_cost then
-    if player and player.valid then
-      player.print({"message.fes-shop-ingress-max-tier"})
-    end
-
-    return
-  end
-
-  if not spend_expansion_points(upgrade_cost) then
-    if player and player.valid then
-      player.print({"message.fes-shop-not-enough-points", upgrade_cost})
-    end
-
-    return
-  end
-
-  bootstrap.ingress_tier = next_tier_level
-  anchor_runtime.ensure_starter_anchors()
-
-  if player and player.valid then
-    player.print({
-      "message.fes-shop-purchased-ingress-tier",
-      next_tier.label,
-      upgrade_cost,
+      line_purchase_cost,
       bootstrap.expansion_points
     })
   end

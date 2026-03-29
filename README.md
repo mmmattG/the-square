@@ -15,6 +15,8 @@ The starting square size is a per-save map setting (`runtime-global` in Factorio
 
 Because square-expansion technologies are generated in the data stage, their precomputed costs use the default starting square size of `7` even if a save overrides the map setting. That mismatch is acceptable in practice because the ring costs quickly converge toward the same values as the square grows.
 
+`Ingress and egress line cost` is a per-save map setting. It defaults to `1000` expansion points for each additional owned ingress or egress line.
+
 `Enable logistic network automation` is also a per-save map setting. It is off by default, which blocks `active provider`, `buffer`, `requester`, and `storage` chests while still allowing passive providers, roboports, and logistic/construction bots.
 
 Square growth is now driven directly by research. Each completed level of `Square expansion` immediately expands the map by one ring and awards expansion points for the newly unlocked tiles.
@@ -22,6 +24,7 @@ Square growth is now driven directly by research. Each completed level of `Squar
 Research now includes custom expanding-square technologies:
 
 - `Square expansion` is a repeatable research line that starts with red science, then steps up to broader science-pack bands every 10 completed levels.
+- `Dual-lane ingress`, `Red ingress`, and `Blue ingress` are one-time researches unlocked after `Logistics`, `Logistics 2`, and `Logistics 3`. Each copies the science cost of the logistics technology that gates it.
 
 For manual testing, enable the per-player `Developer mode` runtime setting. That adds an `Expand square` button to the top-left UI plus a debug panel showing the current square-expansion progression state.
 

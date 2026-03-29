@@ -72,16 +72,15 @@ This document lists planned features for `factorio-expanding-square`, grouped fi
 
 - Item lines start at single yellow-belt-lane equivalent
 - Fluid lines start at the matching lowest fluid ingress tier
-- Global ingress upgrade affects all item and fluid lines
-- Global ingress upgrades apply retroactively to existing and stashed lines
-- Later ingress upgrade enables double-lane item throughput on one anchor
+- Research-driven ingress upgrades affect all item and fluid lines
+- Ingress upgrades apply retroactively to existing and stashed lines
+- Logistics unlocks dual-lane yellow ingress, Logistics 2 unlocks red ingress, and Logistics 3 unlocks blue ingress
 - Additional lines have flat cost in v1
-- Global ingress upgrades scale by level
 - Expansion points awarded equal newly unlocked tiles
 - Expansion points spent on:
   - new resource lines
   - additional lines for unlocked resources
-  - global ingress tier upgrades
+  - additional ingress and egress lines
 
 ### Research
 

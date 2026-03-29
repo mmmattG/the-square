@@ -34,6 +34,7 @@ script.on_configuration_changed(function()
   if storage.bootstrap then
     bootstrap_runtime.ensure_bootstrap_state_defaults()
     anchor_runtime.ensure_starter_anchor_state()
+    anchor_runtime.sync_ingress_tier_from_research(defs.get_player_force())
 
     if storage.bootstrap.square_size ~= defs.get_square_size() then
       bootstrap_runtime.notify_square_size_change_applies_to_new_saves()
@@ -103,16 +104,6 @@ script.on_event(defines.events.on_gui_click, function(event)
     return
   end
 
-  if event.element.name == "fes_shop_upgrade_ingress" then
-    if player then
-      anchor_runtime.purchase_ingress_tier_upgrade(player)
-      gui_runtime.refresh_shop_gui(player, anchor_runtime)
-      sync_all_runtime_guis()
-    end
-
-    return
-  end
-
   local resource = string.match(event.element.name, "^fes_shop_buy__(.+)$")
 
   if resource and player then
@@ -147,6 +138,11 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
     return
   end
 
+  if event.setting == defs.SETTING_LINE_PURCHASE_COST then
+    gui_runtime.sync_all_shop_guis(anchor_runtime)
+    return
+  end
+
   if event.setting == defs.SETTING_DEV_MODE then
     local player = game.get_player(event.player_index)
 
@@ -166,6 +162,10 @@ script.on_event(defines.events.on_research_finished, function(event)
   end
 
   if growth_runtime.handle_expansion_research_finished(research, bootstrap_runtime, gui_runtime, anchor_runtime) then
+    sync_all_runtime_guis()
+  end
+
+  if anchor_runtime.sync_ingress_tier_from_research(research.force) then
     sync_all_runtime_guis()
   end
 
