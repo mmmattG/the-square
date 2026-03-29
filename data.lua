@@ -273,6 +273,7 @@ local function allow_anchor_on_out_of_map(source)
     ["ground-tile"] = true,
     ground_tile = true
   })
+  source.tile_buildability_rules = nil
 end
 
 local function build_ingress_entity(definition, belt_tier_key, belt_prototype_name)
