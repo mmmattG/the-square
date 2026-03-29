@@ -27,7 +27,7 @@ run_test("starting square framing includes two void tiles on each side", functio
   assert_equal(spec.tile_span, 11, "a 7x7 square with a two-tile margin should span 11 tiles")
   assert_equal(spec.resolution.x, 352, "resolution should use 32 pixels per tile")
   assert_equal(spec.resolution.y, 352, "resolution should use 32 pixels per tile")
-  assert_equal(spec.zoom, 1, "captures should use Factorio's default zoom")
+  assert_equal(spec.zoom, 1, "32 pixels per tile should map to Factorio's default zoom")
 end)
 
 run_test("expanded squares keep the same deterministic two-tile margin", function()
@@ -38,4 +38,5 @@ run_test("expanded squares keep the same deterministic two-tile margin", functio
   assert_equal(spec.tile_span, 17, "the image should grow with the square while keeping the same margin")
   assert_equal(spec.resolution.x, 816, "resolution should scale directly with the configured pixels per tile")
   assert_equal(spec.resolution.y, 816, "resolution should scale directly with the configured pixels per tile")
+  assert_equal(spec.zoom, 1.5, "zoom should scale with render density so the same tiles stay in frame")
 end)
