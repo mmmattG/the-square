@@ -310,7 +310,7 @@ local function build_anchor_slot_proxy()
   return {
     type = "simple-entity-with-owner",
     name = "fes-anchor-slot-proxy",
-    icon = "__base__/graphics/icons/ghost.png",
+    icon = "__base__/graphics/icons/info.png",
     icon_size = 64,
     flags = {
       "not-on-map",
@@ -327,7 +327,7 @@ local function build_anchor_slot_proxy()
     max_health = 1,
     render_layer = "object",
     picture = {
-      filename = "__base__/graphics/icons/ghost.png",
+      filename = "__base__/graphics/icons/info.png",
       size = 64,
       scale = 0.35,
       tint = {r = 0.85, g = 0.85, b = 0.85, a = 0.35}
