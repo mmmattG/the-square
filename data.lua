@@ -239,9 +239,40 @@ local function build_ingress_item(definition)
     icon_size = 64,
     subgroup = definition.kind == "fluid" and "energy-pipe-distribution" or "belt",
     order = definition.order,
-    stack_size = 50,
-    place_result = ingress_entity_name(definition.resource, definition.kind == "item" and "yellow" or nil)
+    stack_size = 50
   }
+end
+
+local function remove_collision_layers(collision_mask, layers_to_remove)
+  if not collision_mask then
+    return collision_mask
+  end
+
+  if collision_mask.layers then
+    for layer_name in pairs(layers_to_remove) do
+      collision_mask.layers[layer_name] = nil
+    end
+
+    return collision_mask
+  end
+
+  local filtered_mask = {}
+
+  for _, layer_name in ipairs(collision_mask) do
+    if not layers_to_remove[layer_name] then
+      filtered_mask[#filtered_mask + 1] = layer_name
+    end
+  end
+
+  return filtered_mask
+end
+
+local function allow_anchor_on_out_of_map(source)
+  source.collision_mask = remove_collision_layers(source.collision_mask, {
+    ["ground-tile"] = true,
+    ground_tile = true
+  })
+  source.tile_buildability_rules = nil
 end
 
 local function build_ingress_entity(definition, belt_tier_key, belt_prototype_name)
@@ -257,6 +288,7 @@ local function build_ingress_entity(definition, belt_tier_key, belt_prototype_na
   source.minable = {mining_time = 0.1, result = item_name}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
+  allow_anchor_on_out_of_map(source)
 
   return source
 end
@@ -270,8 +302,45 @@ local function build_egress_item(definition)
     icon_size = 64,
     subgroup = "energy-pipe-distribution",
     order = definition.order,
-    stack_size = 50,
-    place_result = egress_entity_name(definition.resource)
+    stack_size = 50
+  }
+end
+
+local function build_anchor_slot_proxy()
+  return {
+    type = "simple-entity-with-owner",
+    name = "fes-anchor-slot-proxy",
+    icon = "__base__/graphics/icons/info.png",
+    icon_size = 64,
+    flags = {
+      "not-on-map",
+      "placeable-off-grid",
+      "not-blueprintable",
+      "not-deconstructable",
+      "not-flammable"
+    },
+    hidden_in_factoriopedia = true,
+    selectable_in_game = true,
+    collision_box = {{0, 0}, {0, 0}},
+    collision_mask = {layers = {}},
+    selection_box = {{-0.5, -0.5}, {0.5, 0.5}},
+    max_health = 1,
+    render_layer = "object",
+    picture = {
+      filename = "__core__/graphics/empty.png",
+      size = 1
+    }
+  }
+end
+
+local function build_anchor_place_input()
+  return {
+    type = "custom-input",
+    name = "fes-place-managed-anchor",
+    key_sequence = "",
+    linked_game_control = "build",
+    consuming = "none",
+    include_selected_prototype = true
   }
 end
 
@@ -286,6 +355,7 @@ local function build_egress_entity(definition)
   source.minable = {mining_time = 0.1, result = item_name}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
+  allow_anchor_on_out_of_map(source)
 
   return source
 end
@@ -363,6 +433,9 @@ prototypes[#prototypes + 1] = {
   name = "fes-rules",
   order = "o[factorio-expanding-square]"
 }
+
+prototypes[#prototypes + 1] = build_anchor_slot_proxy()
+prototypes[#prototypes + 1] = build_anchor_place_input()
 
 for _, definition in ipairs(ingress_resources) do
   prototypes[#prototypes + 1] = build_ingress_item(definition)

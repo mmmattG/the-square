@@ -1,4 +1,5 @@
 local SURFACE_NAME = "fes-bootstrap"
+local bootstrap_layout = require("lib.bootstrap_layout")
 local resource_balance = require("lib.resource_balance")
 local SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 local SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
@@ -8,6 +9,8 @@ local FLOOR_TILE_NAME = "grass-1"
 local VOID_TILE_NAME = "out-of-map"
 local CHART_MARGIN = 1
 local ITEM_ANCHOR_INTERVAL_TICKS = 8
+local ANCHOR_SLOT_PROXY_NAME = "fes-anchor-slot-proxy"
+local PLACE_MANAGED_ANCHOR_INPUT_NAME = "fes-place-managed-anchor"
 local STARTER_ANCHOR_OUTER_RING_WIDTH = 2
 local STARTER_ANCHOR_LAYOUT_VERSION = 8
 local DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
@@ -260,20 +263,15 @@ local function is_logistic_network_automation_enabled()
 end
 
 local function get_square_bounds(size)
-  local left = -math.floor(size / 2)
-
-  return {
-    left_top = {x = left, y = left},
-    right_bottom = {x = left + size, y = left + size}
-  }
+  return bootstrap_layout.get_square_bounds(size)
 end
 
 local function get_surface_size(square_size)
-  return square_size + (STARTER_ANCHOR_OUTER_RING_WIDTH * 2)
+  return bootstrap_layout.get_surface_size(square_size, STARTER_ANCHOR_OUTER_RING_WIDTH)
 end
 
 local function get_anchor_bounds(square_size)
-  return get_square_bounds(square_size + 2)
+  return bootstrap_layout.get_anchor_bounds(square_size)
 end
 
 local function get_square_area(square_size)
@@ -333,10 +331,7 @@ local function get_next_expansion_tile_reward(square_size)
 end
 
 local function is_inside_bounds(bounds, position)
-  return position.x >= bounds.left_top.x
-    and position.x < bounds.right_bottom.x
-    and position.y >= bounds.left_top.y
-    and position.y < bounds.right_bottom.y
+  return bootstrap_layout.is_inside_bounds(bounds, position)
 end
 
 local function get_position_key(position)
@@ -488,53 +483,25 @@ local function move_position(position, side, distance)
 end
 
 local function get_anchor_side_for_position(square_size, position)
-  local bounds = get_anchor_bounds(square_size)
-  local min_x = bounds.left_top.x
-  local min_y = bounds.left_top.y
-  local max_x = bounds.right_bottom.x - 1
-  local max_y = bounds.right_bottom.y - 1
-
-  if position.y == min_y and position.x > min_x and position.x < max_x then
-    return "north"
-  end
-
-  if position.x == max_x and position.y > min_y and position.y < max_y then
-    return "east"
-  end
-
-  if position.y == max_y and position.x > min_x and position.x < max_x then
-    return "south"
-  end
-
-  if position.x == min_x and position.y > min_y and position.y < max_y then
-    return "west"
-  end
-
-  return nil
+  return bootstrap_layout.get_anchor_side_for_position(square_size, position)
 end
 
 local function is_anchor_ring_position(square_size, position)
-  return get_anchor_side_for_position(square_size, position) ~= nil
+  return bootstrap_layout.is_anchor_ring_position(square_size, position)
+end
+
+local function get_playable_edge_side_for_position(square_size, position)
+  return bootstrap_layout.get_playable_edge_side_for_position(square_size, position)
 end
 
 local function get_managed_tile_name(square_size, surface_size, position)
-  local square_bounds = get_square_bounds(square_size)
-
-  if is_inside_bounds(square_bounds, position) then
-    return FLOOR_TILE_NAME
-  end
-
-  local surface_bounds = get_square_bounds(surface_size)
-
-  if is_inside_bounds(surface_bounds, position) then
-    if is_anchor_ring_position(square_size, position) then
-      return FLOOR_TILE_NAME
-    end
-
-    return VOID_TILE_NAME
-  end
-
-  return nil
+  return bootstrap_layout.get_managed_tile_name(
+    square_size,
+    surface_size,
+    FLOOR_TILE_NAME,
+    VOID_TILE_NAME,
+    position
+  )
 end
 
 local function build_anchor_ring_tiles(square_size, surface_size, anchors)
@@ -555,6 +522,18 @@ local function build_anchor_ring_tiles(square_size, surface_size, anchors)
   end
 
   return tiles
+end
+
+local function refresh_managed_surface_tiles(surface, square_size, surface_size)
+  if not surface then
+    return
+  end
+
+  local tile_updates = build_anchor_ring_tiles(square_size, surface_size, {})
+
+  if #tile_updates > 0 then
+    surface.set_tiles(tile_updates, false, true, true, false)
+  end
 end
 
 local function build_bootstrap_tiles(square_size, surface_size, anchors)
@@ -909,6 +888,13 @@ local function find_entity_at_position(surface, prototype_name, position)
   return entities[1]
 end
 
+local function get_tile_center_position(position)
+  return {
+    x = position.x + 0.5,
+    y = position.y + 0.5
+  }
+end
+
 local function configure_source_anchor_entity(entity, direction)
   if not (entity and entity.valid) then
     return
@@ -943,7 +929,9 @@ local function is_egress_entity_name(entity_name)
 end
 
 local function is_managed_anchor_entity_name(entity_name)
-  return is_ingress_entity_name(entity_name) or is_egress_entity_name(entity_name)
+  return entity_name == ANCHOR_SLOT_PROXY_NAME
+    or is_ingress_entity_name(entity_name)
+    or is_egress_entity_name(entity_name)
 end
 
 local function does_anchor_match_entity_name(anchor, entity_name)
@@ -1048,6 +1036,20 @@ local function place_anchor(anchor, entity, square_size)
   anchor.entity_name = get_anchor_entity_name_for_current_tier(anchor)
   anchor.entity = entity
   configure_source_anchor_entity(entity, anchor.direction)
+
+  return true
+end
+
+local function assign_anchor_position(anchor, side, position)
+  if not (anchor and side and position) then
+    return false
+  end
+
+  anchor.position = position
+  anchor.side = side
+  anchor.direction = DIRECTION_BY_SIDE[side]
+  anchor.entity_name = get_anchor_entity_name_for_current_tier(anchor)
+  anchor.entity = nil
 
   return true
 end
@@ -1176,6 +1178,63 @@ local function ensure_anchor_entity(surface, anchor)
   return entity
 end
 
+local function get_anchor_ring_positions(square_size)
+  local positions = {}
+  local bounds = get_anchor_bounds(square_size)
+
+  for _, side in ipairs({"north", "east", "south", "west"}) do
+    local side_positions = get_edge_positions(bounds, side)
+
+    for _, position in ipairs(side_positions) do
+      positions[#positions + 1] = position
+    end
+  end
+
+  return positions
+end
+
+local function ensure_anchor_slot_proxies(surface, square_size, starter_anchors)
+  if not (surface and starter_anchors) then
+    return
+  end
+
+  local occupied_positions = {}
+  local valid_ring_positions = {}
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    if anchor.position then
+      occupied_positions[get_position_key(anchor.position)] = true
+    end
+  end
+
+  for _, position in ipairs(get_anchor_ring_positions(square_size)) do
+    local position_key = get_position_key(position)
+    valid_ring_positions[position_key] = true
+    local proxy = find_entity_at_position(surface, ANCHOR_SLOT_PROXY_NAME, get_tile_center_position(position))
+
+    if occupied_positions[position_key] then
+      if proxy and proxy.valid then
+        proxy.destroy({raise_destroy = false})
+      end
+    elseif not proxy then
+      surface.create_entity({
+        name = ANCHOR_SLOT_PROXY_NAME,
+        position = get_tile_center_position(position),
+        force = game.forces.player
+      })
+    end
+  end
+
+  for _, proxy in ipairs(surface.find_entities_filtered({name = ANCHOR_SLOT_PROXY_NAME})) do
+    local proxy_position = snap_entity_position_to_tile(proxy.position)
+    local position_key = get_position_key(proxy_position)
+
+    if not valid_ring_positions[position_key] or occupied_positions[position_key] then
+      proxy.destroy({raise_destroy = false})
+    end
+  end
+end
+
 local function migrate_anchor_to_anchor_ring(square_size, anchor)
   if not (anchor and anchor.position and anchor.side) then
     return
@@ -1256,6 +1315,8 @@ local function ensure_starter_anchors()
       ensure_anchor_entity(surface, anchor)
     end
   end
+
+  ensure_anchor_slot_proxies(surface, bootstrap.square_size, starter_anchors)
 end
 
 local function pump_item_anchor(entity, resource, lane_index, item_count)
@@ -1589,6 +1650,113 @@ player_insert_or_spill = function(player, item_name)
   return false
 end
 
+local function get_cursor_managed_anchor(player)
+  if not (player and player.valid and player.cursor_stack and player.cursor_stack.valid_for_read) then
+    return nil, nil
+  end
+
+  local item_name = player.cursor_stack.name
+  local anchor = find_matching_stashed_anchor(item_name)
+
+  if not anchor then
+    return nil, nil
+  end
+
+  return anchor, item_name
+end
+
+local function consume_cursor_item(player, item_name)
+  if not (player and player.valid and player.cursor_stack and player.cursor_stack.valid_for_read) then
+    return false
+  end
+
+  if player.cursor_stack.name ~= item_name then
+    return false
+  end
+
+  if player.cursor_stack.count > 1 then
+    player.cursor_stack.count = player.cursor_stack.count - 1
+  else
+    player.cursor_stack.clear()
+  end
+
+  return true
+end
+
+local function get_selected_anchor_slot_proxy(player)
+  if not (player and player.valid and player.selected and player.selected.valid) then
+    return nil
+  end
+
+  if player.selected.name ~= ANCHOR_SLOT_PROXY_NAME then
+    return nil
+  end
+
+  return player.selected
+end
+
+local function destroy_player_anchor_preview(player_index)
+  local preview_ghosts = storage.anchor_preview_ghosts
+
+  if not preview_ghosts then
+    return
+  end
+
+  local ghost = preview_ghosts[player_index]
+
+  if ghost and ghost.valid then
+    ghost.destroy()
+  end
+
+  preview_ghosts[player_index] = nil
+end
+
+local function update_player_anchor_preview(player)
+  if not (player and player.valid) then
+    return
+  end
+
+  destroy_player_anchor_preview(player.index)
+
+  local bootstrap = storage.bootstrap
+
+  if not (bootstrap and player.surface and player.surface.name == bootstrap.surface_name) then
+    return
+  end
+
+  local proxy = get_selected_anchor_slot_proxy(player)
+  local anchor = get_cursor_managed_anchor(player)
+
+  if not (proxy and anchor) then
+    return
+  end
+
+  local tile_position = snap_entity_position_to_tile(proxy.position)
+  local side = get_anchor_side_for_position(bootstrap.square_size, tile_position)
+
+  if not side or is_fluid_anchor_too_close(anchor, tile_position, side) then
+    return
+  end
+
+  storage.anchor_preview_ghosts = storage.anchor_preview_ghosts or {}
+  storage.anchor_preview_ghosts[player.index] = rendering.draw_sprite({
+    sprite = "entity/" .. get_anchor_entity_name_for_current_tier(anchor),
+    target = {x = tile_position.x + 0.5, y = tile_position.y + 0.5},
+    surface = player.surface,
+    players = {player.index},
+    tint = {r = 1, g = 1, b = 1, a = 0.45},
+    x_scale = 0.9,
+    y_scale = 0.9,
+    render_layer = "object"
+  })
+end
+
+local function update_all_player_anchor_previews()
+  for _, player in pairs(game.players) do
+    update_player_anchor_preview(player)
+  end
+end
+
 local function get_owned_line_counts(resource)
   local starter_anchors = storage.starter_anchors
   local counts = {
@@ -1769,10 +1937,14 @@ local function handle_managed_anchor_built(entity, actor)
     print_ingress_placement_debug(actor, bootstrap.square_size, entity.position)
   end
 
-  local side = get_anchor_side_for_position(
-    bootstrap.square_size,
-    snap_entity_position_to_tile(entity.position)
-  )
+  local tile_position = snap_entity_position_to_tile(entity.position)
+  local side = get_anchor_side_for_position(bootstrap.square_size, tile_position)
+  local anchor_position = tile_position
+
+  if not side then
+    side = get_playable_edge_side_for_position(bootstrap.square_size, tile_position)
+    anchor_position = side and move_position(tile_position, side, 1) or nil
+  end
 
   if not side then
     reject_anchor_placement(entity, actor, {"message.fes-managed-line-invalid-edge"})
@@ -1786,17 +1958,57 @@ local function handle_managed_anchor_built(entity, actor)
     return
   end
 
-  if is_fluid_anchor_too_close(anchor, snap_entity_position_to_tile(entity.position), side) then
+  if is_fluid_anchor_too_close(anchor, anchor_position, side) then
     reject_anchor_placement(entity, actor, {"message.fes-managed-line-fluid-gap-required"})
     return
   end
 
-  if not place_anchor(anchor, entity, bootstrap.square_size) then
-    reject_anchor_placement(entity, actor, {"message.fes-managed-line-invalid-edge"})
+  entity.destroy({raise_destroy = false})
+  assign_anchor_position(anchor, side, anchor_position)
+
+  ensure_starter_anchors()
+  sync_all_shop_guis()
+end
+
+local function handle_managed_anchor_slot_click(player)
+  local bootstrap = storage.bootstrap
+
+  if not (player and player.valid and bootstrap) then
     return
   end
 
+  local proxy = get_selected_anchor_slot_proxy(player)
+
+  if not proxy then
+    return
+  end
+
+  local anchor, item_name = get_cursor_managed_anchor(player)
+
+  if not (anchor and item_name) then
+    return
+  end
+
+  local tile_position = snap_entity_position_to_tile(proxy.position)
+  local side = get_anchor_side_for_position(bootstrap.square_size, tile_position)
+
+  if not side then
+    player.print({"message.fes-managed-line-invalid-edge"})
+    return
+  end
+
+  if is_fluid_anchor_too_close(anchor, tile_position, side) then
+    player.print({"message.fes-managed-line-fluid-gap-required"})
+    return
+  end
+
+  if not consume_cursor_item(player, item_name) then
+    return
+  end
+
+  assign_anchor_position(anchor, side, tile_position)
   ensure_starter_anchors()
+  update_player_anchor_preview(player)
   sync_all_shop_guis()
 end
 
@@ -1809,6 +2021,7 @@ local function handle_anchor_mined(entity)
 
   if anchor then
     stash_anchor(anchor)
+    ensure_starter_anchors()
     sync_all_shop_guis()
   end
 end
@@ -2079,7 +2292,7 @@ end
 
 local function build_ingress_edge_check_debug(square_size, position)
   local tile_position = snap_entity_position_to_tile(position)
-  local bounds = get_anchor_bounds(square_size)
+  local bounds = get_square_bounds(square_size)
   local min_x = bounds.left_top.x
   local min_y = bounds.left_top.y
   local max_x = bounds.right_bottom.x - 1
@@ -2088,22 +2301,24 @@ local function build_ingress_edge_check_debug(square_size, position)
   local east_match = tile_position.x == max_x and tile_position.y > min_y and tile_position.y < max_y
   local south_match = tile_position.y == max_y and tile_position.x > min_x and tile_position.x < max_x
   local west_match = tile_position.x == min_x and tile_position.y > min_y and tile_position.y < max_y
-  local detected_side = get_anchor_side_for_position(square_size, tile_position)
+  local detected_side = get_playable_edge_side_for_position(square_size, tile_position)
+  local anchor_position = detected_side and move_position(tile_position, detected_side, 1) or nil
 
   return table.concat({
     "[Expanding Square] Ingress placement debug",
     "raw_position=" .. format_position(position),
     "tile_position=" .. format_position(tile_position),
     "square_size=" .. square_size,
-    "anchor_bounds.left_top=" .. format_position(bounds.left_top),
-    "anchor_bounds.right_bottom=" .. format_position(bounds.right_bottom),
+    "playable_bounds.left_top=" .. format_position(bounds.left_top),
+    "playable_bounds.right_bottom=" .. format_position(bounds.right_bottom),
     "min=(" .. min_x .. ", " .. min_y .. ")",
     "max=(" .. max_x .. ", " .. max_y .. ")",
     "north=" .. tostring(north_match),
     "east=" .. tostring(east_match),
     "south=" .. tostring(south_match),
     "west=" .. tostring(west_match),
-    "detected_side=" .. tostring(detected_side)
+    "detected_side=" .. tostring(detected_side),
+    "anchor_position=" .. format_position(anchor_position)
   }, " | ")
 end
 
@@ -2647,6 +2862,12 @@ script.on_configuration_changed(function()
   if storage.bootstrap then
     ensure_bootstrap_state_defaults()
     ensure_starter_anchor_state()
+    local surface = game.surfaces[storage.bootstrap.surface_name]
+
+    if surface then
+      refresh_managed_surface_tiles(surface, storage.bootstrap.square_size, storage.bootstrap.surface_size)
+    end
+
     refresh_spawn_routing()
     return
   end
@@ -2753,6 +2974,14 @@ script.on_event(defines.events.on_gui_click, function(event)
   end
 end)
 
+script.on_event(PLACE_MANAGED_ANCHOR_INPUT_NAME, function(event)
+  local player = game.get_player(event.player_index)
+
+  if player then
+    handle_managed_anchor_slot_click(player)
+  end
+end)
+
 script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
   if event.setting == SETTING_STARTING_SQUARE_SIZE then
     if storage.bootstrap then
@@ -2806,6 +3035,7 @@ end)
 script.on_nth_tick(ITEM_ANCHOR_INTERVAL_TICKS, function()
   ensure_starter_anchors()
   pump_starter_anchors()
+  update_all_player_anchor_previews()
 end)
 
 script.on_nth_tick(UTILIZATION_UPDATE_INTERVAL_TICKS, function()
