@@ -13,6 +13,11 @@ The starting square size is a per-save map setting (`runtime-global` in Factorio
 
 Square growth now runs continuously in the background. Once per second the mod evaluates current counted-machine utilization inside the unlocked square, converts that into stored growth progress, and expands the square automatically whenever enough progress has accumulated for the next full ring.
 
+Research now includes custom expanding-square technologies:
+
+- `Expansion speed` is a repeatable research line that starts with red science, steps through vanilla-style science-pack bands over time, and multiplies the square growth rate by 5% per completed level.
+- Tiered `Dummy research` technologies are always available as explicit filler options for each science band, so labs can keep contributing utilization before later infinite research becomes relevant.
+
 For manual testing, enable the per-player `Developer mode` runtime setting. That adds an `Expand square` button to the top-left UI plus a debug panel showing utilization, growth progress, growth rate, and the counted-footprint breakdown by category and entity type.
 
 `make install` builds the zip and copies it into your local Factorio mods directory. By default the install script auto-detects:
