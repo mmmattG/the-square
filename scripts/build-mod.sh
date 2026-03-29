@@ -36,6 +36,7 @@ copy_if_exists() {
 }
 
 copy_if_exists "info.json"
+copy_if_exists "LICENSE"
 copy_if_exists "control.lua"
 copy_if_exists "settings.lua"
 copy_if_exists "settings-updates.lua"
