@@ -355,7 +355,7 @@ for _, definition in ipairs(egress_resources) do
   prototypes[#prototypes + 1] = build_egress_entity(definition)
 end
 
-local starting_square_size = settings.startup["fes-starting-square-size"].value
+local starting_square_size = expansion_research.DEFAULT_STARTING_SQUARE_SIZE
 local tiles_per_research = settings.startup["fes-expansion-tiles-per-research"].value
 
 for level = 1, expansion_research.MAX_LEVEL do

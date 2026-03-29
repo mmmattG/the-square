@@ -1,5 +1,6 @@
 local expansion_research = {}
 
+expansion_research.DEFAULT_STARTING_SQUARE_SIZE = 7
 expansion_research.MAX_LEVEL = 1000
 
 local function round_up_to_nearest_10(value)
