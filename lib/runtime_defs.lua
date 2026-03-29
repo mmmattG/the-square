@@ -391,10 +391,6 @@ function runtime_defs.is_anchor_ring_position(square_size, position)
   return bootstrap_layout.is_anchor_ring_position(square_size, position)
 end
 
-function runtime_defs.get_playable_edge_side_for_position(square_size, position)
-  return bootstrap_layout.get_playable_edge_side_for_position(square_size, position)
-end
-
 function runtime_defs.get_managed_tile_name(square_size, surface_size, position)
   return bootstrap_layout.get_managed_tile_name(
     square_size,
@@ -402,15 +398,6 @@ function runtime_defs.get_managed_tile_name(square_size, surface_size, position)
     runtime_defs.FLOOR_TILE_NAME,
     runtime_defs.VOID_TILE_NAME,
     position
-  )
-end
-
-function runtime_defs.get_anchor_occupied_tile_name(square_size, position, is_anchor_occupied)
-  return bootstrap_layout.get_anchor_occupied_tile_name(
-    square_size,
-    runtime_defs.VOID_TILE_NAME,
-    position,
-    is_anchor_occupied
   )
 end
 

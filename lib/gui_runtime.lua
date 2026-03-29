@@ -4,7 +4,7 @@ local gui_runtime = {}
 
 local function build_ingress_edge_check_debug(square_size, position)
   local tile_position = defs.snap_entity_position_to_tile(position)
-  local bounds = defs.get_square_bounds(square_size)
+  local bounds = defs.get_anchor_bounds(square_size)
   local min_x = bounds.left_top.x
   local min_y = bounds.left_top.y
   local max_x = bounds.right_bottom.x - 1
@@ -13,24 +13,22 @@ local function build_ingress_edge_check_debug(square_size, position)
   local east_match = tile_position.x == max_x and tile_position.y > min_y and tile_position.y < max_y
   local south_match = tile_position.y == max_y and tile_position.x > min_x and tile_position.x < max_x
   local west_match = tile_position.x == min_x and tile_position.y > min_y and tile_position.y < max_y
-  local detected_side = defs.get_playable_edge_side_for_position(square_size, tile_position)
-  local anchor_position = detected_side and defs.move_position(tile_position, detected_side, 1) or nil
+  local detected_side = defs.get_anchor_side_for_position(square_size, tile_position)
 
   return table.concat({
     "[Expanding Square] Ingress placement debug",
     "raw_position=" .. defs.format_position(position),
     "tile_position=" .. defs.format_position(tile_position),
     "square_size=" .. square_size,
-    "playable_bounds.left_top=" .. defs.format_position(bounds.left_top),
-    "playable_bounds.right_bottom=" .. defs.format_position(bounds.right_bottom),
+    "anchor_bounds.left_top=" .. defs.format_position(bounds.left_top),
+    "anchor_bounds.right_bottom=" .. defs.format_position(bounds.right_bottom),
     "min=(" .. min_x .. ", " .. min_y .. ")",
     "max=(" .. max_x .. ", " .. max_y .. ")",
     "north=" .. tostring(north_match),
     "east=" .. tostring(east_match),
     "south=" .. tostring(south_match),
     "west=" .. tostring(west_match),
-    "detected_side=" .. tostring(detected_side),
-    "anchor_position=" .. defs.format_position(anchor_position)
+    "detected_side=" .. tostring(detected_side)
   }, " | ")
 end
 

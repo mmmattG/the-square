@@ -429,13 +429,6 @@ function anchor_runtime.ensure_starter_anchors()
     return
   end
 
-  bootstrap_runtime.refresh_managed_surface_tiles(
-    surface,
-    bootstrap.square_size,
-    bootstrap.surface_size or defs.get_surface_size(bootstrap.square_size),
-    starter_anchors
-  )
-
   for _, anchor in ipairs(starter_anchors.anchors) do
     if anchor.position then
       ensure_anchor_entity(surface, anchor)
@@ -864,11 +857,6 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
   local tile_position = defs.snap_entity_position_to_tile(entity.position)
   local side = defs.get_anchor_side_for_position(bootstrap.square_size, tile_position)
   local anchor_position = tile_position
-
-  if not side then
-    side = defs.get_playable_edge_side_for_position(bootstrap.square_size, tile_position)
-    anchor_position = side and defs.move_position(tile_position, side, 1) or nil
-  end
 
   if not side then
     reject_anchor_placement(entity, actor, {"message.fes-managed-line-invalid-edge"})
