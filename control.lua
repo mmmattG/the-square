@@ -8,11 +8,16 @@ local CHART_MARGIN = 1
 local ITEM_ANCHOR_INTERVAL_TICKS = 8
 local FLUID_ANCHOR_AMOUNT_PER_INTERVAL = 160
 local STARTER_ANCHOR_OUTER_RING_WIDTH = 2
-local STARTER_ANCHOR_LAYOUT_VERSION = 7
+local STARTER_ANCHOR_LAYOUT_VERSION = 8
 local DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
 local DEBUG_FRAME_NAME = "fes_debug_frame"
+local SHOP_BUTTON_NAME = "fes_shop_button"
+local SHOP_FRAME_NAME = "fes_shop_frame"
 local UTILIZATION_UPDATE_INTERVAL_TICKS = 60
 local GROWTH_RATE_SIZE_DIVISOR = 12
+local LINE_PURCHASE_COST = 12
+local DIRECTION_BY_SIDE
+local OFFSET_BY_SIDE
 
 local COUNTED_CATEGORY_ORDER = {
   "crafting",
@@ -30,23 +35,25 @@ local COUNTED_CATEGORY_LABELS = {
   power = "Power"
 }
 
-local STARTER_INPUT_DEFINITIONS = {
-  {resource = "iron-ore", kind = "item", side = "north"},
-  {resource = "copper-ore", kind = "item", side = "north"},
-  {resource = "coal", kind = "item", side = "south"},
-  {resource = "stone", kind = "item", side = "south"},
-  {resource = "water", kind = "fluid", side = "west"},
-  {resource = "wood", kind = "item", side = "east"}
+local INPUT_DEFINITIONS = {
+  {resource = "iron-ore", kind = "item", starter_side = "north", prerequisite_resource = nil},
+  {resource = "copper-ore", kind = "item", starter_side = "north", prerequisite_resource = nil},
+  {resource = "coal", kind = "item", starter_side = "south", prerequisite_resource = nil},
+  {resource = "stone", kind = "item", starter_side = "south", prerequisite_resource = nil},
+  {resource = "water", kind = "fluid", starter_side = "west", prerequisite_resource = nil},
+  {resource = "wood", kind = "item", starter_side = "east", prerequisite_resource = nil},
+  {resource = "crude-oil", kind = "fluid", starter_side = nil, prerequisite_resource = nil},
+  {resource = "uranium-ore", kind = "item", starter_side = nil, prerequisite_resource = "crude-oil"}
 }
 
-local DIRECTION_BY_SIDE = {
+DIRECTION_BY_SIDE = {
   north = defines.direction.south,
   east = defines.direction.west,
   south = defines.direction.north,
   west = defines.direction.east
 }
 
-local OFFSET_BY_SIDE = {
+OFFSET_BY_SIDE = {
   north = {x = 0, y = -1},
   east = {x = 1, y = 0},
   south = {x = 0, y = 1},
@@ -57,6 +64,7 @@ local update_utilization_metrics
 local refresh_all_debug_guis
 local print_ingress_placement_debug
 local snap_entity_position_to_tile
+local sync_all_shop_guis
 
 local function get_ingress_item_name(resource)
   return "fes-" .. resource .. "-ingress"
@@ -64,6 +72,28 @@ end
 
 local function get_ingress_entity_name(resource)
   return "fes-" .. resource .. "-ingress-anchor"
+end
+
+local function get_input_definition(resource)
+  for _, definition in ipairs(INPUT_DEFINITIONS) do
+    if definition.resource == resource then
+      return definition
+    end
+  end
+
+  return nil
+end
+
+local function create_ingress_anchor(definition, side, position)
+  return {
+    resource = definition.resource,
+    kind = definition.kind,
+    side = side,
+    direction = side and DIRECTION_BY_SIDE[side] or nil,
+    position = position,
+    item_name = get_ingress_item_name(definition.resource),
+    entity_name = get_ingress_entity_name(definition.resource)
+  }
 end
 
 local function build_empty_category_breakdown()
@@ -216,9 +246,11 @@ local function build_starter_anchor_layout(square_size)
   local resources_by_side = {}
   local anchors = {}
 
-  for _, definition in ipairs(STARTER_INPUT_DEFINITIONS) do
-    resources_by_side[definition.side] = resources_by_side[definition.side] or {}
-    resources_by_side[definition.side][#resources_by_side[definition.side] + 1] = definition
+  for _, definition in ipairs(INPUT_DEFINITIONS) do
+    if definition.starter_side then
+      resources_by_side[definition.starter_side] = resources_by_side[definition.starter_side] or {}
+      resources_by_side[definition.starter_side][#resources_by_side[definition.starter_side] + 1] = definition
+    end
   end
 
   for _, side in ipairs({"north", "east", "south", "west"}) do
@@ -227,15 +259,7 @@ local function build_starter_anchor_layout(square_size)
     local chosen_positions = choose_spread_positions(side_positions, #side_resources, side)
 
     for index, definition in ipairs(side_resources) do
-      anchors[#anchors + 1] = {
-        resource = definition.resource,
-        kind = definition.kind,
-        side = side,
-        direction = DIRECTION_BY_SIDE[side],
-        position = chosen_positions[index],
-        item_name = get_ingress_item_name(definition.resource),
-        entity_name = get_ingress_entity_name(definition.resource)
-      }
+      anchors[#anchors + 1] = create_ingress_anchor(definition, side, chosen_positions[index])
     end
   end
 
@@ -540,6 +564,10 @@ local function format_decimal(value)
   return string.format("%.2f", value)
 end
 
+local function format_resource_name(resource)
+  return string.gsub(resource, "%-", " ")
+end
+
 local function build_resize_tile_updates(old_square_size, old_surface_size, new_square_size, new_surface_size, anchors)
   local tiles = {}
   local old_bounds = get_square_bounds(old_surface_size)
@@ -669,7 +697,7 @@ local function configure_source_anchor_entity(entity, direction)
 end
 
 local function is_ingress_entity_name(entity_name)
-  for _, definition in ipairs(STARTER_INPUT_DEFINITIONS) do
+  for _, definition in ipairs(INPUT_DEFINITIONS) do
     if entity_name == get_ingress_entity_name(definition.resource) then
       return true
     end
@@ -763,6 +791,36 @@ local function place_anchor(anchor, entity, square_size)
   configure_source_anchor_entity(entity, anchor.direction)
 
   return true
+end
+
+local function is_fluid_anchor_too_close(anchor, position, side)
+  local starter_anchors = storage.starter_anchors
+
+  if not starter_anchors or not anchor or anchor.kind ~= "fluid" then
+    return false
+  end
+
+  for _, other_anchor in ipairs(starter_anchors.anchors) do
+    if other_anchor ~= anchor
+      and other_anchor.kind == "fluid"
+      and other_anchor.side == side
+      and other_anchor.position
+    then
+      local delta
+
+      if side == "north" or side == "south" then
+        delta = math.abs(other_anchor.position.x - position.x)
+      else
+        delta = math.abs(other_anchor.position.y - position.y)
+      end
+
+      if delta <= 1 then
+        return true
+      end
+    end
+  end
+
+  return false
 end
 
 local function destroy_entities_at_anchor_position(surface, anchor)
@@ -962,6 +1020,129 @@ local function reject_anchor_placement(entity, actor, message_key)
   entity.destroy({raise_destroy = false})
 end
 
+local function player_insert_or_spill(player, item_name)
+  if not (player and player.valid and item_name) then
+    return false
+  end
+
+  local inserted = player.insert({name = item_name, count = 1})
+
+  if inserted > 0 then
+    return true
+  end
+
+  if player.surface then
+    player.surface.spill_item_stack(player.position, {name = item_name, count = 1}, true, player.force, false)
+    return true
+  end
+
+  return false
+end
+
+local function get_owned_line_counts(resource)
+  local starter_anchors = storage.starter_anchors
+  local counts = {
+    owned = 0,
+    placed = 0,
+    stashed = 0
+  }
+
+  if not starter_anchors then
+    return counts
+  end
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    if anchor.resource == resource then
+      counts.owned = counts.owned + 1
+
+      if anchor.position then
+        counts.placed = counts.placed + 1
+      else
+        counts.stashed = counts.stashed + 1
+      end
+    end
+  end
+
+  return counts
+end
+
+local function is_resource_unlocked(resource)
+  return get_owned_line_counts(resource).owned > 0
+end
+
+local function can_purchase_line(resource)
+  local definition = get_input_definition(resource)
+
+  if not definition then
+    return false, "message.fes-shop-resource-unknown", nil
+  end
+
+  if is_resource_unlocked(resource) or definition.starter_side then
+    return true, nil, nil
+  end
+
+  if definition.prerequisite_resource and not is_resource_unlocked(definition.prerequisite_resource) then
+    return false, "message.fes-shop-prerequisite", definition.prerequisite_resource
+  end
+
+  return true, nil, nil
+end
+
+local function spend_expansion_points(amount)
+  local bootstrap = storage.bootstrap
+
+  if not bootstrap or (bootstrap.expansion_points or 0) < amount then
+    return false
+  end
+
+  bootstrap.expansion_points = bootstrap.expansion_points - amount
+  return true
+end
+
+local function purchase_ingress_line(player, resource)
+  local bootstrap = storage.bootstrap
+  local definition = get_input_definition(resource)
+
+  if not bootstrap or not definition then
+    return
+  end
+
+  local can_purchase, message_key, message_resource = can_purchase_line(resource)
+
+  if not can_purchase then
+    if player and player.valid then
+      if message_resource then
+        player.print({message_key, {"item-name." .. get_ingress_item_name(message_resource)}})
+      else
+        player.print({message_key, {"item-name." .. get_ingress_item_name(resource)}})
+      end
+    end
+
+    return
+  end
+
+  if not spend_expansion_points(LINE_PURCHASE_COST) then
+    if player and player.valid then
+      player.print({"message.fes-shop-not-enough-points", LINE_PURCHASE_COST})
+    end
+
+    return
+  end
+
+  storage.starter_anchors = storage.starter_anchors or create_starter_anchor_state(bootstrap.square_size)
+  storage.starter_anchors.anchors[#storage.starter_anchors.anchors + 1] = create_ingress_anchor(definition, nil, nil)
+
+  if player and player.valid then
+    player_insert_or_spill(player, get_ingress_item_name(resource))
+    player.print({
+      "message.fes-shop-purchased-line",
+      {"item-name." .. get_ingress_item_name(resource)},
+      LINE_PURCHASE_COST,
+      bootstrap.expansion_points
+    })
+  end
+end
+
 local function handle_ingress_built(entity, actor)
   if not (entity and entity.valid) then
     return
@@ -999,7 +1180,13 @@ local function handle_ingress_built(entity, actor)
     return
   end
 
+  if is_fluid_anchor_too_close(anchor, snap_entity_position_to_tile(entity.position), side) then
+    reject_anchor_placement(entity, actor, "message.fes-ingress-fluid-gap-required")
+    return
+  end
+
   place_anchor(anchor, entity, bootstrap.square_size)
+  sync_all_shop_guis()
 end
 
 local function handle_anchor_mined(entity)
@@ -1011,6 +1198,7 @@ local function handle_anchor_mined(entity)
 
   if anchor then
     stash_anchor(anchor)
+    sync_all_shop_guis()
   end
 end
 
@@ -1216,6 +1404,7 @@ local function expand_square(player)
 
   update_utilization_metrics()
   refresh_all_debug_guis()
+  sync_all_shop_guis()
 end
 
 local function is_dev_mode_enabled(player)
@@ -1324,6 +1513,7 @@ local function build_debug_lines()
     .. " x (" .. bootstrap.square_size .. " / " .. GROWTH_RATE_SIZE_DIVISOR .. ")"
   lines[#lines + 1] = "Progress: " .. format_decimal(bootstrap.growth_progress or 0)
     .. " / " .. next_reward
+  lines[#lines + 1] = "Expansion points: " .. (bootstrap.expansion_points or 0)
   lines[#lines + 1] = "Next reward: " .. next_reward .. " expansion points"
   lines[#lines + 1] = "Breakdown:"
 
@@ -1375,6 +1565,128 @@ end
 refresh_all_debug_guis = function()
   for _, player in pairs(game.players) do
     refresh_debug_gui(player)
+  end
+end
+
+local function ensure_shop_button(player)
+  local button = player.gui.top[SHOP_BUTTON_NAME]
+
+  if button then
+    return button
+  end
+
+  return player.gui.top.add({
+    type = "button",
+    name = SHOP_BUTTON_NAME,
+    caption = {"gui.fes-shop-button"}
+  })
+end
+
+local function build_shop_status_caption(resource)
+  local definition = get_input_definition(resource)
+  local counts = get_owned_line_counts(resource)
+
+  if not definition then
+    return "Unavailable"
+  end
+
+  if counts.owned > 0 then
+    return "Owned: " .. counts.owned .. " (" .. counts.placed .. " placed, " .. counts.stashed .. " stashed)"
+  end
+
+  if definition.prerequisite_resource and not is_resource_unlocked(definition.prerequisite_resource) then
+    return "Locked until " .. format_resource_name(definition.prerequisite_resource) .. " is unlocked"
+  end
+
+  return "Not yet unlocked"
+end
+
+local function ensure_shop_frame(player)
+  local frame = player.gui.left[SHOP_FRAME_NAME]
+
+  if frame then
+    return frame
+  end
+
+  return player.gui.left.add({
+    type = "frame",
+    name = SHOP_FRAME_NAME,
+    direction = "vertical",
+    caption = {"gui.fes-shop-title"}
+  })
+end
+
+local function refresh_shop_gui(player)
+  if not (player and player.valid) then
+    return
+  end
+
+  local frame = player.gui.left[SHOP_FRAME_NAME]
+  local bootstrap = storage.bootstrap
+
+  if not frame or not bootstrap then
+    return
+  end
+
+  frame.clear()
+  frame.add({
+    type = "label",
+    caption = {"gui.fes-shop-points", bootstrap.expansion_points or 0}
+  })
+  frame.add({
+    type = "label",
+    caption = {"gui.fes-shop-line-cost", LINE_PURCHASE_COST}
+  })
+
+  for _, definition in ipairs(INPUT_DEFINITIONS) do
+    local flow = frame.add({
+      type = "flow",
+      direction = "horizontal"
+    })
+    local can_purchase = can_purchase_line(definition.resource)
+    local button = flow.add({
+      type = "button",
+      name = "fes_shop_buy__" .. definition.resource,
+      caption = {"gui.fes-shop-buy", {"item-name." .. get_ingress_item_name(definition.resource)}}
+    })
+
+    button.enabled = can_purchase and (bootstrap.expansion_points or 0) >= LINE_PURCHASE_COST
+
+    flow.add({
+      type = "label",
+      caption = build_shop_status_caption(definition.resource)
+    })
+  end
+end
+
+local function toggle_shop_gui(player)
+  if not (player and player.valid) then
+    return
+  end
+
+  local frame = player.gui.left[SHOP_FRAME_NAME]
+
+  if frame then
+    frame.destroy()
+    return
+  end
+
+  ensure_shop_frame(player)
+  refresh_shop_gui(player)
+end
+
+local function sync_shop_gui(player)
+  if not (player and player.valid) then
+    return
+  end
+
+  ensure_shop_button(player)
+  refresh_shop_gui(player)
+end
+
+sync_all_shop_guis = function()
+  for _, player in pairs(game.players) do
+    sync_shop_gui(player)
   end
 end
 
@@ -1484,6 +1796,7 @@ local function bootstrap_world()
 
   update_utilization_metrics()
   sync_all_dev_guis()
+  sync_all_shop_guis()
 end
 
 local function refresh_spawn_routing()
@@ -1512,6 +1825,7 @@ local function refresh_spawn_routing()
 
   update_utilization_metrics()
   sync_all_dev_guis()
+  sync_all_shop_guis()
 end
 
 local function notify_square_size_change_applies_to_new_saves()
@@ -1554,6 +1868,7 @@ script.on_event(defines.events.on_player_created, function(event)
   if player then
     teleport_player_to_square(player)
     sync_dev_gui(player)
+    sync_shop_gui(player)
   end
 end)
 
@@ -1563,6 +1878,7 @@ script.on_event(defines.events.on_player_respawned, function(event)
   if player then
     teleport_player_to_square(player)
     sync_dev_gui(player)
+    sync_shop_gui(player)
   end
 end)
 
@@ -1603,12 +1919,32 @@ script.on_event(defines.events.on_entity_died, function(event)
 end)
 
 script.on_event(defines.events.on_gui_click, function(event)
-  if event.element and event.element.valid and event.element.name == DEV_EXPAND_BUTTON_NAME then
-    local player = game.get_player(event.player_index)
+  if not (event.element and event.element.valid) then
+    return
+  end
 
+  local player = game.get_player(event.player_index)
+
+  if event.element.name == DEV_EXPAND_BUTTON_NAME then
     if player and is_dev_mode_enabled(player) then
       expand_square(player)
     end
+
+    return
+  end
+
+  if event.element.name == SHOP_BUTTON_NAME then
+    toggle_shop_gui(player)
+    return
+  end
+
+  local resource = string.match(event.element.name, "^fes_shop_buy__(.+)$")
+
+  if resource and player then
+    purchase_ingress_line(player, resource)
+    refresh_shop_gui(player)
+    refresh_all_debug_guis()
+    sync_all_shop_guis()
   end
 end)
 
@@ -1626,6 +1962,7 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
 
     if player then
       sync_dev_gui(player)
+      sync_shop_gui(player)
     end
   end
 end)
