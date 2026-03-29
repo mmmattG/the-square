@@ -1,4 +1,4 @@
-# The Square
+# the-square
 
 Local development commands:
 

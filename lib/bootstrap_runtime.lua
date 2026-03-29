@@ -456,7 +456,7 @@ function bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
 
   game.print(
     {"",
-      "[The Square] Square expanded from ",
+      "[the-square] Square expanded from ",
       previous_square_size,
       "x",
       previous_square_size,
@@ -552,7 +552,7 @@ function bootstrap_runtime.notify_square_size_change_applies_to_new_saves()
 
   game.print(
     {"",
-      "[The Square] Starting square size changes only apply to new saves. ",
+      "[the-square] Starting square size changes only apply to new saves. ",
       "This save remains at ",
       storage.bootstrap and storage.bootstrap.square_size or "?",
       " and the current map setting is ",
