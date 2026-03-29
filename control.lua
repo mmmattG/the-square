@@ -19,6 +19,7 @@ local MAX_INGRESS_TIER = 4
 local DIRECTION_BY_SIDE
 local OFFSET_BY_SIDE
 local INGRESS_TIER_DEFINITIONS
+local ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER
 
 local COUNTED_CATEGORY_ORDER = {
   "crafting",
@@ -61,6 +62,13 @@ OFFSET_BY_SIDE = {
   west = {x = -1, y = 0}
 }
 
+ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER = {
+  [1] = "yellow",
+  [2] = "yellow",
+  [3] = "red",
+  [4] = "blue"
+}
+
 INGRESS_TIER_DEFINITIONS = {
   [1] = {
     key = "yellow-single",
@@ -94,13 +102,51 @@ local print_ingress_placement_debug
 local snap_entity_position_to_tile
 local sync_all_shop_guis
 local player_insert_or_spill
+local get_anchor_entity_name_for_current_tier
 
 local function get_ingress_item_name(resource)
   return "fes-" .. resource .. "-ingress"
 end
 
-local function get_ingress_entity_name(resource)
-  return "fes-" .. resource .. "-ingress-anchor"
+local function get_ingress_entity_name(resource, ingress_tier_level)
+  local definition = nil
+
+  for _, input_definition in ipairs(INPUT_DEFINITIONS) do
+    if input_definition.resource == resource then
+      definition = input_definition
+      break
+    end
+  end
+
+  if not definition then
+    return "fes-" .. resource .. "-ingress-anchor"
+  end
+
+  if definition.kind ~= "item" then
+    return "fes-" .. resource .. "-ingress-anchor"
+  end
+
+  local belt_tier_key = ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER[ingress_tier_level or 1] or "yellow"
+
+  if belt_tier_key == "yellow" then
+    return "fes-" .. resource .. "-ingress-anchor"
+  end
+
+  return "fes-" .. resource .. "-ingress-anchor-" .. belt_tier_key
+end
+
+local function is_ingress_entity_name_for_resource(resource, entity_name)
+  if entity_name == get_ingress_entity_name(resource, 1) then
+    return true
+  end
+
+  for tier_level = 2, MAX_INGRESS_TIER do
+    if entity_name == get_ingress_entity_name(resource, tier_level) then
+      return true
+    end
+  end
+
+  return false
 end
 
 local function get_input_definition(resource)
@@ -788,7 +834,7 @@ end
 
 local function is_ingress_entity_name(entity_name)
   for _, definition in ipairs(INPUT_DEFINITIONS) do
-    if entity_name == get_ingress_entity_name(definition.resource) then
+    if is_ingress_entity_name_for_resource(definition.resource, entity_name) then
       return true
     end
   end
@@ -804,7 +850,10 @@ local function find_matching_stashed_anchor(item_or_entity_name)
   end
 
   for _, anchor in ipairs(starter_anchors.anchors) do
-    if not anchor.position and (anchor.item_name == item_or_entity_name or anchor.entity_name == item_or_entity_name) then
+    if not anchor.position and (
+      anchor.item_name == item_or_entity_name
+      or is_ingress_entity_name_for_resource(anchor.resource, item_or_entity_name)
+    ) then
       return anchor
     end
   end
@@ -838,7 +887,10 @@ local function find_anchor_by_entity_name_and_position(entity_name, position)
   local position_key = get_position_key(position)
 
   for _, anchor in ipairs(starter_anchors.anchors) do
-    if anchor.entity_name == entity_name and anchor.position and get_position_key(anchor.position) == position_key then
+    if anchor.position
+      and get_position_key(anchor.position) == position_key
+      and is_ingress_entity_name_for_resource(anchor.resource, entity_name)
+    then
       return anchor
     end
   end
@@ -877,6 +929,7 @@ local function place_anchor(anchor, entity, square_size)
   anchor.position = tile_position
   anchor.side = side
   anchor.direction = DIRECTION_BY_SIDE[side]
+  anchor.entity_name = get_anchor_entity_name_for_current_tier(anchor)
   anchor.entity = entity
   configure_source_anchor_entity(entity, anchor.direction)
 
@@ -947,16 +1000,35 @@ local function destroy_entities_at_anchor_position(surface, anchor)
   end
 end
 
+get_anchor_entity_name_for_current_tier = function(anchor)
+  if not anchor then
+    return nil
+  end
+
+  if anchor.kind == "item" then
+    return get_ingress_entity_name(anchor.resource, get_current_ingress_tier_level())
+  end
+
+  return get_ingress_entity_name(anchor.resource, 1)
+end
+
 local function ensure_anchor_entity(surface, anchor)
   if not (surface and anchor and anchor.position) then
     return nil
   end
 
+  anchor.entity_name = get_anchor_entity_name_for_current_tier(anchor)
+
   local entity = anchor.entity
 
-  if entity and entity.valid then
+  if entity and entity.valid and entity.name == anchor.entity_name then
     configure_source_anchor_entity(entity, anchor.direction)
     return entity
+  end
+
+  if entity and entity.valid then
+    entity.destroy({raise_destroy = false})
+    anchor.entity = nil
   end
 
   destroy_entities_at_anchor_position(surface, anchor)
@@ -1010,7 +1082,7 @@ local function ensure_starter_anchor_state()
 
     for _, anchor in ipairs(migrated_anchors) do
       anchor.item_name = anchor.item_name or get_ingress_item_name(anchor.resource)
-      anchor.entity_name = anchor.entity_name or get_ingress_entity_name(anchor.resource)
+      anchor.entity_name = anchor.entity_name or get_ingress_entity_name(anchor.resource, 1)
       anchor.entity = nil
       migrate_anchor_to_anchor_ring(bootstrap.square_size, anchor)
     end
@@ -1151,14 +1223,19 @@ local function reject_anchor_placement(entity, actor, message_key)
     return
   end
 
-  local item_name = string.gsub(entity.name, "-anchor$", "")
+  local item_name = get_entity_refund_item_name(entity)
 
   if actor and actor.valid then
     if actor.object_name == "LuaPlayer" then
-      refund_entity_to_player(actor, item_name)
+      if item_name then
+        refund_entity_to_player(actor, item_name)
+      end
+
       actor.print({message_key})
     elseif actor.object_name == "LuaEntity" and actor.type == "construction-robot" then
-      refund_entity_to_robot(actor, item_name)
+      if item_name then
+        refund_entity_to_robot(actor, item_name)
+      end
     end
   end
 
@@ -1337,6 +1414,7 @@ local function purchase_ingress_tier_upgrade(player)
   end
 
   bootstrap.ingress_tier = next_tier_level
+  ensure_starter_anchors()
 
   if player and player.valid then
     player.print({
@@ -1390,7 +1468,12 @@ local function handle_ingress_built(entity, actor)
     return
   end
 
-  place_anchor(anchor, entity, bootstrap.square_size)
+  if not place_anchor(anchor, entity, bootstrap.square_size) then
+    reject_anchor_placement(entity, actor, "message.fes-ingress-invalid-edge")
+    return
+  end
+
+  ensure_starter_anchors()
   sync_all_shop_guis()
 end
 
