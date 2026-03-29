@@ -11,6 +11,12 @@ defines = {
 
 settings = {
   global = {
+    ["fes-screenshot-alt-mode"] = {
+      value = true
+    },
+    ["fes-screenshot-pixels-per-tile"] = {
+      value = 48
+    },
     ["fes-background-tile"] = {
       value = "checkerboard"
     }
@@ -72,5 +78,21 @@ run_test("expansion research name detection accepts the finite and infinite prot
     runtime_defs.is_expansion_research_name("logistics"),
     false,
     "other technology names should not match"
+  )
+end)
+
+run_test("screenshot pixels per tile comes from the runtime-global setting", function()
+  assert_equal(
+    runtime_defs.get_screenshot_pixels_per_tile(),
+    48,
+    "screenshot captures should use the configured render density"
+  )
+end)
+
+run_test("screenshot alt mode defaults to the runtime-global toggle", function()
+  assert_equal(
+    runtime_defs.is_screenshot_alt_mode_enabled(),
+    true,
+    "base screenshots should include alt mode info by default"
   )
 end)

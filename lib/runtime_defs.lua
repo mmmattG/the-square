@@ -5,11 +5,15 @@ local item_ingress = require("lib.item_ingress")
 local runtime_defs = {}
 
 runtime_defs.SURFACE_NAME = "fes-bootstrap"
+runtime_defs.BASE_SCREENSHOT_MARGIN_TILES = 2
+runtime_defs.BASE_SCREENSHOT_DIRECTORY = "the-square"
 runtime_defs.SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH = "fes-expansion-tiles-per-research"
 runtime_defs.SETTING_LINE_PURCHASE_COST = "fes-line-purchase-cost"
 runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
 runtime_defs.SETTING_BACKGROUND_TILE = "fes-background-tile"
+runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE = "fes-screenshot-pixels-per-tile"
+runtime_defs.SETTING_SCREENSHOT_ALT_MODE = "fes-screenshot-alt-mode"
 runtime_defs.SETTING_DEV_MODE = "fes-dev-mode"
 runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
 runtime_defs.FLOOR_TILE_NAME = "grass-1"
@@ -29,6 +33,7 @@ runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION = 12
 runtime_defs.DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
 runtime_defs.DEBUG_FRAME_NAME = "fes_debug_frame"
 runtime_defs.SHOP_BUTTON_NAME = "fes_shop_button"
+runtime_defs.SCREENSHOT_BUTTON_NAME = "fes_screenshot_button"
 runtime_defs.SHOP_FRAME_NAME = "fes_shop_frame"
 runtime_defs.MAX_INGRESS_TIER = 4
 runtime_defs.INGRESS_RESEARCH_DEFINITIONS = {
@@ -317,6 +322,26 @@ function runtime_defs.get_background_tile_name()
   end
 
   return runtime_defs.DEFAULT_BACKGROUND_TILE_NAME
+end
+
+function runtime_defs.get_screenshot_pixels_per_tile()
+  local screenshot_pixels_per_tile_setting = settings.global[runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE]
+
+  if screenshot_pixels_per_tile_setting and screenshot_pixels_per_tile_setting.value then
+    return screenshot_pixels_per_tile_setting.value
+  end
+
+  return 32
+end
+
+function runtime_defs.is_screenshot_alt_mode_enabled()
+  local screenshot_alt_mode_setting = settings.global[runtime_defs.SETTING_SCREENSHOT_ALT_MODE]
+
+  if screenshot_alt_mode_setting == nil or screenshot_alt_mode_setting.value == nil then
+    return true
+  end
+
+  return screenshot_alt_mode_setting.value
 end
 
 function runtime_defs.get_anchor_bounds(square_size)

@@ -68,17 +68,33 @@ data:extend({
     order = "e"
   },
   {
+    type = "int-setting",
+    name = "fes-screenshot-pixels-per-tile",
+    setting_type = "runtime-global",
+    default_value = 32,
+    minimum_value = 8,
+    maximum_value = 256,
+    order = "f"
+  },
+  {
+    type = "bool-setting",
+    name = "fes-screenshot-alt-mode",
+    setting_type = "runtime-global",
+    default_value = true,
+    order = "g"
+  },
+  {
     type = "bool-setting",
     name = "fes-dev-mode",
     setting_type = "runtime-per-user",
     default_value = false,
-    order = "f"
+    order = "h"
   },
   {
     type = "bool-setting",
     name = "fes-ingress-placement-debug",
     setting_type = "runtime-per-user",
     default_value = false,
-    order = "g"
+    order = "i"
   }
 })

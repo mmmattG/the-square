@@ -4,6 +4,7 @@ local defs = require("lib.runtime_defs")
 local growth_runtime = require("lib.growth_runtime")
 local gui_runtime = require("lib.gui_runtime")
 local ingress_runtime = require("lib.ingress_runtime")
+local screenshot_runtime = require("lib.screenshot_runtime")
 
 local function sync_all_runtime_guis()
   gui_runtime.refresh_all_debug_guis()
@@ -20,6 +21,7 @@ local function handle_player_join_or_respawn(event)
   if player then
     bootstrap_runtime.teleport_player_to_square(player)
     gui_runtime.sync_dev_gui(player)
+    gui_runtime.sync_screenshot_gui(player)
     gui_runtime.sync_shop_gui(player, anchor_runtime)
   end
 end
@@ -44,6 +46,9 @@ script.on_configuration_changed(function()
       bootstrap_runtime.refresh_managed_surface_tiles(surface, storage.bootstrap.square_size, storage.bootstrap.surface_size)
     end
 
+    gui_runtime.sync_all_dev_guis()
+    gui_runtime.sync_all_screenshot_guis()
+    gui_runtime.sync_all_shop_guis(anchor_runtime)
     bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
     return
   end
@@ -99,6 +104,11 @@ script.on_event(defines.events.on_gui_click, function(event)
 
   if event.element.name == defs.SHOP_BUTTON_NAME then
     gui_runtime.toggle_shop_gui(player, anchor_runtime)
+    return
+  end
+
+  if event.element.name == defs.SCREENSHOT_BUTTON_NAME then
+    screenshot_runtime.take_base_screenshot(player)
     return
   end
 
