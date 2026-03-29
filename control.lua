@@ -1855,6 +1855,18 @@ local function teleport_player_to_square(player)
   chart_play_area(player.force, surface, bootstrap.surface_size or bootstrap.square_size)
 end
 
+local function store_player_safe_position(player)
+  if not (player and player.valid) then
+    return
+  end
+
+  storage.player_safe_positions = storage.player_safe_positions or {}
+  storage.player_safe_positions[player.index] = {
+    x = player.position.x,
+    y = player.position.y
+  }
+end
+
 local function get_inward_position_for_anchor_ring(square_size, tile_position)
   local side = get_anchor_side_for_position(square_size, tile_position)
 
@@ -1887,10 +1899,18 @@ local function keep_player_out_of_anchor_ring(player)
   local tile_position = snap_entity_position_to_tile(player.position)
 
   if not is_anchor_ring_position(bootstrap.square_size, tile_position) then
+    store_player_safe_position(player)
     return
   end
 
-  local target_position = get_inward_position_for_anchor_ring(bootstrap.square_size, tile_position)
+  player.walking_state = {
+    walking = false,
+    direction = player.walking_state.direction
+  }
+
+  local safe_positions = storage.player_safe_positions or {}
+  local target_position = safe_positions[player.index]
+    or get_inward_position_for_anchor_ring(bootstrap.square_size, tile_position)
 
   if not target_position then
     return
@@ -1904,6 +1924,7 @@ local function keep_player_out_of_anchor_ring(player)
   end
 
   teleport_player_to_square(player)
+  store_player_safe_position(player)
 end
 
 local function add_expansion_points(amount)
@@ -2604,6 +2625,7 @@ local function bootstrap_world()
 
   for _, player in pairs(game.players) do
     teleport_player_to_square(player)
+    store_player_safe_position(player)
   end
 
   apply_logistic_network_setting_to_all_forces()
@@ -2635,6 +2657,7 @@ local function refresh_spawn_routing()
 
   for _, player in pairs(game.players) do
     teleport_player_to_square(player)
+    store_player_safe_position(player)
   end
 
   apply_logistic_network_setting_to_all_forces()
@@ -2689,6 +2712,7 @@ script.on_event(defines.events.on_player_created, function(event)
 
   if player then
     teleport_player_to_square(player)
+    store_player_safe_position(player)
     sync_status_gui(player)
     sync_dev_gui(player)
     sync_shop_gui(player)
@@ -2700,6 +2724,7 @@ script.on_event(defines.events.on_player_respawned, function(event)
 
   if player then
     teleport_player_to_square(player)
+    store_player_safe_position(player)
     sync_status_gui(player)
     sync_dev_gui(player)
     sync_shop_gui(player)
