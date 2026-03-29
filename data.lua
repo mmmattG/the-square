@@ -156,38 +156,46 @@ local dummy_research_definitions = {
 
 local tips_and_tricks_items = {
   {
-    name = "fes-overview",
-    order = "a[overview]",
+    name = "fes-mod",
+    order = "a[mod]",
     category = "fes-rules",
-    icon = "__base__/graphics/icons/info.png"
+    icon = "__base__/graphics/icons/info.png",
+    is_title = true
+  },
+  {
+    name = "fes-overview",
+    order = "b[overview]",
+    category = "fes-rules",
+    icon = "__base__/graphics/icons/info.png",
+    indent = 1
   },
   {
     name = "fes-utilization-and-growth",
-    order = "b[utilization-and-growth]",
+    order = "c[utilization-and-growth]",
     category = "fes-rules",
-    dependencies = {"fes-overview"},
-    icon = "__base__/graphics/icons/lab.png"
+    icon = "__base__/graphics/icons/lab.png",
+    indent = 1
   },
   {
     name = "fes-ingress-lines",
-    order = "c[ingress-lines]",
+    order = "d[ingress-lines]",
     category = "fes-rules",
-    dependencies = {"fes-utilization-and-growth"},
-    icon = "__base__/graphics/icons/transport-belt.png"
+    icon = "__base__/graphics/icons/transport-belt.png",
+    indent = 1
   },
   {
     name = "fes-research-and-rewards",
-    order = "d[research-and-rewards]",
+    order = "e[research-and-rewards]",
     category = "fes-rules",
-    dependencies = {"fes-ingress-lines"},
-    icon = "__base__/graphics/icons/utility-science-pack.png"
+    icon = "__base__/graphics/icons/utility-science-pack.png",
+    indent = 1
   },
   {
     name = "fes-logistics-rule",
-    order = "e[logistics-rule]",
+    order = "f[logistics-rule]",
     category = "fes-rules",
-    dependencies = {"fes-research-and-rewards"},
-    icon = "__base__/graphics/icons/logistic-robot.png"
+    icon = "__base__/graphics/icons/logistic-robot.png",
+    indent = 1
   }
 }
 
@@ -291,7 +299,8 @@ local function build_tips_item(definition)
     order = definition.order,
     category = definition.category,
     starting_status = "unlocked",
-    dependencies = definition.dependencies,
+    indent = definition.indent,
+    is_title = definition.is_title,
     localised_name = {"tips-and-tricks-item-name." .. definition.name},
     localised_description = {"tips-and-tricks-item-description." .. definition.name},
     icon = definition.icon,
