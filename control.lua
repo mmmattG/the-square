@@ -65,6 +65,7 @@ local refresh_all_debug_guis
 local print_ingress_placement_debug
 local snap_entity_position_to_tile
 local sync_all_shop_guis
+local player_insert_or_spill
 
 local function get_ingress_item_name(resource)
   return "fes-" .. resource .. "-ingress"
@@ -823,6 +824,28 @@ local function is_fluid_anchor_too_close(anchor, position, side)
   return false
 end
 
+local function entity_overlaps_anchor_ring(square_size, entity)
+  if not (entity and entity.valid and entity.bounding_box) then
+    return false
+  end
+
+  local bounding_box = entity.bounding_box
+  local min_x = math.floor(bounding_box.left_top.x + 0.001)
+  local min_y = math.floor(bounding_box.left_top.y + 0.001)
+  local max_x = math.ceil(bounding_box.right_bottom.x - 0.001) - 1
+  local max_y = math.ceil(bounding_box.right_bottom.y - 0.001) - 1
+
+  for y = min_y, max_y do
+    for x = min_x, max_x do
+      if is_anchor_ring_position(square_size, {x = x, y = y}) then
+        return true
+      end
+    end
+  end
+
+  return false
+end
+
 local function destroy_entities_at_anchor_position(surface, anchor)
   if not (surface and anchor and anchor.position) then
     return
@@ -1001,6 +1024,20 @@ local function refund_entity_to_robot(robot, entity_name)
   end
 end
 
+local function get_entity_refund_item_name(entity)
+  if not (entity and entity.valid and entity.prototype and entity.prototype.items_to_place_this) then
+    return nil
+  end
+
+  local items_to_place = entity.prototype.items_to_place_this
+
+  if #items_to_place == 0 or not items_to_place[1] then
+    return nil
+  end
+
+  return items_to_place[1].name
+end
+
 local function reject_anchor_placement(entity, actor, message_key)
   if not (entity and entity.valid) then
     return
@@ -1020,7 +1057,29 @@ local function reject_anchor_placement(entity, actor, message_key)
   entity.destroy({raise_destroy = false})
 end
 
-local function player_insert_or_spill(player, item_name)
+local function reject_reserved_ring_placement(entity, actor, message_key)
+  if not (entity and entity.valid) then
+    return
+  end
+
+  local item_name = get_entity_refund_item_name(entity)
+
+  if actor and actor.valid then
+    if actor.object_name == "LuaPlayer" then
+      if item_name then
+        player_insert_or_spill(actor, item_name)
+      end
+
+      actor.print({message_key})
+    elseif actor.object_name == "LuaEntity" and actor.type == "construction-robot" and item_name then
+      refund_entity_to_robot(actor, item_name)
+    end
+  end
+
+  entity.destroy({raise_destroy = false})
+end
+
+player_insert_or_spill = function(player, item_name)
   if not (player and player.valid and item_name) then
     return false
   end
@@ -1211,9 +1270,20 @@ local function handle_entity_built(event)
 
   local player = event.player_index and game.get_player(event.player_index) or nil
   local robot = event.robot
+  local actor = player or robot
+  local bootstrap = storage.bootstrap
+
+  if bootstrap
+    and entity.surface.name == bootstrap.surface_name
+    and not is_ingress_entity_name(entity.name)
+    and entity_overlaps_anchor_ring(bootstrap.square_size, entity)
+  then
+    reject_reserved_ring_placement(entity, actor, "message.fes-edge-reserved")
+    return
+  end
 
   if is_ingress_entity_name(entity.name) then
-    handle_ingress_built(entity, player or robot)
+    handle_ingress_built(entity, actor)
   end
 end
 
