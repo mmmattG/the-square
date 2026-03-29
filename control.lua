@@ -35,6 +35,10 @@ script.on_configuration_changed(function()
     bootstrap_runtime.ensure_bootstrap_state_defaults()
     anchor_runtime.ensure_starter_anchor_state()
 
+    if storage.bootstrap.square_size ~= defs.get_square_size() then
+      bootstrap_runtime.notify_square_size_change_applies_to_new_saves()
+    end
+
     local surface = game.surfaces[storage.bootstrap.surface_name]
 
     if surface then
