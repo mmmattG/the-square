@@ -1,0 +1,402 @@
+local bootstrap_layout = require("lib.bootstrap_layout")
+local item_ingress = require("lib.item_ingress")
+
+local runtime_defs = {}
+
+runtime_defs.SURFACE_NAME = "fes-bootstrap"
+runtime_defs.SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
+runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
+runtime_defs.SETTING_DEV_MODE = "fes-dev-mode"
+runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
+runtime_defs.FLOOR_TILE_NAME = "grass-1"
+runtime_defs.VOID_TILE_NAME = "out-of-map"
+runtime_defs.CHART_MARGIN = 1
+runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS = 8
+runtime_defs.ANCHOR_SLOT_PROXY_NAME = "fes-anchor-slot-proxy"
+runtime_defs.PLACE_MANAGED_ANCHOR_INPUT_NAME = "fes-place-managed-anchor"
+runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH = 2
+runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION = 8
+runtime_defs.DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
+runtime_defs.DEBUG_FRAME_NAME = "fes_debug_frame"
+runtime_defs.STATUS_FRAME_NAME = "fes_status_frame"
+runtime_defs.SHOP_BUTTON_NAME = "fes_shop_button"
+runtime_defs.SHOP_FRAME_NAME = "fes_shop_frame"
+runtime_defs.UTILIZATION_UPDATE_INTERVAL_TICKS = 60
+runtime_defs.GROWTH_RATE_SIZE_DIVISOR = 12
+runtime_defs.LINE_PURCHASE_COST = 12
+runtime_defs.MAX_INGRESS_TIER = 4
+runtime_defs.EXPANSION_SPEED_RESEARCH_PER_LEVEL_MULTIPLIER = 0.05
+runtime_defs.EXPANSION_SPEED_RESEARCH_BANDS = {
+  {name = "fes-expansion-speed-automation", start_level = 1},
+  {name = "fes-expansion-speed-logistic", start_level = 6},
+  {name = "fes-expansion-speed-chemical", start_level = 11},
+  {name = "fes-expansion-speed-production-utility", start_level = 16},
+  {name = "fes-expansion-speed-space", start_level = 21}
+}
+runtime_defs.FORBIDDEN_LOGISTIC_CONTAINER_NAMES = {
+  ["active-provider-chest"] = true,
+  ["buffer-chest"] = true,
+  ["requester-chest"] = true,
+  ["storage-chest"] = true
+}
+runtime_defs.COUNTED_CATEGORY_ORDER = {
+  "crafting",
+  "lab",
+  "rocket-silo",
+  "beacon",
+  "power"
+}
+runtime_defs.COUNTED_CATEGORY_LABELS = {
+  crafting = "Crafting",
+  lab = "Labs",
+  ["rocket-silo"] = "Rocket silos",
+  beacon = "Beacons",
+  power = "Power"
+}
+runtime_defs.INPUT_DEFINITIONS = {
+  {resource = "iron-ore", kind = "item", starter_side = "north", prerequisite_resource = nil},
+  {resource = "copper-ore", kind = "item", starter_side = "north", prerequisite_resource = nil},
+  {resource = "coal", kind = "item", starter_side = "south", prerequisite_resource = nil},
+  {resource = "stone", kind = "item", starter_side = "south", prerequisite_resource = nil},
+  {resource = "water", kind = "fluid", starter_side = "west", prerequisite_resource = nil},
+  {resource = "wood", kind = "item", starter_side = "east", prerequisite_resource = nil},
+  {resource = "crude-oil", kind = "fluid", starter_side = nil, prerequisite_resource = nil},
+  {resource = "uranium-ore", kind = "item", starter_side = nil, prerequisite_resource = "crude-oil"}
+}
+runtime_defs.OUTPUT_DEFINITIONS = {
+  {resource = "sulfuric-acid", kind = "fluid", starter_side = nil, prerequisite_resource = "uranium-ore"}
+}
+runtime_defs.DIRECTION_BY_SIDE = {
+  north = defines.direction.south,
+  east = defines.direction.west,
+  south = defines.direction.north,
+  west = defines.direction.east
+}
+runtime_defs.OFFSET_BY_SIDE = {
+  north = {x = 0, y = -1},
+  east = {x = 1, y = 0},
+  south = {x = 0, y = 1},
+  west = {x = -1, y = 0}
+}
+runtime_defs.ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER = {
+  [1] = "yellow",
+  [2] = "yellow",
+  [3] = "red",
+  [4] = "blue"
+}
+runtime_defs.INGRESS_TIER_DEFINITIONS = {
+  [1] = {
+    key = "yellow-single",
+    label = "Yellow single lane",
+    item_lane_counts = {1, 0},
+    fluid_amount_per_interval = 160
+  },
+  [2] = {
+    key = "yellow-double",
+    label = "Yellow double lane",
+    item_lane_counts = {1, 1},
+    fluid_amount_per_interval = 320
+  },
+  [3] = {
+    key = "red-double",
+    label = "Red double lane",
+    item_lane_counts = {2, 2},
+    fluid_amount_per_interval = 640
+  },
+  [4] = {
+    key = "blue-double",
+    label = "Blue double lane",
+    item_lane_counts = {3, 3},
+    fluid_amount_per_interval = 960
+  }
+}
+
+function runtime_defs.get_ingress_item_name(resource)
+  return "fes-" .. resource .. "-ingress"
+end
+
+function runtime_defs.get_ingress_entity_name(resource, ingress_tier_level)
+  local definition = nil
+
+  for _, input_definition in ipairs(runtime_defs.INPUT_DEFINITIONS) do
+    if input_definition.resource == resource then
+      definition = input_definition
+      break
+    end
+  end
+
+  if not definition or definition.kind ~= "item" then
+    return "fes-" .. resource .. "-ingress-anchor"
+  end
+
+  local belt_tier_key = runtime_defs.ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER[ingress_tier_level or 1] or "yellow"
+
+  if belt_tier_key == "yellow" then
+    return "fes-" .. resource .. "-ingress-anchor"
+  end
+
+  return "fes-" .. resource .. "-ingress-anchor-" .. belt_tier_key
+end
+
+function runtime_defs.is_ingress_entity_name_for_resource(resource, entity_name)
+  if entity_name == runtime_defs.get_ingress_entity_name(resource, 1) then
+    return true
+  end
+
+  for tier_level = 2, runtime_defs.MAX_INGRESS_TIER do
+    if entity_name == runtime_defs.get_ingress_entity_name(resource, tier_level) then
+      return true
+    end
+  end
+
+  return false
+end
+
+function runtime_defs.get_input_definition(resource)
+  for _, definition in ipairs(runtime_defs.INPUT_DEFINITIONS) do
+    if definition.resource == resource then
+      return definition
+    end
+  end
+
+  return nil
+end
+
+function runtime_defs.get_output_definition(resource)
+  for _, definition in ipairs(runtime_defs.OUTPUT_DEFINITIONS) do
+    if definition.resource == resource then
+      return definition
+    end
+  end
+
+  return nil
+end
+
+function runtime_defs.get_line_definition(resource)
+  local input_definition = runtime_defs.get_input_definition(resource)
+
+  if input_definition then
+    return input_definition, "ingress"
+  end
+
+  local output_definition = runtime_defs.get_output_definition(resource)
+
+  if output_definition then
+    return output_definition, "egress"
+  end
+
+  return nil, nil
+end
+
+function runtime_defs.get_egress_item_name(resource)
+  return "fes-" .. resource .. "-egress"
+end
+
+function runtime_defs.get_egress_entity_name(resource)
+  return "fes-" .. resource .. "-egress-anchor"
+end
+
+function runtime_defs.is_egress_entity_name_for_resource(resource, entity_name)
+  return entity_name == runtime_defs.get_egress_entity_name(resource)
+end
+
+function runtime_defs.create_managed_anchor(definition, flow, side, position)
+  return {
+    resource = definition.resource,
+    kind = definition.kind,
+    flow = flow,
+    side = side,
+    direction = side and runtime_defs.DIRECTION_BY_SIDE[side] or nil,
+    position = position,
+    item_name = flow == "egress"
+      and runtime_defs.get_egress_item_name(definition.resource)
+      or runtime_defs.get_ingress_item_name(definition.resource),
+    entity_name = flow == "egress"
+      and runtime_defs.get_egress_entity_name(definition.resource)
+      or runtime_defs.get_ingress_entity_name(definition.resource),
+    item_progress = {0, 0}
+  }
+end
+
+function runtime_defs.get_square_size()
+  return settings.global[runtime_defs.SETTING_STARTING_SQUARE_SIZE].value
+end
+
+function runtime_defs.is_logistic_network_automation_enabled()
+  return settings.global[runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION].value
+end
+
+function runtime_defs.get_square_bounds(size)
+  return bootstrap_layout.get_square_bounds(size)
+end
+
+function runtime_defs.get_surface_size(square_size)
+  return bootstrap_layout.get_surface_size(square_size, runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH)
+end
+
+function runtime_defs.get_anchor_bounds(square_size)
+  return bootstrap_layout.get_anchor_bounds(square_size)
+end
+
+function runtime_defs.get_square_area(square_size)
+  return square_size * square_size
+end
+
+function runtime_defs.get_ingress_tier_definition(tier_level)
+  return runtime_defs.INGRESS_TIER_DEFINITIONS[tier_level] or runtime_defs.INGRESS_TIER_DEFINITIONS[1]
+end
+
+function runtime_defs.get_current_ingress_tier_level()
+  local bootstrap = storage.bootstrap
+
+  if not bootstrap then
+    return 1
+  end
+
+  local tier_level = bootstrap.ingress_tier or 1
+
+  if tier_level < 1 then
+    return 1
+  end
+
+  if tier_level > runtime_defs.MAX_INGRESS_TIER then
+    return runtime_defs.MAX_INGRESS_TIER
+  end
+
+  return tier_level
+end
+
+function runtime_defs.get_current_ingress_tier()
+  return runtime_defs.get_ingress_tier_definition(runtime_defs.get_current_ingress_tier_level())
+end
+
+function runtime_defs.get_next_ingress_tier_level()
+  local next_level = runtime_defs.get_current_ingress_tier_level() + 1
+
+  if next_level > runtime_defs.MAX_INGRESS_TIER then
+    return nil
+  end
+
+  return next_level
+end
+
+function runtime_defs.get_ingress_tier_upgrade_cost(next_tier_level)
+  if not next_tier_level then
+    return nil
+  end
+
+  return runtime_defs.LINE_PURCHASE_COST * next_tier_level
+end
+
+function runtime_defs.get_next_expansion_tile_reward(square_size)
+  local next_square_size = square_size + 2
+
+  return runtime_defs.get_square_area(next_square_size) - runtime_defs.get_square_area(square_size)
+end
+
+function runtime_defs.is_inside_bounds(bounds, position)
+  return bootstrap_layout.is_inside_bounds(bounds, position)
+end
+
+function runtime_defs.get_position_key(position)
+  return position.x .. ":" .. position.y
+end
+
+function runtime_defs.move_position(position, side, distance)
+  local offset = runtime_defs.OFFSET_BY_SIDE[side]
+
+  return {
+    x = position.x + (offset.x * distance),
+    y = position.y + (offset.y * distance)
+  }
+end
+
+function runtime_defs.get_anchor_side_for_position(square_size, position)
+  return bootstrap_layout.get_anchor_side_for_position(square_size, position)
+end
+
+function runtime_defs.is_anchor_ring_position(square_size, position)
+  return bootstrap_layout.is_anchor_ring_position(square_size, position)
+end
+
+function runtime_defs.get_playable_edge_side_for_position(square_size, position)
+  return bootstrap_layout.get_playable_edge_side_for_position(square_size, position)
+end
+
+function runtime_defs.get_managed_tile_name(square_size, surface_size, position)
+  return bootstrap_layout.get_managed_tile_name(
+    square_size,
+    surface_size,
+    runtime_defs.FLOOR_TILE_NAME,
+    runtime_defs.VOID_TILE_NAME,
+    position
+  )
+end
+
+function runtime_defs.get_player_force()
+  return game and game.forces and game.forces.player or nil
+end
+
+function runtime_defs.format_ratio_percent(ratio)
+  return string.format("%.1f%%", ratio * 100)
+end
+
+function runtime_defs.format_decimal(value)
+  return string.format("%.2f", value)
+end
+
+function runtime_defs.format_resource_name(resource)
+  return string.gsub(resource, "%-", " ")
+end
+
+function runtime_defs.format_position(position)
+  if not position then
+    return "(nil)"
+  end
+
+  return "(" .. position.x .. ", " .. position.y .. ")"
+end
+
+function runtime_defs.snap_entity_position_to_tile(position)
+  if not position then
+    return nil
+  end
+
+  return {
+    x = math.floor(position.x),
+    y = math.floor(position.y)
+  }
+end
+
+function runtime_defs.get_anchor_entity_name_for_current_tier(anchor)
+  if not anchor then
+    return nil
+  end
+
+  if anchor.flow == "egress" then
+    return runtime_defs.get_egress_entity_name(anchor.resource)
+  end
+
+  if anchor.kind == "item" then
+    return runtime_defs.get_ingress_entity_name(anchor.resource, runtime_defs.get_current_ingress_tier_level())
+  end
+
+  return runtime_defs.get_ingress_entity_name(anchor.resource, 1)
+end
+
+function runtime_defs.build_ingress_tier_summary()
+  local tier = runtime_defs.get_current_ingress_tier()
+  local item_rate_per_second = item_ingress.get_total_items_per_second(
+    tier.item_lane_counts or {0, 0},
+    runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS
+  )
+  local fluid_rate_per_second = (tier.fluid_amount_per_interval or 0) * (60 / runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS)
+
+  return tier.label
+    .. " | item/s per anchor: "
+    .. runtime_defs.format_decimal(item_rate_per_second)
+    .. " | fluid/s per anchor: "
+    .. runtime_defs.format_decimal(fluid_rate_per_second)
+end
+
+return runtime_defs
