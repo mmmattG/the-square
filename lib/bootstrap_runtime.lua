@@ -150,7 +150,7 @@ function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, s
   local tile_updates = build_managed_surface_tiles(square_size, surface_size)
 
   if #tile_updates > 0 then
-    surface.set_tiles(tile_updates, false, true, true, false)
+    surface.set_tiles(tile_updates, true, true, true, false)
   end
 end
 
@@ -255,7 +255,7 @@ function bootstrap_runtime.ensure_bootstrap_surface(anchor_runtime)
   surface.destroy_decoratives({})
   surface.clear_hidden_tiles()
   destroy_noise_entities(surface)
-  surface.set_tiles(build_bootstrap_tiles(square_size, surface_size), false, true, true, false)
+  surface.set_tiles(build_bootstrap_tiles(square_size, surface_size), true, true, true, false)
 
   storage.bootstrap = storage.bootstrap or {}
   storage.bootstrap.square_size = square_size
@@ -406,7 +406,7 @@ local function apply_square_resize(surface, old_square_size, old_surface_size, n
   )
 
   if #tile_updates > 0 then
-    surface.set_tiles(tile_updates, false, true, true, false)
+    surface.set_tiles(tile_updates, true, true, true, false)
   end
 end
 
