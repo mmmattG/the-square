@@ -793,6 +793,36 @@ local function place_anchor(anchor, entity, square_size)
   return true
 end
 
+local function is_fluid_anchor_too_close(anchor, position, side)
+  local starter_anchors = storage.starter_anchors
+
+  if not starter_anchors or not anchor or anchor.kind ~= "fluid" then
+    return false
+  end
+
+  for _, other_anchor in ipairs(starter_anchors.anchors) do
+    if other_anchor ~= anchor
+      and other_anchor.kind == "fluid"
+      and other_anchor.side == side
+      and other_anchor.position
+    then
+      local delta
+
+      if side == "north" or side == "south" then
+        delta = math.abs(other_anchor.position.x - position.x)
+      else
+        delta = math.abs(other_anchor.position.y - position.y)
+      end
+
+      if delta <= 1 then
+        return true
+      end
+    end
+  end
+
+  return false
+end
+
 local function destroy_entities_at_anchor_position(surface, anchor)
   if not (surface and anchor and anchor.position) then
     return
@@ -1147,6 +1177,11 @@ local function handle_ingress_built(entity, actor)
 
   if not anchor then
     reject_anchor_placement(entity, actor, "message.fes-ingress-unowned")
+    return
+  end
+
+  if is_fluid_anchor_too_close(anchor, snap_entity_position_to_tile(entity.position), side) then
+    reject_anchor_placement(entity, actor, "message.fes-ingress-fluid-gap-required")
     return
   end
 
