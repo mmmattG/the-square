@@ -188,15 +188,22 @@ local tips_and_tricks_items = {
     indent = 1
   },
   {
+    name = "fes-uranium-egress",
+    order = "e[uranium-egress]",
+    category = "fes-rules",
+    icon = "__base__/graphics/icons/fluid/sulfuric-acid.png",
+    indent = 1
+  },
+  {
     name = "fes-research-and-rewards",
-    order = "e[research-and-rewards]",
+    order = "f[research-and-rewards]",
     category = "fes-rules",
     icon = "__base__/graphics/icons/utility-science-pack.png",
     indent = 1
   },
   {
     name = "fes-logistics-rule",
-    order = "f[logistics-rule]",
+    order = "g[logistics-rule]",
     category = "fes-rules",
     icon = "__base__/graphics/icons/logistic-robot.png",
     indent = 1
