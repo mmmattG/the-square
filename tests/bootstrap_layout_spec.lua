@@ -19,25 +19,25 @@ local function run_test(name, fn)
   io.stdout:write("PASS " .. name .. "\n")
 end
 
-run_test("anchor ring tiles stay unmanaged", function()
+run_test("anchor ring tiles stay out of map", function()
   local square_size = 12
-  local surface_size = bootstrap_layout.get_surface_size(square_size, 2)
+  local surface_size = bootstrap_layout.get_surface_size(square_size, 1)
 
   assert_equal(
     bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -7}),
-    nil,
-    "north anchor ring should remain unmanaged"
+    "out-of-map",
+    "north anchor ring should stay out of map"
   )
   assert_equal(
     bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 6, y = 0}),
-    nil,
-    "east anchor ring should remain unmanaged"
+    "out-of-map",
+    "east anchor ring should stay out of map"
   )
 end)
 
 run_test("playable square stays walkable floor", function()
   local square_size = 12
-  local surface_size = bootstrap_layout.get_surface_size(square_size, 2)
+  local surface_size = bootstrap_layout.get_surface_size(square_size, 1)
 
   assert_equal(
     bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = 0}),
@@ -46,14 +46,14 @@ run_test("playable square stays walkable floor", function()
   )
 end)
 
-run_test("outer perimeter outside the anchor ring stays unmanaged", function()
+run_test("positions outside the managed surface stay unmanaged", function()
   local square_size = 12
-  local surface_size = bootstrap_layout.get_surface_size(square_size, 2)
+  local surface_size = bootstrap_layout.get_surface_size(square_size, 1)
 
   assert_equal(
     bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -8}),
     nil,
-    "the outer perimeter should remain unmanaged"
+    "positions beyond the out-of-map ring should remain unmanaged"
   )
 end)
 
