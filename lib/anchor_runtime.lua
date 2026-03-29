@@ -806,6 +806,28 @@ local function get_shop_item_name(resource)
   return nil
 end
 
+local function grant_managed_line(player, bootstrap, definition, flow, item_name, purchase_message)
+  if not (bootstrap and definition and flow and item_name) then
+    return false
+  end
+
+  storage.starter_anchors = storage.starter_anchors or {
+    layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = bootstrap_runtime.build_starter_anchor_layout(bootstrap.square_size)
+  }
+  storage.starter_anchors.anchors[#storage.starter_anchors.anchors + 1] = defs.create_managed_anchor(definition, flow, nil, nil)
+
+  if player and player.valid then
+    player_insert_or_spill(player, item_name)
+
+    if purchase_message then
+      player.print(purchase_message)
+    end
+  end
+
+  return true
+end
+
 function anchor_runtime.purchase_managed_line_for_resource(player, resource)
   local bootstrap = storage.bootstrap
   local definition, flow = defs.get_line_definition(resource)
@@ -838,20 +860,18 @@ function anchor_runtime.purchase_managed_line_for_resource(player, resource)
     return
   end
 
-  storage.starter_anchors = storage.starter_anchors or {
-    layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = bootstrap_runtime.build_starter_anchor_layout(bootstrap.square_size)
-  }
-  storage.starter_anchors.anchors[#storage.starter_anchors.anchors + 1] = defs.create_managed_anchor(definition, flow, nil, nil)
+  grant_managed_line(player, bootstrap, definition, flow, item_name, {
+    "message.fes-shop-purchased-line",
+    {"item-name." .. item_name},
+    line_purchase_cost,
+    bootstrap.expansion_points
+  })
 
-  if player and player.valid then
-    player_insert_or_spill(player, item_name)
-    player.print({
-      "message.fes-shop-purchased-line",
-      {"item-name." .. item_name},
-      line_purchase_cost,
-      bootstrap.expansion_points
-    })
+  if resource == "uranium-ore" and not anchor_runtime.is_resource_unlocked("sulfuric-acid") then
+    local sulfuric_acid_definition = defs.get_output_definition("sulfuric-acid")
+    local sulfuric_acid_item_name = defs.get_egress_item_name("sulfuric-acid")
+
+    grant_managed_line(player, bootstrap, sulfuric_acid_definition, "egress", sulfuric_acid_item_name)
   end
 end
 
