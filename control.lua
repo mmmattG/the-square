@@ -1199,6 +1199,7 @@ local function ensure_anchor_slot_proxies(surface, square_size, starter_anchors)
   end
 
   local occupied_positions = {}
+  local valid_ring_positions = {}
 
   for _, anchor in ipairs(starter_anchors.anchors) do
     if anchor.position then
@@ -1208,6 +1209,7 @@ local function ensure_anchor_slot_proxies(surface, square_size, starter_anchors)
 
   for _, position in ipairs(get_anchor_ring_positions(square_size)) do
     local position_key = get_position_key(position)
+    valid_ring_positions[position_key] = true
     local proxy = find_entity_at_position(surface, ANCHOR_SLOT_PROXY_NAME, get_tile_center_position(position))
 
     if occupied_positions[position_key] then
@@ -1220,6 +1222,15 @@ local function ensure_anchor_slot_proxies(surface, square_size, starter_anchors)
         position = get_tile_center_position(position),
         force = game.forces.player
       })
+    end
+  end
+
+  for _, proxy in ipairs(surface.find_entities_filtered({name = ANCHOR_SLOT_PROXY_NAME})) do
+    local proxy_position = snap_entity_position_to_tile(proxy.position)
+    local position_key = get_position_key(proxy_position)
+
+    if not valid_ring_positions[position_key] or occupied_positions[position_key] then
+      proxy.destroy({raise_destroy = false})
     end
   end
 end
@@ -1927,8 +1938,13 @@ local function handle_managed_anchor_built(entity, actor)
   end
 
   local tile_position = snap_entity_position_to_tile(entity.position)
-  local side = get_playable_edge_side_for_position(bootstrap.square_size, tile_position)
-  local anchor_position = side and move_position(tile_position, side, 1) or nil
+  local side = get_anchor_side_for_position(bootstrap.square_size, tile_position)
+  local anchor_position = tile_position
+
+  if not side then
+    side = get_playable_edge_side_for_position(bootstrap.square_size, tile_position)
+    anchor_position = side and move_position(tile_position, side, 1) or nil
+  end
 
   if not side then
     reject_anchor_placement(entity, actor, {"message.fes-managed-line-invalid-edge"})
