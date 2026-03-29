@@ -1,8 +1,9 @@
 {
   "name": "the-square",
   "version": "0.1.0",
-  "title": "the-square",
+  "title": "The Square",
   "author": "mmmatt",
+  "contact": "https://discord.gg/HytACasPxY",
   "factorio_version": "2.0",
-  "description": "Bootstrap scenario for the-square Factorio challenge."
+  "description": "The Square is a Factorio challenge mod where your factory begins inside a tiny square and can only grow by researching Square expansion.\nEach square expansion level adds one buildable tile in each direction.\n\nThe intended purpose of this mod is to constrain space and force efficient design of the factory.\n\nThis mod is pre-alpha with much tuning and playtesting still needed. Only supports the vanilla game for now but Space Age support is planned in the future.\n\nFeedback: Join the discord! https://discord.gg/HytACasPxY\n\nDisclaimer: This mod’s code was primarily AI-generated using GPT-5.4 with Codex, with human direction, review, and iteration."
 }
