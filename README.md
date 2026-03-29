@@ -5,9 +5,18 @@ Local development commands:
 ```sh
 make build
 make install
+make test
 ```
 
 `make build` creates a versioned Factorio mod zip in `./build/` using the `name` and `version` from `info.json`.
+
+`make test` runs every Lua spec in `tests/*_spec.lua` and stops on the first failure. It requires either `luajit` or `lua` to be available on `PATH`; the target prefers `luajit` when both are installed.
+
+If you need to force a specific runtime, override `LUA` directly:
+
+```sh
+make test LUA=lua
+```
 
 The starting square size is a per-save map setting (`runtime-global` in Factorio terms). Set it when creating a run. Changing it after the bootstrap surface already exists does not resize the current save.
 
