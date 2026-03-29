@@ -1,0 +1,219 @@
+local item_ingress = require("lib.item_ingress")
+local resource_balance = require("lib.resource_balance")
+local defs = require("lib.runtime_defs")
+
+local ingress_runtime = {}
+
+local function get_item_anchor_emissions(anchor, ingress_tier, elapsed_ticks)
+  if not anchor then
+    return {
+      lane_emissions = {0, 0},
+      carried_progress = {0, 0}
+    }
+  end
+
+  local emission = item_ingress.compute_lane_emissions(
+    ingress_tier.item_lane_counts or {0, 0},
+    defs.ITEM_ANCHOR_INTERVAL_TICKS,
+    anchor.item_progress or {0, 0},
+    elapsed_ticks
+  )
+
+  anchor.item_progress = emission.carried_progress
+  return emission
+end
+
+local function pump_item_anchor(entity, resource, lane_index, item_count)
+  if item_count <= 0 then
+    return 0
+  end
+
+  local line = entity.get_transport_line(lane_index)
+
+  if not line then
+    return 0
+  end
+
+  local inserted = 0
+
+  for _ = 1, item_count do
+    if not line.can_insert_at_back() then
+      return inserted
+    end
+
+    line.insert_at_back({name = resource, count = 1})
+    inserted = inserted + 1
+  end
+
+  return inserted
+end
+
+local function drain_fluid_anchor(entity, resource, amount)
+  if not (entity and entity.valid) or amount <= 0 then
+    return 0
+  end
+
+  local removed = entity.remove_fluid({
+    name = resource,
+    amount = amount
+  })
+
+  return removed or 0
+end
+
+local function get_mining_productivity_bonus()
+  local player_force = defs.get_player_force()
+
+  if not (player_force and player_force.valid) then
+    return 0
+  end
+
+  return player_force.mining_drill_productivity_bonus or 0
+end
+
+local function get_active_uranium_anchors(ingress_tier)
+  local anchors = {}
+
+  for _, anchor in ipairs(storage.starter_anchors.anchors) do
+    local entity = anchor.position and anchor.entity or nil
+
+    if anchor.flow == "ingress"
+      and anchor.resource == "uranium-ore"
+      and entity
+      and entity.valid
+    then
+      local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
+      local requested_count = (emission.lane_emissions[1] or 0) + (emission.lane_emissions[2] or 0)
+
+      if requested_count > 0 then
+        anchors[#anchors + 1] = {
+          anchor = anchor,
+          entity = entity,
+          requested_emission = emission,
+          capacity = requested_count
+        }
+      end
+    end
+  end
+
+  return anchors
+end
+
+local function get_active_uranium_budget_per_interval(uranium_anchors)
+  local bootstrap = storage.bootstrap
+
+  if not bootstrap or #uranium_anchors == 0 then
+    return 0
+  end
+
+  local ingress_tier = defs.get_current_ingress_tier()
+  local mining_productivity_bonus = get_mining_productivity_bonus()
+  local total_capacity = 0
+
+  for _, uranium_anchor in ipairs(uranium_anchors) do
+    total_capacity = total_capacity + uranium_anchor.capacity
+  end
+
+  if total_capacity <= 0 then
+    return 0
+  end
+
+  local sulfuric_acid_needed = total_capacity / (
+    resource_balance.URANIUM_ORE_PER_SULFURIC_ACID * (1 + mining_productivity_bonus)
+  )
+  local sulfuric_acid_egressed = 0
+
+  for _, anchor in ipairs(storage.starter_anchors.anchors) do
+    local entity = anchor.position and anchor.entity or nil
+
+    if anchor.flow == "egress"
+      and anchor.resource == "sulfuric-acid"
+      and entity
+      and entity.valid
+    then
+      local remaining_needed = sulfuric_acid_needed - sulfuric_acid_egressed
+
+      if remaining_needed <= 0 then
+        break
+      end
+
+      sulfuric_acid_egressed = sulfuric_acid_egressed + drain_fluid_anchor(
+        entity,
+        anchor.resource,
+        math.min(ingress_tier.fluid_amount_per_interval, remaining_needed)
+      )
+    end
+  end
+
+  local budget = resource_balance.compute_uranium_budget(
+    sulfuric_acid_egressed,
+    mining_productivity_bonus,
+    bootstrap.uranium_ore_progress_carry or 0
+  )
+
+  bootstrap.uranium_ore_progress_carry = budget.remaining_ore_progress
+  return budget.ore_budget
+end
+
+local function pump_uranium_ingress_anchor(entity, requested_emission, shared_budget)
+  if shared_budget <= 0 then
+    return 0
+  end
+
+  local lane_emissions = requested_emission and requested_emission.lane_emissions or {0, 0}
+  local lane_one_target = math.min(shared_budget, lane_emissions[1] or 0)
+  local inserted = pump_item_anchor(entity, "uranium-ore", 1, lane_one_target)
+  local remaining_budget = shared_budget - inserted
+  local lane_two_target = math.min(remaining_budget, lane_emissions[2] or 0)
+
+  inserted = inserted + pump_item_anchor(entity, "uranium-ore", 2, lane_two_target)
+  return inserted
+end
+
+function ingress_runtime.pump_starter_anchors()
+  local starter_anchors = storage.starter_anchors
+
+  if not starter_anchors then
+    return
+  end
+
+  local ingress_tier = defs.get_current_ingress_tier()
+  local uranium_anchors = get_active_uranium_anchors(ingress_tier)
+  local uranium_budget = get_active_uranium_budget_per_interval(uranium_anchors)
+  local uranium_capacities = {}
+
+  for index, uranium_anchor in ipairs(uranium_anchors) do
+    uranium_capacities[index] = uranium_anchor.capacity
+  end
+
+  local uranium_allocations = resource_balance.allocate_shared_budget(uranium_budget, uranium_capacities).allocations
+  local uranium_anchor_index = 1
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    local entity = anchor.position and anchor.entity or nil
+
+    if entity and entity.valid and anchor.flow == "ingress" then
+      if anchor.kind == "item" then
+        if anchor.resource == "uranium-ore" then
+          local allocated_budget = uranium_allocations[uranium_anchor_index] or 0
+          local uranium_anchor = uranium_anchors[uranium_anchor_index]
+
+          pump_uranium_ingress_anchor(entity, uranium_anchor and uranium_anchor.requested_emission, allocated_budget)
+          uranium_anchor_index = uranium_anchor_index + 1
+        else
+          local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
+
+          pump_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
+          pump_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
+        end
+      else
+        entity.insert_fluid({
+          name = anchor.resource,
+          amount = ingress_tier.fluid_amount_per_interval
+        })
+      end
+    end
+  end
+end
+
+return ingress_runtime
