@@ -46,14 +46,14 @@ run_test("playable square stays walkable floor", function()
   )
 end)
 
-run_test("outer perimeter outside the anchor ring uses the configured border tile", function()
+run_test("outer perimeter outside the border ring stays unmanaged", function()
   local square_size = 12
-  local surface_size = bootstrap_layout.get_surface_size(square_size, 2)
+  local surface_size = bootstrap_layout.get_surface_size(square_size, 3)
 
   assert_equal(
     bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "sand-1", {x = 0, y = -8}),
-    "sand-1",
-    "the outer perimeter should use the configured border tile"
+    nil,
+    "the outer perimeter beyond the border ring should remain unmanaged"
   )
 end)
 

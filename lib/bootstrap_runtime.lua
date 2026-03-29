@@ -1,7 +1,7 @@
 local defs = require("lib.runtime_defs")
 
 local bootstrap_runtime = {}
-local EXPANDED_SURFACE_MARGIN = 1
+local EXPANDED_SURFACE_MARGIN = 2
 local ensure_surface_dimensions
 
 local function get_target_surface_size(square_size, expansions_completed)
@@ -179,8 +179,6 @@ end
 
 local function build_anchor_ring_tiles(square_size, surface_size)
   local surface_bounds = defs.get_square_bounds(surface_size)
-  local square_bounds = defs.get_square_bounds(square_size)
-  local border_tile_name = defs.get_border_tile_name()
   local tiles = {}
 
   if surface_size <= square_size then
@@ -190,10 +188,11 @@ local function build_anchor_ring_tiles(square_size, surface_size)
   for y = surface_bounds.left_top.y, surface_bounds.right_bottom.y - 1 do
     for x = surface_bounds.left_top.x, surface_bounds.right_bottom.x - 1 do
       local position = {x = x, y = y}
+      local tile_name = defs.get_managed_tile_name(square_size, surface_size, position)
 
-      if not defs.is_inside_bounds(square_bounds, position) then
+      if tile_name and tile_name ~= defs.FLOOR_TILE_NAME then
         tiles[#tiles + 1] = {
-          name = border_tile_name,
+          name = tile_name,
           position = position
         }
       end
@@ -208,7 +207,7 @@ local function clear_outer_band_decoratives(surface, square_size, surface_size)
     return
   end
 
-  for _, area in ipairs(build_outer_band_areas(square_size, surface_size)) do
+  for _, area in ipairs(build_outer_band_areas(square_size, square_size + 2)) do
     surface.destroy_decoratives({area = area})
   end
 end
