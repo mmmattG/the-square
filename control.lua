@@ -16,6 +16,14 @@ local UTILIZATION_UPDATE_INTERVAL_TICKS = 60
 local GROWTH_RATE_SIZE_DIVISOR = 12
 local LINE_PURCHASE_COST = 12
 local MAX_INGRESS_TIER = 4
+local EXPANSION_SPEED_RESEARCH_PER_LEVEL_MULTIPLIER = 0.05
+local EXPANSION_SPEED_RESEARCH_BANDS = {
+  {name = "fes-expansion-speed-automation", start_level = 1},
+  {name = "fes-expansion-speed-logistic", start_level = 6},
+  {name = "fes-expansion-speed-chemical", start_level = 11},
+  {name = "fes-expansion-speed-production-utility", start_level = 16},
+  {name = "fes-expansion-speed-space", start_level = 21}
+}
 local DIRECTION_BY_SIDE
 local OFFSET_BY_SIDE
 local INGRESS_TIER_DEFINITIONS
@@ -609,6 +617,20 @@ local function compute_growth_rate_per_second(square_size, utilization_ratio)
   return utilization_ratio * (square_size / GROWTH_RATE_SIZE_DIVISOR)
 end
 
+local function get_completed_expansion_speed_research_levels()
+  if not storage.bootstrap then
+    return 0
+  end
+
+  return storage.bootstrap.expansion_speed_research_levels or 0
+end
+
+local function get_expansion_speed_multiplier()
+  local levels = get_completed_expansion_speed_research_levels()
+
+  return math.pow(1 + EXPANSION_SPEED_RESEARCH_PER_LEVEL_MULTIPLIER, levels), levels
+end
+
 local function sort_breakdown_entries(entries_by_key)
   local entries = {}
 
@@ -634,6 +656,7 @@ end
 local function evaluate_utilization(surface, square_size)
   local square_bounds = get_square_bounds(square_size)
   local total_tiles = get_square_area(square_size)
+  local expansion_speed_multiplier, expansion_speed_research_levels = get_expansion_speed_multiplier()
   local metrics = {
     tick = game.tick,
     square_size = square_size,
@@ -641,8 +664,11 @@ local function evaluate_utilization(surface, square_size)
     active_footprint_tiles = 0,
     active_entity_count = 0,
     utilization_ratio = 0,
+    base_growth_rate_per_second = 0,
     growth_rate_per_second = 0,
     growth_rate_per_minute = 0,
+    expansion_speed_multiplier = expansion_speed_multiplier,
+    expansion_speed_research_levels = expansion_speed_research_levels,
     categories = build_empty_category_breakdown(),
     entity_types = {}
   }
@@ -670,7 +696,8 @@ local function evaluate_utilization(surface, square_size)
     metrics.utilization_ratio = metrics.active_footprint_tiles / total_tiles
   end
 
-  metrics.growth_rate_per_second = compute_growth_rate_per_second(square_size, metrics.utilization_ratio)
+  metrics.base_growth_rate_per_second = compute_growth_rate_per_second(square_size, metrics.utilization_ratio)
+  metrics.growth_rate_per_second = metrics.base_growth_rate_per_second * expansion_speed_multiplier
   metrics.growth_rate_per_minute = metrics.growth_rate_per_second * 60
   metrics.sorted_entity_types = sort_breakdown_entries(metrics.entity_types)
 
@@ -768,6 +795,7 @@ local function ensure_bootstrap_state_defaults()
   storage.bootstrap.expansions_completed = storage.bootstrap.expansions_completed or 0
   storage.bootstrap.growth_progress = storage.bootstrap.growth_progress or 0
   storage.bootstrap.ingress_tier = storage.bootstrap.ingress_tier or 1
+  storage.bootstrap.expansion_speed_research_levels = storage.bootstrap.expansion_speed_research_levels or 0
 end
 
 local function ensure_surface_dimensions(surface, target_surface_size)
@@ -1807,7 +1835,12 @@ local function build_debug_lines()
   lines[#lines + 1] = "Growth rate: " .. format_decimal(metrics.growth_rate_per_second) .. " tiles/s"
     .. " (" .. format_decimal(metrics.growth_rate_per_minute) .. " tiles/min)"
   lines[#lines + 1] = "Formula: growth/s = utilization x (square size / " .. GROWTH_RATE_SIZE_DIVISOR .. ")"
+  lines[#lines + 1] = "Research multiplier: " .. format_decimal(metrics.expansion_speed_multiplier)
+    .. "x from " .. metrics.expansion_speed_research_levels .. " expansion-speed levels"
   lines[#lines + 1] = "Current: " .. format_decimal(metrics.growth_rate_per_second)
+    .. " = " .. format_decimal(metrics.base_growth_rate_per_second)
+    .. " x " .. format_decimal(metrics.expansion_speed_multiplier)
+  lines[#lines + 1] = "Base: " .. format_decimal(metrics.base_growth_rate_per_second)
     .. " = " .. format_decimal(metrics.utilization_ratio)
     .. " x (" .. bootstrap.square_size .. " / " .. GROWTH_RATE_SIZE_DIVISOR .. ")"
   lines[#lines + 1] = "Progress: " .. format_decimal(bootstrap.growth_progress or 0)
@@ -2089,6 +2122,16 @@ update_utilization_metrics = function()
   return metrics
 end
 
+local function announce_expansion_speed_research(force)
+  local multiplier, levels = get_expansion_speed_multiplier()
+
+  force.print({
+    "message.fes-expansion-speed-updated",
+    levels,
+    format_decimal(multiplier)
+  })
+end
+
 local function advance_growth_from_utilization()
   local bootstrap = storage.bootstrap
 
@@ -2316,6 +2359,25 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
     if player then
       sync_dev_gui(player)
       sync_shop_gui(player)
+    end
+  end
+end)
+
+script.on_event(defines.events.on_research_finished, function(event)
+  local research = event.research
+
+  if not (research and research.valid and research.force) then
+    return
+  end
+
+  for _, band in ipairs(EXPANSION_SPEED_RESEARCH_BANDS) do
+    if research.name == band.name then
+      storage.bootstrap = storage.bootstrap or {}
+      storage.bootstrap.expansion_speed_research_levels = (storage.bootstrap.expansion_speed_research_levels or 0) + 1
+      update_utilization_metrics()
+      refresh_all_debug_guis()
+      announce_expansion_speed_research(research.force)
+      return
     end
   end
 end)
