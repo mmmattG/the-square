@@ -488,6 +488,10 @@ local function is_anchor_ring_position(square_size, position)
   return bootstrap_layout.is_anchor_ring_position(square_size, position)
 end
 
+local function get_playable_edge_side_for_position(square_size, position)
+  return bootstrap_layout.get_playable_edge_side_for_position(square_size, position)
+end
+
 local function get_managed_tile_name(square_size, surface_size, position)
   return bootstrap_layout.get_managed_tile_name(
     square_size,
@@ -1021,6 +1025,20 @@ local function place_anchor(anchor, entity, square_size)
   anchor.entity_name = get_anchor_entity_name_for_current_tier(anchor)
   anchor.entity = entity
   configure_source_anchor_entity(entity, anchor.direction)
+
+  return true
+end
+
+local function assign_anchor_position(anchor, side, position)
+  if not (anchor and side and position) then
+    return false
+  end
+
+  anchor.position = position
+  anchor.side = side
+  anchor.direction = DIRECTION_BY_SIDE[side]
+  anchor.entity_name = get_anchor_entity_name_for_current_tier(anchor)
+  anchor.entity = nil
 
   return true
 end
@@ -1742,10 +1760,9 @@ local function handle_managed_anchor_built(entity, actor)
     print_ingress_placement_debug(actor, bootstrap.square_size, entity.position)
   end
 
-  local side = get_anchor_side_for_position(
-    bootstrap.square_size,
-    snap_entity_position_to_tile(entity.position)
-  )
+  local tile_position = snap_entity_position_to_tile(entity.position)
+  local side = get_playable_edge_side_for_position(bootstrap.square_size, tile_position)
+  local anchor_position = side and move_position(tile_position, side, 1) or nil
 
   if not side then
     reject_anchor_placement(entity, actor, {"message.fes-managed-line-invalid-edge"})
@@ -1759,15 +1776,13 @@ local function handle_managed_anchor_built(entity, actor)
     return
   end
 
-  if is_fluid_anchor_too_close(anchor, snap_entity_position_to_tile(entity.position), side) then
+  if is_fluid_anchor_too_close(anchor, anchor_position, side) then
     reject_anchor_placement(entity, actor, {"message.fes-managed-line-fluid-gap-required"})
     return
   end
 
-  if not place_anchor(anchor, entity, bootstrap.square_size) then
-    reject_anchor_placement(entity, actor, {"message.fes-managed-line-invalid-edge"})
-    return
-  end
+  entity.destroy({raise_destroy = false})
+  assign_anchor_position(anchor, side, anchor_position)
 
   ensure_starter_anchors()
   sync_all_shop_guis()
@@ -1853,78 +1868,6 @@ local function teleport_player_to_square(player)
   player.force.set_spawn_position(target_position, surface)
   player.teleport(target_position, surface)
   chart_play_area(player.force, surface, bootstrap.surface_size or bootstrap.square_size)
-end
-
-local function store_player_safe_position(player)
-  if not (player and player.valid) then
-    return
-  end
-
-  storage.player_safe_positions = storage.player_safe_positions or {}
-  storage.player_safe_positions[player.index] = {
-    x = player.position.x,
-    y = player.position.y
-  }
-end
-
-local function get_inward_position_for_anchor_ring(square_size, tile_position)
-  local side = get_anchor_side_for_position(square_size, tile_position)
-
-  if side == "north" then
-    return {x = tile_position.x + 0.5, y = tile_position.y + 1.5}
-  end
-
-  if side == "east" then
-    return {x = tile_position.x - 0.5, y = tile_position.y + 0.5}
-  end
-
-  if side == "south" then
-    return {x = tile_position.x + 0.5, y = tile_position.y - 0.5}
-  end
-
-  if side == "west" then
-    return {x = tile_position.x + 1.5, y = tile_position.y + 0.5}
-  end
-
-  return nil
-end
-
-local function keep_player_out_of_anchor_ring(player)
-  local bootstrap = storage.bootstrap
-
-  if not (player and player.valid and bootstrap and player.surface and player.surface.name == bootstrap.surface_name) then
-    return
-  end
-
-  local tile_position = snap_entity_position_to_tile(player.position)
-
-  if not is_anchor_ring_position(bootstrap.square_size, tile_position) then
-    store_player_safe_position(player)
-    return
-  end
-
-  player.walking_state = {
-    walking = false,
-    direction = player.walking_state.direction
-  }
-
-  local safe_positions = storage.player_safe_positions or {}
-  local target_position = safe_positions[player.index]
-    or get_inward_position_for_anchor_ring(bootstrap.square_size, tile_position)
-
-  if not target_position then
-    return
-  end
-
-  local safe_position = player.surface.find_non_colliding_position("character", target_position, 1, 0.25)
-
-  if safe_position then
-    player.teleport(safe_position, player.surface)
-    return
-  end
-
-  teleport_player_to_square(player)
-  store_player_safe_position(player)
 end
 
 local function add_expansion_points(amount)
@@ -2124,7 +2067,7 @@ end
 
 local function build_ingress_edge_check_debug(square_size, position)
   local tile_position = snap_entity_position_to_tile(position)
-  local bounds = get_anchor_bounds(square_size)
+  local bounds = get_square_bounds(square_size)
   local min_x = bounds.left_top.x
   local min_y = bounds.left_top.y
   local max_x = bounds.right_bottom.x - 1
@@ -2133,22 +2076,24 @@ local function build_ingress_edge_check_debug(square_size, position)
   local east_match = tile_position.x == max_x and tile_position.y > min_y and tile_position.y < max_y
   local south_match = tile_position.y == max_y and tile_position.x > min_x and tile_position.x < max_x
   local west_match = tile_position.x == min_x and tile_position.y > min_y and tile_position.y < max_y
-  local detected_side = get_anchor_side_for_position(square_size, tile_position)
+  local detected_side = get_playable_edge_side_for_position(square_size, tile_position)
+  local anchor_position = detected_side and move_position(tile_position, detected_side, 1) or nil
 
   return table.concat({
     "[Expanding Square] Ingress placement debug",
     "raw_position=" .. format_position(position),
     "tile_position=" .. format_position(tile_position),
     "square_size=" .. square_size,
-    "anchor_bounds.left_top=" .. format_position(bounds.left_top),
-    "anchor_bounds.right_bottom=" .. format_position(bounds.right_bottom),
+    "playable_bounds.left_top=" .. format_position(bounds.left_top),
+    "playable_bounds.right_bottom=" .. format_position(bounds.right_bottom),
     "min=(" .. min_x .. ", " .. min_y .. ")",
     "max=(" .. max_x .. ", " .. max_y .. ")",
     "north=" .. tostring(north_match),
     "east=" .. tostring(east_match),
     "south=" .. tostring(south_match),
     "west=" .. tostring(west_match),
-    "detected_side=" .. tostring(detected_side)
+    "detected_side=" .. tostring(detected_side),
+    "anchor_position=" .. format_position(anchor_position)
   }, " | ")
 end
 
@@ -2625,7 +2570,6 @@ local function bootstrap_world()
 
   for _, player in pairs(game.players) do
     teleport_player_to_square(player)
-    store_player_safe_position(player)
   end
 
   apply_logistic_network_setting_to_all_forces()
@@ -2657,7 +2601,6 @@ local function refresh_spawn_routing()
 
   for _, player in pairs(game.players) do
     teleport_player_to_square(player)
-    store_player_safe_position(player)
   end
 
   apply_logistic_network_setting_to_all_forces()
@@ -2712,7 +2655,6 @@ script.on_event(defines.events.on_player_created, function(event)
 
   if player then
     teleport_player_to_square(player)
-    store_player_safe_position(player)
     sync_status_gui(player)
     sync_dev_gui(player)
     sync_shop_gui(player)
@@ -2724,18 +2666,9 @@ script.on_event(defines.events.on_player_respawned, function(event)
 
   if player then
     teleport_player_to_square(player)
-    store_player_safe_position(player)
     sync_status_gui(player)
     sync_dev_gui(player)
     sync_shop_gui(player)
-  end
-end)
-
-script.on_event(defines.events.on_player_changed_position, function(event)
-  local player = game.get_player(event.player_index)
-
-  if player then
-    keep_player_out_of_anchor_ring(player)
   end
 end)
 

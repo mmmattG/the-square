@@ -19,19 +19,19 @@ local function run_test(name, fn)
   io.stdout:write("PASS " .. name .. "\n")
 end
 
-run_test("anchor ring tiles stay buildable floor", function()
+run_test("anchor ring tiles stay out-of-map", function()
   local square_size = 12
   local surface_size = bootstrap_layout.get_surface_size(square_size, 2)
 
   assert_equal(
     bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -7}),
-    "grass-1",
-    "north anchor ring should stay buildable"
+    "out-of-map",
+    "north anchor ring should remain out-of-map"
   )
   assert_equal(
     bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 6, y = 0}),
-    "grass-1",
-    "east anchor ring should stay buildable"
+    "out-of-map",
+    "east anchor ring should remain out-of-map"
   )
 end)
 
@@ -69,5 +69,20 @@ run_test("anchor side detection still targets the ingress ring", function()
     bootstrap_layout.get_anchor_side_for_position(square_size, {x = 6, y = 0}),
     "east",
     "starter anchors should still snap to the east ring"
+  )
+end)
+
+run_test("playable edge detection resolves the inner placement strip", function()
+  local square_size = 12
+
+  assert_equal(
+    bootstrap_layout.get_playable_edge_side_for_position(square_size, {x = 0, y = -6}),
+    "north",
+    "players should place north anchors from the inner edge"
+  )
+  assert_equal(
+    bootstrap_layout.get_playable_edge_side_for_position(square_size, {x = 5, y = 0}),
+    "east",
+    "players should place east anchors from the inner edge"
   )
 end)
