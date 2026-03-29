@@ -240,7 +240,7 @@ function runtime_defs.create_managed_anchor(definition, flow, side, position)
 end
 
 function runtime_defs.get_square_size()
-  return settings.startup[runtime_defs.SETTING_STARTING_SQUARE_SIZE].value
+  return settings.global[runtime_defs.SETTING_STARTING_SQUARE_SIZE].value
 end
 
 function runtime_defs.get_expansion_tiles_per_research()

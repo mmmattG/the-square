@@ -9,7 +9,7 @@ make install
 
 `make build` creates a versioned Factorio mod zip in `./build/` using the `name` and `version` from `info.json`.
 
-The starting square size is a startup setting. Change it in mod settings before loading a save; changing it later does not resize an existing bootstrap surface.
+The starting square size is a per-save map setting (`runtime-global` in Factorio terms). Set it when creating a run. Changing it after the bootstrap surface already exists does not resize the current save.
 
 `Tiles per research pack` is also a startup setting. It defaults to `7`, which means each required science pack in square-expansion research pays for about seven newly unlocked tiles. The first expansion level is fixed at `5` packs, and later levels round up to the next `10`.
 
