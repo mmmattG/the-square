@@ -322,7 +322,7 @@ local function build_anchor_slot_proxy()
     hidden_in_factoriopedia = true,
     selectable_in_game = true,
     collision_box = {{0, 0}, {0, 0}},
-    collision_mask = {},
+    collision_mask = {layers = {}},
     selection_box = {{-0.45, -0.45}, {0.45, 0.45}},
     max_health = 1,
     render_layer = "object",
