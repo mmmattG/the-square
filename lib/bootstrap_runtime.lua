@@ -504,6 +504,7 @@ function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
 
   if gui_runtime then
     gui_runtime.sync_all_dev_guis()
+    gui_runtime.sync_all_screenshot_guis()
     gui_runtime.sync_all_shop_guis(anchor_runtime)
   end
 end

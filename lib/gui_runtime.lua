@@ -152,6 +152,20 @@ local function ensure_shop_button(player)
   })
 end
 
+local function ensure_screenshot_button(player)
+  local button = player.gui.top[defs.SCREENSHOT_BUTTON_NAME]
+
+  if button then
+    return button
+  end
+
+  return player.gui.top.add({
+    type = "button",
+    name = defs.SCREENSHOT_BUTTON_NAME,
+    caption = {"gui.fes-screenshot-button"}
+  })
+end
+
 local function build_shop_status_caption(resource, anchor_runtime)
   local definition = defs.get_input_definition(resource) or defs.get_output_definition(resource)
   local counts = anchor_runtime.get_owned_line_counts(resource)
@@ -280,6 +294,20 @@ function gui_runtime.sync_shop_gui(player, anchor_runtime)
 
   ensure_shop_button(player)
   gui_runtime.refresh_shop_gui(player, anchor_runtime)
+end
+
+function gui_runtime.sync_screenshot_gui(player)
+  if not (player and player.valid) then
+    return
+  end
+
+  ensure_screenshot_button(player)
+end
+
+function gui_runtime.sync_all_screenshot_guis()
+  for _, player in pairs(game.players) do
+    gui_runtime.sync_screenshot_gui(player)
+  end
 end
 
 function gui_runtime.sync_all_shop_guis(anchor_runtime)

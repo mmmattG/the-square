@@ -5,6 +5,8 @@ local item_ingress = require("lib.item_ingress")
 local runtime_defs = {}
 
 runtime_defs.SURFACE_NAME = "fes-bootstrap"
+runtime_defs.BASE_SCREENSHOT_MARGIN_TILES = 2
+runtime_defs.BASE_SCREENSHOT_DIRECTORY = "the-square"
 runtime_defs.SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH = "fes-expansion-tiles-per-research"
 runtime_defs.SETTING_LINE_PURCHASE_COST = "fes-line-purchase-cost"
@@ -29,6 +31,7 @@ runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION = 12
 runtime_defs.DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
 runtime_defs.DEBUG_FRAME_NAME = "fes_debug_frame"
 runtime_defs.SHOP_BUTTON_NAME = "fes_shop_button"
+runtime_defs.SCREENSHOT_BUTTON_NAME = "fes_screenshot_button"
 runtime_defs.SHOP_FRAME_NAME = "fes_shop_frame"
 runtime_defs.MAX_INGRESS_TIER = 4
 runtime_defs.INGRESS_RESEARCH_DEFINITIONS = {
