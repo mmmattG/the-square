@@ -159,7 +159,7 @@ local tips_and_tricks_items = {
     name = "fes-overview",
     order = "a[overview]",
     category = "fes-rules",
-    icon = "__base__/graphics/icons/map.png"
+    icon = "__base__/graphics/icons/info.png"
   },
   {
     name = "fes-utilization-and-growth",
