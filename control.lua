@@ -6,7 +6,6 @@ local gui_runtime = require("lib.gui_runtime")
 local ingress_runtime = require("lib.ingress_runtime")
 
 local function sync_all_runtime_guis()
-  gui_runtime.refresh_all_status_guis()
   gui_runtime.refresh_all_debug_guis()
   gui_runtime.sync_all_shop_guis(anchor_runtime)
 end
@@ -20,7 +19,6 @@ local function handle_player_join_or_respawn(event)
 
   if player then
     bootstrap_runtime.teleport_player_to_square(player)
-    gui_runtime.sync_status_gui(player)
     gui_runtime.sync_dev_gui(player)
     gui_runtime.sync_shop_gui(player, anchor_runtime)
   end
@@ -134,7 +132,6 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
 
   if event.setting == defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION then
     anchor_runtime.apply_logistic_network_setting_to_all_forces()
-    gui_runtime.refresh_all_status_guis()
     return
   end
 
@@ -150,7 +147,6 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
       bootstrap_runtime.refresh_managed_surface_tiles(surface, storage.bootstrap.square_size, storage.bootstrap.surface_size)
     end
 
-    gui_runtime.refresh_all_status_guis()
     gui_runtime.refresh_all_debug_guis()
     return
   end
@@ -161,7 +157,6 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
     if player then
       gui_runtime.sync_dev_gui(player)
       gui_runtime.sync_shop_gui(player, anchor_runtime)
-      gui_runtime.sync_status_gui(player)
     end
   end
 end)

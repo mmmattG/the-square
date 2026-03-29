@@ -28,7 +28,6 @@ runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH = 1
 runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION = 12
 runtime_defs.DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
 runtime_defs.DEBUG_FRAME_NAME = "fes_debug_frame"
-runtime_defs.STATUS_FRAME_NAME = "fes_status_frame"
 runtime_defs.SHOP_BUTTON_NAME = "fes_shop_button"
 runtime_defs.SHOP_FRAME_NAME = "fes_shop_frame"
 runtime_defs.MAX_INGRESS_TIER = 4
@@ -503,17 +502,28 @@ end
 
 function runtime_defs.build_ingress_tier_summary()
   local tier = runtime_defs.get_current_ingress_tier()
-  local item_rate_per_second = item_ingress.get_total_items_per_second(
-    tier.item_lane_counts or {0, 0},
-    runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS
-  )
-  local fluid_rate_per_second = (tier.fluid_amount_per_interval or 0) * (60 / runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS)
+  local item_rate_per_second = runtime_defs.get_ingress_item_rate_per_second()
+  local fluid_rate_per_second = runtime_defs.get_ingress_fluid_rate_per_second()
 
   return tier.label
     .. " | item/s per anchor: "
     .. runtime_defs.format_decimal(item_rate_per_second)
     .. " | fluid/s per anchor: "
     .. runtime_defs.format_decimal(fluid_rate_per_second)
+end
+
+function runtime_defs.get_ingress_item_rate_per_second()
+  local tier = runtime_defs.get_current_ingress_tier()
+
+  return item_ingress.get_total_items_per_second(
+    tier.item_lane_counts or {0, 0},
+    runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS
+  )
+end
+
+function runtime_defs.get_ingress_fluid_rate_per_second()
+  local tier = runtime_defs.get_current_ingress_tier()
+  return (tier.fluid_amount_per_interval or 0) * (60 / runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS)
 end
 
 return runtime_defs

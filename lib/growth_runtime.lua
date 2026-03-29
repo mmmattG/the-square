@@ -13,7 +13,6 @@ function growth_runtime.handle_expansion_research_finished(research, bootstrap_r
   bootstrap_runtime.expand_square(game.players[1], gui_runtime, anchor_runtime)
 
   if gui_runtime then
-    gui_runtime.refresh_all_status_guis()
     gui_runtime.refresh_all_debug_guis()
   end
 
