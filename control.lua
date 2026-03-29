@@ -12,7 +12,7 @@ local function sync_all_runtime_guis()
 end
 
 local function bootstrap_world()
-  bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime, growth_runtime)
+  bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
 end
 
 local function handle_player_join_or_respawn(event)
@@ -41,7 +41,7 @@ script.on_configuration_changed(function()
       bootstrap_runtime.refresh_managed_surface_tiles(surface, storage.bootstrap.square_size, storage.bootstrap.surface_size)
     end
 
-    bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime, growth_runtime)
+    bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
     return
   end
 
@@ -87,7 +87,7 @@ script.on_event(defines.events.on_gui_click, function(event)
 
   if event.element.name == defs.DEV_EXPAND_BUTTON_NAME then
     if player and gui_runtime.is_dev_mode_enabled(player) then
-      bootstrap_runtime.expand_square(player, gui_runtime, growth_runtime, anchor_runtime)
+      bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
       sync_all_runtime_guis()
     end
 
@@ -161,16 +161,8 @@ script.on_event(defines.events.on_research_finished, function(event)
     return
   end
 
-  for _, band in ipairs(defs.EXPANSION_SPEED_RESEARCH_BANDS) do
-    if research.name == band.name then
-      storage.bootstrap = storage.bootstrap or {}
-      storage.bootstrap.expansion_speed_research_levels = (storage.bootstrap.expansion_speed_research_levels or 0) + 1
-      growth_runtime.update_utilization_metrics(gui_runtime)
-      gui_runtime.refresh_all_debug_guis()
-      gui_runtime.refresh_all_status_guis()
-      growth_runtime.announce_expansion_speed_research(research.force)
-      break
-    end
+  if growth_runtime.handle_expansion_research_finished(research, bootstrap_runtime, gui_runtime, anchor_runtime) then
+    sync_all_runtime_guis()
   end
 
   if not defs.is_logistic_network_automation_enabled() then
@@ -185,9 +177,4 @@ end)
 script.on_nth_tick(defs.ITEM_ANCHOR_INTERVAL_TICKS, function()
   anchor_runtime.ensure_starter_anchors()
   anchor_runtime.update_all_player_anchor_previews()
-end)
-
-script.on_nth_tick(defs.UTILIZATION_UPDATE_INTERVAL_TICKS, function()
-  growth_runtime.advance_growth_from_utilization(bootstrap_runtime, gui_runtime, anchor_runtime)
-  gui_runtime.sync_all_shop_guis(anchor_runtime)
 end)

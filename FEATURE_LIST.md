@@ -8,23 +8,21 @@ This document lists planned features for `factorio-expanding-square`, grouped fi
 
 - Centered expanding square play area
 - Symmetric ring expansion by 1 tile on each side
-- Continuous stored growth progress toward the next ring expansion
-- Growth rate driven primarily by current utilization
-- Slight map-size bonus to growth rate
+- Each completed square-expansion research level triggers the next ring expansion
+- Square-expansion research steps up to broader science tiers over time
 - Outside of the square is inaccessible void
 - Clean newly unlocked space by default
 - Fixed center spawn
 - Endless post-rocket play
 - Vanilla rocket launch remains the default win condition
 
-### Utilization And Growth
+### Expansion Research And Rewards
 
-- Utilization defined as active counted-machine footprint over total unlocked tiles
-- Linear utilization-to-growth curve for v1
-- 0% utilization produces 0 growth
-- Exact-tick activity requirement for counted machines
-- Growth and next-expansion reward surfaced in UI
+- Square-expansion research starts with red science only
+- Science requirements step up every 10 completed expansion levels
+- Each completed level expands the square immediately
 - Next expansion reward shown as newly unlocked tiles / expansion points
+- Expansion points awarded equal newly unlocked tiles
 
 ### Counted Entities
 
@@ -87,12 +85,10 @@ This document lists planned features for `factorio-expanding-square`, grouped fi
 
 ### Research
 
-- Custom repeatable expansion-speed research
-- Expansion-speed research multiplies growth rate
-- Expansion-speed research starts early
-- Expansion-speed research continues indefinitely
-- Expansion-speed research follows vanilla-style infinite research progression
-- Tiered dummy research exists to keep labs active before later infinite options dominate
+- Custom repeatable square-expansion research
+- Square-expansion research starts early
+- Square-expansion research continues indefinitely
+- Square-expansion research follows tiered science-pack progression
 - Vanilla infinite researches remain available
 
 ### Logistics And Automation Rules
@@ -117,7 +113,7 @@ This document lists planned features for `factorio-expanding-square`, grouped fi
 
 ### UI, Settings, And Onboarding
 
-- Core growth metrics shown to the player
+- Core expansion research metrics shown to the player
 - Factorio-style help/tips entries explaining system rules
 - World/startup setting: starting square size
 - World/startup setting: logistic network enabled/disabled

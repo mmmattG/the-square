@@ -69,31 +69,27 @@ end
 
 local function build_status_lines()
   local bootstrap = storage.bootstrap
-  local metrics = storage.utilization_metrics
   local lines = {}
 
-  if not bootstrap or not metrics then
-    lines[#lines + 1] = "No utilization data yet."
+  if not bootstrap then
+    lines[#lines + 1] = "No expansion data yet."
     return lines
   end
 
   local next_reward = defs.get_next_expansion_tile_reward(bootstrap.square_size)
+  local completed_levels = defs.get_completed_expansion_research_levels()
+  local next_level = completed_levels + 1
+  local next_band = defs.get_expansion_research_band_for_level(next_level)
 
   lines[#lines + 1] = "Square: " .. bootstrap.square_size .. "x" .. bootstrap.square_size
   lines[#lines + 1] = "Logistics setting: "
     .. (defs.is_logistic_network_automation_enabled() and "enabled" or "disabled")
-  lines[#lines + 1] = "Utilization: " .. defs.format_ratio_percent(metrics.utilization_ratio)
-    .. " (" .. metrics.active_footprint_tiles .. " / " .. metrics.total_tiles .. " tiles)"
-  lines[#lines + 1] = "Growth rate: " .. defs.format_decimal(metrics.growth_rate_per_second) .. " tiles/s"
-    .. " (" .. defs.format_decimal(metrics.growth_rate_per_minute) .. " tiles/min)"
-  lines[#lines + 1] = "Progress: " .. defs.format_decimal(bootstrap.growth_progress or 0)
-    .. " / " .. next_reward
-  lines[#lines + 1] = "Research multiplier: " .. defs.format_decimal(metrics.expansion_speed_multiplier)
-    .. "x from " .. metrics.expansion_speed_research_levels .. " expansion-speed levels"
-  lines[#lines + 1] = "Active entities: " .. metrics.active_entity_count
+  lines[#lines + 1] = "Expansion research: " .. completed_levels .. " levels completed"
+  lines[#lines + 1] = "Next expansion: level " .. next_level .. " using " .. next_band.label
+  lines[#lines + 1] = "Next reward: " .. next_reward .. " tiles and " .. next_reward .. " expansion points"
+  lines[#lines + 1] = "Expansions completed: " .. (bootstrap.expansions_completed or 0)
   lines[#lines + 1] = "Expansion points: " .. (bootstrap.expansion_points or 0)
   lines[#lines + 1] = "Ingress tier: " .. defs.build_ingress_tier_summary()
-  lines[#lines + 1] = "Next reward: " .. next_reward .. " tiles and " .. next_reward .. " expansion points"
 
   return lines
 end
@@ -152,42 +148,18 @@ end
 local function build_debug_lines()
   local lines = build_status_lines()
 
-  if lines[1] == "No utilization data yet." then
+  if lines[1] == "No expansion data yet." then
     return lines
   end
 
   local bootstrap = storage.bootstrap
-  local metrics = storage.utilization_metrics
+  local next_level = defs.get_completed_expansion_research_levels() + 1
+  local next_band = defs.get_expansion_research_band_for_level(next_level)
 
-  lines[#lines + 1] = "Formula: growth/s = utilization x (square size / " .. defs.GROWTH_RATE_SIZE_DIVISOR .. ")"
-  lines[#lines + 1] = "Current: " .. defs.format_decimal(metrics.growth_rate_per_second)
-    .. " = " .. defs.format_decimal(metrics.base_growth_rate_per_second)
-    .. " x " .. defs.format_decimal(metrics.expansion_speed_multiplier)
-  lines[#lines + 1] = "Base: " .. defs.format_decimal(metrics.base_growth_rate_per_second)
-    .. " = " .. defs.format_decimal(metrics.utilization_ratio)
-    .. " x (" .. bootstrap.square_size .. " / " .. defs.GROWTH_RATE_SIZE_DIVISOR .. ")"
-  lines[#lines + 1] = "Breakdown:"
-
-  for _, key in ipairs(defs.COUNTED_CATEGORY_ORDER) do
-    local category = metrics.categories[key]
-
-    if category.entity_count > 0 then
-      lines[#lines + 1] = "  " .. category.label .. ": "
-        .. category.footprint_tiles .. " tiles across " .. category.entity_count .. " entities"
-    end
-  end
-
-  if #metrics.sorted_entity_types > 0 then
-    lines[#lines + 1] = "Top entity types:"
-
-    local max_rows = math.min(8, #metrics.sorted_entity_types)
-
-    for index = 1, max_rows do
-      local entry = metrics.sorted_entity_types[index]
-      lines[#lines + 1] = "  " .. entry.label .. ": "
-        .. entry.footprint_tiles .. " tiles across " .. entry.entity_count
-    end
-  end
+  lines[#lines + 1] = "Expansion trigger: complete one level of square-expansion research."
+  lines[#lines + 1] = "Current research band: " .. next_band.name
+  lines[#lines + 1] = "Current square area: " .. defs.get_square_area(bootstrap.square_size) .. " tiles"
+  lines[#lines + 1] = "Next ring reward: " .. defs.get_next_expansion_tile_reward(bootstrap.square_size) .. " tiles"
 
   return lines
 end

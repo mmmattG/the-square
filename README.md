@@ -13,14 +13,13 @@ The starting square size is a per-save map setting (`runtime-global` in Factorio
 
 `Enable logistic network automation` is also a per-save map setting. It is off by default, which blocks `active provider`, `buffer`, `requester`, and `storage` chests while still allowing passive providers, roboports, and logistic/construction bots.
 
-Square growth now runs continuously in the background. Once per second the mod evaluates current counted-machine utilization inside the unlocked square, converts that into stored growth progress, and expands the square automatically whenever enough progress has accumulated for the next full ring.
+Square growth is now driven directly by research. Each completed level of `Square expansion` immediately expands the map by one ring and awards expansion points for the newly unlocked tiles.
 
 Research now includes custom expanding-square technologies:
 
-- `Expansion speed` is a repeatable research line that starts with red science, steps through vanilla-style science-pack bands over time, and multiplies the square growth rate by 5% per completed level.
-- Tiered `Dummy research` technologies are always available as explicit filler options for each science band, so labs can keep contributing utilization before later infinite research becomes relevant.
+- `Square expansion` is a repeatable research line that starts with red science, then steps up to broader science-pack bands every 10 completed levels.
 
-For manual testing, enable the per-player `Developer mode` runtime setting. That adds an `Expand square` button to the top-left UI plus a debug panel showing utilization, growth progress, growth rate, and the counted-footprint breakdown by category and entity type.
+For manual testing, enable the per-player `Developer mode` runtime setting. That adds an `Expand square` button to the top-left UI plus a debug panel showing the current square-expansion progression state.
 
 `make install` builds the zip and copies it into your local Factorio mods directory. By default the install script auto-detects:
 
