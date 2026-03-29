@@ -6,7 +6,6 @@ local FLOOR_TILE_NAME = "grass-1"
 local VOID_TILE_NAME = "out-of-map"
 local CHART_MARGIN = 1
 local ITEM_ANCHOR_INTERVAL_TICKS = 8
-local FLUID_ANCHOR_AMOUNT_PER_INTERVAL = 160
 local STARTER_ANCHOR_OUTER_RING_WIDTH = 2
 local STARTER_ANCHOR_LAYOUT_VERSION = 8
 local DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
@@ -16,8 +15,11 @@ local SHOP_FRAME_NAME = "fes_shop_frame"
 local UTILIZATION_UPDATE_INTERVAL_TICKS = 60
 local GROWTH_RATE_SIZE_DIVISOR = 12
 local LINE_PURCHASE_COST = 12
+local MAX_INGRESS_TIER = 4
 local DIRECTION_BY_SIDE
 local OFFSET_BY_SIDE
+local INGRESS_TIER_DEFINITIONS
+local ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER
 
 local COUNTED_CATEGORY_ORDER = {
   "crafting",
@@ -60,19 +62,91 @@ OFFSET_BY_SIDE = {
   west = {x = -1, y = 0}
 }
 
+ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER = {
+  [1] = "yellow",
+  [2] = "yellow",
+  [3] = "red",
+  [4] = "blue"
+}
+
+INGRESS_TIER_DEFINITIONS = {
+  [1] = {
+    key = "yellow-single",
+    label = "Yellow single lane",
+    item_lane_counts = {1, 0},
+    fluid_amount_per_interval = 160
+  },
+  [2] = {
+    key = "yellow-double",
+    label = "Yellow double lane",
+    item_lane_counts = {1, 1},
+    fluid_amount_per_interval = 320
+  },
+  [3] = {
+    key = "red-double",
+    label = "Red double lane",
+    item_lane_counts = {2, 2},
+    fluid_amount_per_interval = 640
+  },
+  [4] = {
+    key = "blue-double",
+    label = "Blue double lane",
+    item_lane_counts = {3, 3},
+    fluid_amount_per_interval = 960
+  }
+}
+
 local update_utilization_metrics
 local refresh_all_debug_guis
 local print_ingress_placement_debug
 local snap_entity_position_to_tile
 local sync_all_shop_guis
 local player_insert_or_spill
+local get_anchor_entity_name_for_current_tier
 
 local function get_ingress_item_name(resource)
   return "fes-" .. resource .. "-ingress"
 end
 
-local function get_ingress_entity_name(resource)
-  return "fes-" .. resource .. "-ingress-anchor"
+local function get_ingress_entity_name(resource, ingress_tier_level)
+  local definition = nil
+
+  for _, input_definition in ipairs(INPUT_DEFINITIONS) do
+    if input_definition.resource == resource then
+      definition = input_definition
+      break
+    end
+  end
+
+  if not definition then
+    return "fes-" .. resource .. "-ingress-anchor"
+  end
+
+  if definition.kind ~= "item" then
+    return "fes-" .. resource .. "-ingress-anchor"
+  end
+
+  local belt_tier_key = ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER[ingress_tier_level or 1] or "yellow"
+
+  if belt_tier_key == "yellow" then
+    return "fes-" .. resource .. "-ingress-anchor"
+  end
+
+  return "fes-" .. resource .. "-ingress-anchor-" .. belt_tier_key
+end
+
+local function is_ingress_entity_name_for_resource(resource, entity_name)
+  if entity_name == get_ingress_entity_name(resource, 1) then
+    return true
+  end
+
+  for tier_level = 2, MAX_INGRESS_TIER do
+    if entity_name == get_ingress_entity_name(resource, tier_level) then
+      return true
+    end
+  end
+
+  return false
 end
 
 local function get_input_definition(resource)
@@ -135,6 +209,52 @@ end
 
 local function get_square_area(square_size)
   return square_size * square_size
+end
+
+local function get_ingress_tier_definition(tier_level)
+  return INGRESS_TIER_DEFINITIONS[tier_level] or INGRESS_TIER_DEFINITIONS[1]
+end
+
+local function get_current_ingress_tier_level()
+  local bootstrap = storage.bootstrap
+
+  if not bootstrap then
+    return 1
+  end
+
+  local tier_level = bootstrap.ingress_tier or 1
+
+  if tier_level < 1 then
+    return 1
+  end
+
+  if tier_level > MAX_INGRESS_TIER then
+    return MAX_INGRESS_TIER
+  end
+
+  return tier_level
+end
+
+local function get_current_ingress_tier()
+  return get_ingress_tier_definition(get_current_ingress_tier_level())
+end
+
+local function get_next_ingress_tier_level()
+  local next_level = get_current_ingress_tier_level() + 1
+
+  if next_level > MAX_INGRESS_TIER then
+    return nil
+  end
+
+  return next_level
+end
+
+local function get_ingress_tier_upgrade_cost(next_tier_level)
+  if not next_tier_level then
+    return nil
+  end
+
+  return LINE_PURCHASE_COST * next_tier_level
 end
 
 local function get_next_expansion_tile_reward(square_size)
@@ -569,6 +689,20 @@ local function format_resource_name(resource)
   return string.gsub(resource, "%-", " ")
 end
 
+local function build_ingress_tier_summary()
+  local tier = get_current_ingress_tier()
+  local item_lane_counts = tier.item_lane_counts or {0, 0}
+  local total_item_count = (item_lane_counts[1] or 0) + (item_lane_counts[2] or 0)
+  local item_rate_per_second = total_item_count * (60 / ITEM_ANCHOR_INTERVAL_TICKS)
+  local fluid_rate_per_second = (tier.fluid_amount_per_interval or 0) * (60 / ITEM_ANCHOR_INTERVAL_TICKS)
+
+  return tier.label
+    .. " | item/s per anchor: "
+    .. format_decimal(item_rate_per_second)
+    .. " | fluid/s per anchor: "
+    .. format_decimal(fluid_rate_per_second)
+end
+
 local function build_resize_tile_updates(old_square_size, old_surface_size, new_square_size, new_surface_size, anchors)
   local tiles = {}
   local old_bounds = get_square_bounds(old_surface_size)
@@ -633,6 +767,7 @@ local function ensure_bootstrap_state_defaults()
   storage.bootstrap.expansion_points = storage.bootstrap.expansion_points or 0
   storage.bootstrap.expansions_completed = storage.bootstrap.expansions_completed or 0
   storage.bootstrap.growth_progress = storage.bootstrap.growth_progress or 0
+  storage.bootstrap.ingress_tier = storage.bootstrap.ingress_tier or 1
 end
 
 local function ensure_surface_dimensions(surface, target_surface_size)
@@ -699,7 +834,7 @@ end
 
 local function is_ingress_entity_name(entity_name)
   for _, definition in ipairs(INPUT_DEFINITIONS) do
-    if entity_name == get_ingress_entity_name(definition.resource) then
+    if is_ingress_entity_name_for_resource(definition.resource, entity_name) then
       return true
     end
   end
@@ -715,7 +850,10 @@ local function find_matching_stashed_anchor(item_or_entity_name)
   end
 
   for _, anchor in ipairs(starter_anchors.anchors) do
-    if not anchor.position and (anchor.item_name == item_or_entity_name or anchor.entity_name == item_or_entity_name) then
+    if not anchor.position and (
+      anchor.item_name == item_or_entity_name
+      or is_ingress_entity_name_for_resource(anchor.resource, item_or_entity_name)
+    ) then
       return anchor
     end
   end
@@ -749,7 +887,10 @@ local function find_anchor_by_entity_name_and_position(entity_name, position)
   local position_key = get_position_key(position)
 
   for _, anchor in ipairs(starter_anchors.anchors) do
-    if anchor.entity_name == entity_name and anchor.position and get_position_key(anchor.position) == position_key then
+    if anchor.position
+      and get_position_key(anchor.position) == position_key
+      and is_ingress_entity_name_for_resource(anchor.resource, entity_name)
+    then
       return anchor
     end
   end
@@ -788,6 +929,7 @@ local function place_anchor(anchor, entity, square_size)
   anchor.position = tile_position
   anchor.side = side
   anchor.direction = DIRECTION_BY_SIDE[side]
+  anchor.entity_name = get_anchor_entity_name_for_current_tier(anchor)
   anchor.entity = entity
   configure_source_anchor_entity(entity, anchor.direction)
 
@@ -858,16 +1000,35 @@ local function destroy_entities_at_anchor_position(surface, anchor)
   end
 end
 
+get_anchor_entity_name_for_current_tier = function(anchor)
+  if not anchor then
+    return nil
+  end
+
+  if anchor.kind == "item" then
+    return get_ingress_entity_name(anchor.resource, get_current_ingress_tier_level())
+  end
+
+  return get_ingress_entity_name(anchor.resource, 1)
+end
+
 local function ensure_anchor_entity(surface, anchor)
   if not (surface and anchor and anchor.position) then
     return nil
   end
 
+  anchor.entity_name = get_anchor_entity_name_for_current_tier(anchor)
+
   local entity = anchor.entity
 
-  if entity and entity.valid then
+  if entity and entity.valid and entity.name == anchor.entity_name then
     configure_source_anchor_entity(entity, anchor.direction)
     return entity
+  end
+
+  if entity and entity.valid then
+    entity.destroy({raise_destroy = false})
+    anchor.entity = nil
   end
 
   destroy_entities_at_anchor_position(surface, anchor)
@@ -921,7 +1082,7 @@ local function ensure_starter_anchor_state()
 
     for _, anchor in ipairs(migrated_anchors) do
       anchor.item_name = anchor.item_name or get_ingress_item_name(anchor.resource)
-      anchor.entity_name = anchor.entity_name or get_ingress_entity_name(anchor.resource)
+      anchor.entity_name = anchor.entity_name or get_ingress_entity_name(anchor.resource, 1)
       anchor.entity = nil
       migrate_anchor_to_anchor_ring(bootstrap.square_size, anchor)
     end
@@ -967,6 +1128,26 @@ local function ensure_starter_anchors()
   end
 end
 
+local function pump_item_anchor(entity, resource, lane_index, item_count)
+  if item_count <= 0 then
+    return
+  end
+
+  local line = entity.get_transport_line(lane_index)
+
+  if not line then
+    return
+  end
+
+  for _ = 1, item_count do
+    if not line.can_insert_at_back() then
+      return
+    end
+
+    line.insert_at_back({name = resource, count = 1})
+  end
+end
+
 local function pump_starter_anchors()
   local starter_anchors = storage.starter_anchors
 
@@ -974,20 +1155,19 @@ local function pump_starter_anchors()
     return
   end
 
+  local ingress_tier = get_current_ingress_tier()
+
   for _, anchor in ipairs(starter_anchors.anchors) do
     local entity = anchor.position and anchor.entity or nil
 
     if entity and entity.valid then
       if anchor.kind == "item" then
-        local line = entity.get_transport_line(1)
-
-        if line and line.can_insert_at_back() then
-          line.insert_at_back({name = anchor.resource, count = 1})
-        end
+        pump_item_anchor(entity, anchor.resource, 1, ingress_tier.item_lane_counts[1] or 0)
+        pump_item_anchor(entity, anchor.resource, 2, ingress_tier.item_lane_counts[2] or 0)
       else
         entity.insert_fluid({
           name = anchor.resource,
-          amount = FLUID_ANCHOR_AMOUNT_PER_INTERVAL
+          amount = ingress_tier.fluid_amount_per_interval
         })
       end
     end
@@ -1043,14 +1223,19 @@ local function reject_anchor_placement(entity, actor, message_key)
     return
   end
 
-  local item_name = string.gsub(entity.name, "-anchor$", "")
+  local item_name = get_entity_refund_item_name(entity)
 
   if actor and actor.valid then
     if actor.object_name == "LuaPlayer" then
-      refund_entity_to_player(actor, item_name)
+      if item_name then
+        refund_entity_to_player(actor, item_name)
+      end
+
       actor.print({message_key})
     elseif actor.object_name == "LuaEntity" and actor.type == "construction-robot" then
-      refund_entity_to_robot(actor, item_name)
+      if item_name then
+        refund_entity_to_robot(actor, item_name)
+      end
     end
   end
 
@@ -1202,6 +1387,45 @@ local function purchase_ingress_line(player, resource)
   end
 end
 
+local function purchase_ingress_tier_upgrade(player)
+  local bootstrap = storage.bootstrap
+  local next_tier_level = get_next_ingress_tier_level()
+  local next_tier = next_tier_level and get_ingress_tier_definition(next_tier_level) or nil
+  local upgrade_cost = get_ingress_tier_upgrade_cost(next_tier_level)
+
+  if not bootstrap then
+    return
+  end
+
+  if not next_tier_level or not next_tier or not upgrade_cost then
+    if player and player.valid then
+      player.print({"message.fes-shop-ingress-max-tier"})
+    end
+
+    return
+  end
+
+  if not spend_expansion_points(upgrade_cost) then
+    if player and player.valid then
+      player.print({"message.fes-shop-not-enough-points", upgrade_cost})
+    end
+
+    return
+  end
+
+  bootstrap.ingress_tier = next_tier_level
+  ensure_starter_anchors()
+
+  if player and player.valid then
+    player.print({
+      "message.fes-shop-purchased-ingress-tier",
+      next_tier.label,
+      upgrade_cost,
+      bootstrap.expansion_points
+    })
+  end
+end
+
 local function handle_ingress_built(entity, actor)
   if not (entity and entity.valid) then
     return
@@ -1244,7 +1468,12 @@ local function handle_ingress_built(entity, actor)
     return
   end
 
-  place_anchor(anchor, entity, bootstrap.square_size)
+  if not place_anchor(anchor, entity, bootstrap.square_size) then
+    reject_anchor_placement(entity, actor, "message.fes-ingress-invalid-edge")
+    return
+  end
+
+  ensure_starter_anchors()
   sync_all_shop_guis()
 end
 
@@ -1584,6 +1813,7 @@ local function build_debug_lines()
   lines[#lines + 1] = "Progress: " .. format_decimal(bootstrap.growth_progress or 0)
     .. " / " .. next_reward
   lines[#lines + 1] = "Expansion points: " .. (bootstrap.expansion_points or 0)
+  lines[#lines + 1] = "Ingress tier: " .. build_ingress_tier_summary()
   lines[#lines + 1] = "Next reward: " .. next_reward .. " expansion points"
   lines[#lines + 1] = "Breakdown:"
 
@@ -1671,6 +1901,28 @@ local function build_shop_status_caption(resource)
   return "Not yet unlocked"
 end
 
+local function build_ingress_upgrade_caption(next_tier_level)
+  local next_tier = next_tier_level and get_ingress_tier_definition(next_tier_level) or nil
+
+  if not next_tier then
+    return "Ingress tier maxed"
+  end
+
+  return "Upgrade to " .. next_tier.label
+end
+
+local function build_ingress_upgrade_status_caption()
+  local current_tier = get_current_ingress_tier()
+  local next_tier_level = get_next_ingress_tier_level()
+  local next_cost = get_ingress_tier_upgrade_cost(next_tier_level)
+
+  if not next_tier_level or not next_cost then
+    return "Current: " .. current_tier.label .. " (maximum tier)"
+  end
+
+  return "Current: " .. current_tier.label .. " | Next cost: " .. next_cost
+end
+
 local function ensure_shop_frame(player)
   local frame = player.gui.left[SHOP_FRAME_NAME]
 
@@ -1707,6 +1959,26 @@ local function refresh_shop_gui(player)
     type = "label",
     caption = {"gui.fes-shop-line-cost", LINE_PURCHASE_COST}
   })
+  do
+    local flow = frame.add({
+      type = "flow",
+      direction = "horizontal"
+    })
+    local next_tier_level = get_next_ingress_tier_level()
+    local next_upgrade_cost = get_ingress_tier_upgrade_cost(next_tier_level)
+    local button = flow.add({
+      type = "button",
+      name = "fes_shop_upgrade_ingress",
+      caption = build_ingress_upgrade_caption(next_tier_level)
+    })
+
+    button.enabled = next_upgrade_cost ~= nil and (bootstrap.expansion_points or 0) >= next_upgrade_cost
+
+    flow.add({
+      type = "label",
+      caption = build_ingress_upgrade_status_caption()
+    })
+  end
 
   for _, definition in ipairs(INPUT_DEFINITIONS) do
     local flow = frame.add({
@@ -2005,6 +2277,17 @@ script.on_event(defines.events.on_gui_click, function(event)
 
   if event.element.name == SHOP_BUTTON_NAME then
     toggle_shop_gui(player)
+    return
+  end
+
+  if event.element.name == "fes_shop_upgrade_ingress" then
+    if player then
+      purchase_ingress_tier_upgrade(player)
+      refresh_shop_gui(player)
+      refresh_all_debug_guis()
+      sync_all_shop_guis()
+    end
+
     return
   end
 
