@@ -11,6 +11,8 @@ make install
 
 The starting square size is a per-save map setting (`runtime-global` in Factorio terms). Set it when creating a run. Changing it after the bootstrap surface already exists does not resize the current save.
 
+`Tiles per research pack` is also a per-save map setting. It defaults to `7`, which means each required science pack in square-expansion research pays for about seven newly unlocked tiles. The first expansion level is fixed at `5` packs, and later levels round up to the next `10`.
+
 `Enable logistic network automation` is also a per-save map setting. It is off by default, which blocks `active provider`, `buffer`, `requester`, and `storage` chests while still allowing passive providers, roboports, and logistic/construction bots.
 
 Square growth is now driven directly by research. Each completed level of `Square expansion` immediately expands the map by one ring and awards expansion points for the newly unlocked tiles.

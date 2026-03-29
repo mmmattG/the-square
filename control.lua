@@ -13,6 +13,7 @@ end
 
 local function bootstrap_world()
   bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
+  growth_runtime.apply_expansion_research_costs_to_all_forces()
 end
 
 local function handle_player_join_or_respawn(event)
@@ -42,6 +43,7 @@ script.on_configuration_changed(function()
     end
 
     bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
+    growth_runtime.apply_expansion_research_costs_to_all_forces()
     return
   end
 
@@ -134,6 +136,12 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
       bootstrap_runtime.notify_square_size_change_applies_to_new_saves()
     end
 
+    growth_runtime.apply_expansion_research_costs_to_all_forces()
+    return
+  end
+
+  if event.setting == defs.SETTING_EXPANSION_TILES_PER_RESEARCH then
+    growth_runtime.apply_expansion_research_costs_to_all_forces()
     return
   end
 

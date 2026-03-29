@@ -5,6 +5,7 @@ local runtime_defs = {}
 
 runtime_defs.SURFACE_NAME = "fes-bootstrap"
 runtime_defs.SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
+runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH = "fes-expansion-tiles-per-research"
 runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
 runtime_defs.SETTING_DEV_MODE = "fes-dev-mode"
 runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
@@ -238,6 +239,10 @@ end
 
 function runtime_defs.get_square_size()
   return settings.global[runtime_defs.SETTING_STARTING_SQUARE_SIZE].value
+end
+
+function runtime_defs.get_expansion_tiles_per_research()
+  return settings.global[runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH].value
 end
 
 function runtime_defs.is_logistic_network_automation_enabled()
