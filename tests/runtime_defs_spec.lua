@@ -11,8 +11,8 @@ defines = {
 
 settings = {
   global = {
-    ["fes-screenshot-quality"] = {
-      value = 87
+    ["fes-screenshot-pixels-per-tile"] = {
+      value = 48
     },
     ["fes-background-tile"] = {
       value = "checkerboard"
@@ -78,10 +78,10 @@ run_test("expansion research name detection accepts the finite and infinite prot
   )
 end)
 
-run_test("screenshot quality comes from the runtime-global setting", function()
+run_test("screenshot pixels per tile comes from the runtime-global setting", function()
   assert_equal(
-    runtime_defs.get_screenshot_quality(),
-    87,
-    "screenshot captures should use the configured quality percentage"
+    runtime_defs.get_screenshot_pixels_per_tile(),
+    48,
+    "screenshot captures should use the configured render density"
   )
 end)

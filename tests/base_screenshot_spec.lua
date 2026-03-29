@@ -20,7 +20,7 @@ local function run_test(name, fn)
 end
 
 run_test("starting square framing includes two void tiles on each side", function()
-  local spec = base_screenshot.build_capture_spec(7, 2)
+  local spec = base_screenshot.build_capture_spec(7, 2, 32)
 
   assert_equal(spec.position.x, 0.5, "odd-width captures should stay centered on the square")
   assert_equal(spec.position.y, 0.5, "odd-width captures should stay centered on the square")
@@ -31,11 +31,11 @@ run_test("starting square framing includes two void tiles on each side", functio
 end)
 
 run_test("expanded squares keep the same deterministic two-tile margin", function()
-  local spec = base_screenshot.build_capture_spec(13, 2)
+  local spec = base_screenshot.build_capture_spec(13, 2, 48)
 
   assert_equal(spec.position.x, 0.5, "expanded odd-width squares should stay centered")
   assert_equal(spec.position.y, 0.5, "expanded odd-width squares should stay centered")
   assert_equal(spec.tile_span, 17, "the image should grow with the square while keeping the same margin")
-  assert_equal(spec.resolution.x, 544, "resolution should keep the same 32 pixels per tile scale")
-  assert_equal(spec.resolution.y, 544, "resolution should keep the same 32 pixels per tile scale")
+  assert_equal(spec.resolution.x, 816, "resolution should scale directly with the configured pixels per tile")
+  assert_equal(spec.resolution.y, 816, "resolution should scale directly with the configured pixels per tile")
 end)

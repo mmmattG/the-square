@@ -2,9 +2,7 @@ local bootstrap_layout = require("lib.bootstrap_layout")
 
 local base_screenshot = {}
 
-local PIXELS_PER_TILE = 32
-
-function base_screenshot.build_capture_spec(square_size, margin_tiles)
+function base_screenshot.build_capture_spec(square_size, margin_tiles, pixels_per_tile)
   local bounds = bootstrap_layout.get_square_bounds(square_size + (margin_tiles * 2))
   local tile_span = square_size + (margin_tiles * 2)
 
@@ -14,8 +12,8 @@ function base_screenshot.build_capture_spec(square_size, margin_tiles)
       y = (bounds.left_top.y + bounds.right_bottom.y) / 2
     },
     resolution = {
-      x = tile_span * PIXELS_PER_TILE,
-      y = tile_span * PIXELS_PER_TILE
+      x = tile_span * pixels_per_tile,
+      y = tile_span * pixels_per_tile
     },
     tile_span = tile_span,
     zoom = 1

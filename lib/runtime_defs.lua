@@ -12,7 +12,7 @@ runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH = "fes-expansion-tiles-per-res
 runtime_defs.SETTING_LINE_PURCHASE_COST = "fes-line-purchase-cost"
 runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
 runtime_defs.SETTING_BACKGROUND_TILE = "fes-background-tile"
-runtime_defs.SETTING_SCREENSHOT_QUALITY = "fes-screenshot-quality"
+runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE = "fes-screenshot-pixels-per-tile"
 runtime_defs.SETTING_DEV_MODE = "fes-dev-mode"
 runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
 runtime_defs.FLOOR_TILE_NAME = "grass-1"
@@ -323,14 +323,14 @@ function runtime_defs.get_background_tile_name()
   return runtime_defs.DEFAULT_BACKGROUND_TILE_NAME
 end
 
-function runtime_defs.get_screenshot_quality()
-  local screenshot_quality_setting = settings.global[runtime_defs.SETTING_SCREENSHOT_QUALITY]
+function runtime_defs.get_screenshot_pixels_per_tile()
+  local screenshot_pixels_per_tile_setting = settings.global[runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE]
 
-  if screenshot_quality_setting and screenshot_quality_setting.value then
-    return screenshot_quality_setting.value
+  if screenshot_pixels_per_tile_setting and screenshot_pixels_per_tile_setting.value then
+    return screenshot_pixels_per_tile_setting.value
   end
 
-  return 100
+  return 32
 end
 
 function runtime_defs.get_anchor_bounds(square_size)

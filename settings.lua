@@ -69,11 +69,11 @@ data:extend({
   },
   {
     type = "int-setting",
-    name = "fes-screenshot-quality",
+    name = "fes-screenshot-pixels-per-tile",
     setting_type = "runtime-global",
-    default_value = 100,
-    minimum_value = 1,
-    maximum_value = 100,
+    default_value = 32,
+    minimum_value = 8,
+    maximum_value = 256,
     order = "f"
   },
   {

@@ -27,7 +27,8 @@ function screenshot_runtime.take_base_screenshot(player)
 
   local capture = base_screenshot.build_capture_spec(
     bootstrap.square_size,
-    defs.BASE_SCREENSHOT_MARGIN_TILES
+    defs.BASE_SCREENSHOT_MARGIN_TILES,
+    defs.get_screenshot_pixels_per_tile()
   )
   local path = build_screenshot_path(bootstrap.square_size)
 
@@ -38,7 +39,6 @@ function screenshot_runtime.take_base_screenshot(player)
     resolution = capture.resolution,
     zoom = capture.zoom,
     path = path,
-    quality = defs.get_screenshot_quality(),
     show_gui = false,
     show_entity_info = false,
     show_cursor_building_preview = false,
@@ -50,7 +50,7 @@ function screenshot_runtime.take_base_screenshot(player)
     path,
     bootstrap.square_size,
     defs.BASE_SCREENSHOT_MARGIN_TILES,
-    defs.get_screenshot_quality()
+    defs.get_screenshot_pixels_per_tile()
   })
 end
 

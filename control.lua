@@ -46,6 +46,9 @@ script.on_configuration_changed(function()
       bootstrap_runtime.refresh_managed_surface_tiles(surface, storage.bootstrap.square_size, storage.bootstrap.surface_size)
     end
 
+    gui_runtime.sync_all_dev_guis()
+    gui_runtime.sync_all_screenshot_guis()
+    gui_runtime.sync_all_shop_guis(anchor_runtime)
     bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
     return
   end
