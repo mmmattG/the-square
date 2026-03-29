@@ -11,6 +11,9 @@ defines = {
 
 settings = {
   global = {
+    ["fes-screenshot-alt-mode"] = {
+      value = true
+    },
     ["fes-screenshot-pixels-per-tile"] = {
       value = 48
     },
@@ -83,5 +86,13 @@ run_test("screenshot pixels per tile comes from the runtime-global setting", fun
     runtime_defs.get_screenshot_pixels_per_tile(),
     48,
     "screenshot captures should use the configured render density"
+  )
+end)
+
+run_test("screenshot alt mode defaults to the runtime-global toggle", function()
+  assert_equal(
+    runtime_defs.is_screenshot_alt_mode_enabled(),
+    true,
+    "base screenshots should include alt mode info by default"
   )
 end)

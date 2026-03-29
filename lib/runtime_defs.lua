@@ -13,6 +13,7 @@ runtime_defs.SETTING_LINE_PURCHASE_COST = "fes-line-purchase-cost"
 runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
 runtime_defs.SETTING_BACKGROUND_TILE = "fes-background-tile"
 runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE = "fes-screenshot-pixels-per-tile"
+runtime_defs.SETTING_SCREENSHOT_ALT_MODE = "fes-screenshot-alt-mode"
 runtime_defs.SETTING_DEV_MODE = "fes-dev-mode"
 runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
 runtime_defs.FLOOR_TILE_NAME = "grass-1"
@@ -331,6 +332,16 @@ function runtime_defs.get_screenshot_pixels_per_tile()
   end
 
   return 32
+end
+
+function runtime_defs.is_screenshot_alt_mode_enabled()
+  local screenshot_alt_mode_setting = settings.global[runtime_defs.SETTING_SCREENSHOT_ALT_MODE]
+
+  if screenshot_alt_mode_setting == nil or screenshot_alt_mode_setting.value == nil then
+    return true
+  end
+
+  return screenshot_alt_mode_setting.value
 end
 
 function runtime_defs.get_anchor_bounds(square_size)

@@ -78,16 +78,23 @@ data:extend({
   },
   {
     type = "bool-setting",
+    name = "fes-screenshot-alt-mode",
+    setting_type = "runtime-global",
+    default_value = true,
+    order = "g"
+  },
+  {
+    type = "bool-setting",
     name = "fes-dev-mode",
     setting_type = "runtime-per-user",
     default_value = false,
-    order = "g"
+    order = "h"
   },
   {
     type = "bool-setting",
     name = "fes-ingress-placement-debug",
     setting_type = "runtime-per-user",
     default_value = false,
-    order = "h"
+    order = "i"
   }
 })
