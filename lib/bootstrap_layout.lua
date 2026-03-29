@@ -90,6 +90,10 @@ function bootstrap_layout.get_managed_tile_name(square_size, surface_size, floor
   local surface_bounds = bootstrap_layout.get_square_bounds(surface_size)
 
   if bootstrap_layout.is_inside_bounds(surface_bounds, position) then
+    if bootstrap_layout.is_anchor_ring_position(square_size, position) then
+      return floor_tile_name
+    end
+
     return void_tile_name
   end
 

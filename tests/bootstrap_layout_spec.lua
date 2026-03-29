@@ -19,19 +19,19 @@ local function run_test(name, fn)
   io.stdout:write("PASS " .. name .. "\n")
 end
 
-run_test("anchor ring tiles stay out-of-map", function()
+run_test("anchor ring tiles stay walkable floor", function()
   local square_size = 12
   local surface_size = bootstrap_layout.get_surface_size(square_size, 2)
 
   assert_equal(
     bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -7}),
-    "out-of-map",
-    "north anchor ring should remain out-of-map"
+    "grass-1",
+    "north anchor ring should remain floor"
   )
   assert_equal(
     bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 6, y = 0}),
-    "out-of-map",
-    "east anchor ring should remain out-of-map"
+    "grass-1",
+    "east anchor ring should remain floor"
   )
 end)
 
