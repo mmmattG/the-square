@@ -9,7 +9,6 @@ local SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
 local FLOOR_TILE_NAME = "grass-1"
 local VOID_TILE_NAME = "out-of-map"
 local CHART_MARGIN = 1
-local ITEM_ANCHOR_PUMP_INTERVAL_TICKS = 1
 local ITEM_ANCHOR_INTERVAL_TICKS = 8
 local ANCHOR_SLOT_PROXY_NAME = "fes-anchor-slot-proxy"
 local PLACE_MANAGED_ANCHOR_INPUT_NAME = "fes-place-managed-anchor"
@@ -1407,7 +1406,7 @@ local function get_active_uranium_anchors(ingress_tier)
       and entity
       and entity.valid
     then
-      local emission = get_item_anchor_emissions(anchor, ingress_tier, ITEM_ANCHOR_PUMP_INTERVAL_TICKS)
+      local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
       local requested_count = (emission.lane_emissions[1] or 0) + (emission.lane_emissions[2] or 0)
 
       if requested_count > 0 then
@@ -1526,7 +1525,7 @@ local function pump_starter_anchors()
           pump_uranium_ingress_anchor(entity, uranium_anchor and uranium_anchor.requested_emission, allocated_budget)
           uranium_anchor_index = uranium_anchor_index + 1
         else
-          local emission = get_item_anchor_emissions(anchor, ingress_tier, ITEM_ANCHOR_PUMP_INTERVAL_TICKS)
+          local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
 
           pump_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
           pump_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
@@ -3068,7 +3067,7 @@ script.on_event(defines.events.on_research_finished, function(event)
   end
 end)
 
-script.on_nth_tick(ITEM_ANCHOR_PUMP_INTERVAL_TICKS, function()
+script.on_nth_tick(1, function()
   pump_starter_anchors()
 end)
 
