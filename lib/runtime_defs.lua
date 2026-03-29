@@ -405,6 +405,15 @@ function runtime_defs.get_managed_tile_name(square_size, surface_size, position)
   )
 end
 
+function runtime_defs.get_anchor_occupied_tile_name(square_size, position, is_anchor_occupied)
+  return bootstrap_layout.get_anchor_occupied_tile_name(
+    square_size,
+    runtime_defs.VOID_TILE_NAME,
+    position,
+    is_anchor_occupied
+  )
+end
+
 function runtime_defs.get_player_force()
   return game and game.forces and game.forces.player or nil
 end

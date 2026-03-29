@@ -100,4 +100,12 @@ function bootstrap_layout.get_managed_tile_name(square_size, surface_size, floor
   return nil
 end
 
+function bootstrap_layout.get_anchor_occupied_tile_name(square_size, void_tile_name, position, is_anchor_occupied)
+  if is_anchor_occupied and bootstrap_layout.is_anchor_ring_position(square_size, position) then
+    return void_tile_name
+  end
+
+  return nil
+end
+
 return bootstrap_layout

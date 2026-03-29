@@ -429,6 +429,13 @@ function anchor_runtime.ensure_starter_anchors()
     return
   end
 
+  bootstrap_runtime.refresh_managed_surface_tiles(
+    surface,
+    bootstrap.square_size,
+    bootstrap.surface_size or defs.get_surface_size(bootstrap.square_size),
+    starter_anchors
+  )
+
   for _, anchor in ipairs(starter_anchors.anchors) do
     if anchor.position then
       ensure_anchor_entity(surface, anchor)

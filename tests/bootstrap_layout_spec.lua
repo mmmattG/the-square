@@ -35,6 +35,21 @@ run_test("anchor ring tiles stay walkable floor", function()
   )
 end)
 
+run_test("occupied anchor tiles switch back to out-of-map", function()
+  local square_size = 12
+
+  assert_equal(
+    bootstrap_layout.get_anchor_occupied_tile_name(square_size, "out-of-map", {x = 0, y = -7}, true),
+    "out-of-map",
+    "occupied north anchor tiles should not keep grass behind the anchor"
+  )
+  assert_equal(
+    bootstrap_layout.get_anchor_occupied_tile_name(square_size, "out-of-map", {x = 0, y = -6}, true),
+    nil,
+    "playable edge tiles should not be affected by the occupied-anchor overlay"
+  )
+end)
+
 run_test("playable square stays walkable floor", function()
   local square_size = 12
   local surface_size = bootstrap_layout.get_surface_size(square_size, 2)

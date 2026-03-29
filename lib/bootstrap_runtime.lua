@@ -157,7 +157,30 @@ local function build_anchor_ring_tiles(square_size, surface_size)
   return tiles
 end
 
-function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, surface_size)
+local function build_occupied_anchor_tile_updates(square_size, starter_anchors)
+  local tiles = {}
+
+  if not starter_anchors then
+    return tiles
+  end
+
+  for _, anchor in ipairs(starter_anchors.anchors or {}) do
+    if anchor.position then
+      local tile_name = defs.get_anchor_occupied_tile_name(square_size, anchor.position, true)
+
+      if tile_name then
+        tiles[#tiles + 1] = {
+          name = tile_name,
+          position = anchor.position
+        }
+      end
+    end
+  end
+
+  return tiles
+end
+
+function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, surface_size, starter_anchors)
   if not surface then
     return
   end
@@ -166,6 +189,12 @@ function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, s
 
   if #tile_updates > 0 then
     surface.set_tiles(tile_updates, false, true, true, false)
+  end
+
+  local occupied_anchor_tile_updates = build_occupied_anchor_tile_updates(square_size, starter_anchors)
+
+  if #occupied_anchor_tile_updates > 0 then
+    surface.set_tiles(occupied_anchor_tile_updates, false, true, true, false)
   end
 end
 
