@@ -318,7 +318,7 @@ local function move_starter_anchors_outward()
   for _, anchor in ipairs(starter_anchors.anchors) do
     if anchor.position and anchor.side then
       anchor.position = defs.move_position(anchor.position, anchor.side, 1)
-      anchor.direction = defs.DIRECTION_BY_SIDE[anchor.side]
+      anchor.direction = defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side)
       anchor.entity = nil
     end
   end
@@ -380,7 +380,7 @@ local function leave_trailing_ingress_stub(surface, anchor)
   surface.create_entity({
     name = trailing_entity_name,
     position = anchor.position,
-    direction = anchor.direction,
+    direction = anchor.kind == "item" and defs.DIRECTION_BY_SIDE[anchor.side] or anchor.direction,
     force = game.forces.player
   })
 end

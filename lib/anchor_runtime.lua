@@ -60,6 +60,14 @@ local function configure_source_anchor_entity(entity, direction)
   entity.operable = false
 end
 
+local function get_required_underground_belt_type(anchor)
+  if anchor and anchor.flow == "ingress" and anchor.kind == "item" then
+    return "output"
+  end
+
+  return nil
+end
+
 local function is_ingress_entity_name(entity_name)
   for _, definition in ipairs(defs.INPUT_DEFINITIONS) do
     if defs.is_ingress_entity_name_for_resource(definition.resource, entity_name) then
@@ -177,7 +185,7 @@ local function assign_anchor_position(anchor, side, position)
 
   anchor.position = position
   anchor.side = side
-  anchor.direction = defs.DIRECTION_BY_SIDE[side]
+  anchor.direction = defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, side)
   anchor.entity_name = defs.get_anchor_entity_name_for_current_tier(anchor)
   anchor.entity = nil
 
@@ -258,8 +266,12 @@ local function ensure_anchor_entity(surface, anchor)
   local entity = anchor.entity
 
   if entity and entity.valid and entity.name == anchor.entity_name then
-    configure_source_anchor_entity(entity, anchor.direction)
-    return entity
+    local required_belt_type = get_required_underground_belt_type(anchor)
+
+    if not required_belt_type or entity.belt_to_ground_type == required_belt_type then
+      configure_source_anchor_entity(entity, anchor.direction)
+      return entity
+    end
   end
 
   if entity and entity.valid then
@@ -272,16 +284,23 @@ local function ensure_anchor_entity(surface, anchor)
   entity = find_entity_at_position(surface, anchor.entity_name, anchor.position)
 
   if entity and entity.valid then
-    anchor.entity = entity
-    configure_source_anchor_entity(entity, anchor.direction)
-    return entity
+    local required_belt_type = get_required_underground_belt_type(anchor)
+
+    if not required_belt_type or entity.belt_to_ground_type == required_belt_type then
+      anchor.entity = entity
+      configure_source_anchor_entity(entity, anchor.direction)
+      return entity
+    end
+
+    entity.destroy({raise_destroy = false})
   end
 
   entity = surface.create_entity({
     name = anchor.entity_name,
     position = anchor.position,
     direction = anchor.direction,
-    force = game.forces.player
+    force = game.forces.player,
+    type = get_required_underground_belt_type(anchor)
   })
 
   if entity then
@@ -359,7 +378,7 @@ local function migrate_anchor_to_anchor_ring(square_size, anchor)
   end
 
   anchor.position = defs.move_position(anchor.position, anchor.side, 1)
-  anchor.direction = defs.DIRECTION_BY_SIDE[anchor.side]
+  anchor.direction = defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side)
   anchor.entity = nil
 end
 
@@ -376,6 +395,7 @@ function anchor_runtime.ensure_starter_anchor_state()
     for _, anchor in ipairs(migrated_anchors) do
       anchor.flow = anchor.flow or "ingress"
       anchor.item_progress = anchor.item_progress or {0, 0}
+      anchor.direction = anchor.side and defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side) or nil
       anchor.item_name = anchor.item_name or (
         anchor.flow == "egress"
           and defs.get_egress_item_name(anchor.resource)
@@ -404,6 +424,7 @@ function anchor_runtime.ensure_starter_anchor_state()
   for _, anchor in ipairs(storage.starter_anchors.anchors) do
     anchor.flow = anchor.flow or "ingress"
     anchor.item_progress = anchor.item_progress or {0, 0}
+    anchor.direction = anchor.side and defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side) or nil
     migrate_anchor_to_anchor_ring(bootstrap.square_size, anchor)
   end
 
