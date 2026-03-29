@@ -339,6 +339,7 @@ local function build_anchor_place_input()
   return {
     type = "custom-input",
     name = "fes-place-managed-anchor",
+    key_sequence = "",
     linked_game_control = "build",
     consuming = "none",
     include_selected_prototype = true
