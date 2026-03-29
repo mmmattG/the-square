@@ -16,7 +16,7 @@ mod_version=$(
 
 artifact_base="${mod_name}_${mod_version}"
 artifact_path="$build_dir/${artifact_base}.zip"
-stage_dir=$(mktemp -d "${TMPDIR:-/tmp}/factorio-expanding-square-build.XXXXXX")
+stage_dir=$(mktemp -d "${TMPDIR:-/tmp}/the-square-build.XXXXXX")
 package_root="$stage_dir/$artifact_base"
 
 cleanup() {

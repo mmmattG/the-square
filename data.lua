@@ -410,7 +410,7 @@ local prototypes = {}
 prototypes[#prototypes + 1] = {
   type = "tips-and-tricks-item-category",
   name = "fes-rules",
-  order = "o[factorio-expanding-square]"
+  order = "o[the-square]"
 }
 
 prototypes[#prototypes + 1] = build_anchor_slot_proxy()
