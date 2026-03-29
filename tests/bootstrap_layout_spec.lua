@@ -19,19 +19,19 @@ local function run_test(name, fn)
   io.stdout:write("PASS " .. name .. "\n")
 end
 
-run_test("anchor ring tiles stay unmanaged", function()
+run_test("anchor ring tiles use the configured border tile", function()
   local square_size = 12
   local surface_size = bootstrap_layout.get_surface_size(square_size, 2)
 
   assert_equal(
-    bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -7}),
-    nil,
-    "north anchor ring should remain unmanaged"
+    bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "sand-1", {x = 0, y = -7}),
+    "sand-1",
+    "north anchor ring should use the configured border tile"
   )
   assert_equal(
-    bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 6, y = 0}),
-    nil,
-    "east anchor ring should remain unmanaged"
+    bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "sand-1", {x = 6, y = 0}),
+    "sand-1",
+    "east anchor ring should use the configured border tile"
   )
 end)
 
@@ -46,14 +46,14 @@ run_test("playable square stays walkable floor", function()
   )
 end)
 
-run_test("outer perimeter outside the anchor ring stays unmanaged", function()
+run_test("outer perimeter outside the anchor ring uses the configured border tile", function()
   local square_size = 12
   local surface_size = bootstrap_layout.get_surface_size(square_size, 2)
 
   assert_equal(
-    bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -8}),
-    nil,
-    "the outer perimeter should remain unmanaged"
+    bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "sand-1", {x = 0, y = -8}),
+    "sand-1",
+    "the outer perimeter should use the configured border tile"
   )
 end)
 

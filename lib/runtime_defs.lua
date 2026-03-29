@@ -9,6 +9,7 @@ runtime_defs.SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH = "fes-expansion-tiles-per-research"
 runtime_defs.SETTING_LINE_PURCHASE_COST = "fes-line-purchase-cost"
 runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
+runtime_defs.SETTING_BORDER_TILE = "fes-border-tile"
 runtime_defs.SETTING_DEV_MODE = "fes-dev-mode"
 runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
 runtime_defs.FLOOR_TILE_NAME = "grass-1"
@@ -272,6 +273,10 @@ function runtime_defs.is_logistic_network_automation_enabled()
   return settings.global[runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION].value
 end
 
+function runtime_defs.get_border_tile_name()
+  return settings.global[runtime_defs.SETTING_BORDER_TILE].value
+end
+
 function runtime_defs.get_square_bounds(size)
   return bootstrap_layout.get_square_bounds(size)
 end
@@ -396,7 +401,7 @@ function runtime_defs.get_managed_tile_name(square_size, surface_size, position)
     square_size,
     surface_size,
     runtime_defs.FLOOR_TILE_NAME,
-    runtime_defs.VOID_TILE_NAME,
+    runtime_defs.get_border_tile_name(),
     position
   )
 end

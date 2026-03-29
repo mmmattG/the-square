@@ -34,17 +34,34 @@ data:extend({
     order = "d"
   },
   {
+    type = "string-setting",
+    name = "fes-border-tile",
+    setting_type = "runtime-global",
+    default_value = "grass-1",
+    allowed_values = {
+      "grass-1",
+      "grass-2",
+      "grass-3",
+      "dirt-3",
+      "dirt-5",
+      "sand-1",
+      "sand-3",
+      "red-desert-1"
+    },
+    order = "e"
+  },
+  {
     type = "bool-setting",
     name = "fes-dev-mode",
     setting_type = "runtime-per-user",
     default_value = false,
-    order = "e"
+    order = "f"
   },
   {
     type = "bool-setting",
     name = "fes-ingress-placement-debug",
     setting_type = "runtime-per-user",
     default_value = false,
-    order = "f"
+    order = "g"
   }
 })

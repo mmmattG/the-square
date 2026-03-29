@@ -19,6 +19,8 @@ Because square-expansion technologies are generated in the data stage, their pre
 
 `Enable logistic network automation` is also a per-save map setting. It is off by default, which blocks `active provider`, `buffer`, `requester`, and `storage` chests while still allowing passive providers, roboports, and logistic/construction bots.
 
+`Border tile` is a per-save map setting. It controls the tile painted into the outer border ring after the square expands, with previewable options such as grass, dirt, sand, and red desert variants.
+
 Square growth is now driven directly by research. Each completed level of `Square expansion` immediately expands the map by one ring and awards expansion points for the newly unlocked tiles.
 
 Research now includes custom expanding-square technologies:

@@ -143,6 +143,17 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
     return
   end
 
+  if event.setting == defs.SETTING_BORDER_TILE then
+    local bootstrap = storage.bootstrap
+    local surface = bootstrap and game.surfaces[bootstrap.surface_name] or nil
+
+    if surface and bootstrap then
+      bootstrap_runtime.refresh_managed_surface_tiles(surface, bootstrap.square_size, bootstrap.surface_size)
+    end
+
+    return
+  end
+
   if event.setting == defs.SETTING_DEV_MODE then
     local player = game.get_player(event.player_index)
 
