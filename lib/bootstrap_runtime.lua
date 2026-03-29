@@ -503,7 +503,6 @@ function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
   end
 
   if gui_runtime then
-    gui_runtime.refresh_all_status_guis()
     gui_runtime.sync_all_dev_guis()
     gui_runtime.sync_all_shop_guis(anchor_runtime)
   end
@@ -539,7 +538,6 @@ function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
   end
 
   if gui_runtime then
-    gui_runtime.refresh_all_status_guis()
     gui_runtime.sync_all_dev_guis()
     gui_runtime.sync_all_shop_guis(anchor_runtime)
   end

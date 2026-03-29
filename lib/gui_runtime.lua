@@ -88,60 +88,8 @@ local function build_status_lines()
   lines[#lines + 1] = "Next reward: " .. next_reward .. " tiles and " .. next_reward .. " expansion points"
   lines[#lines + 1] = "Expansions completed: " .. (bootstrap.expansions_completed or 0)
   lines[#lines + 1] = "Expansion points: " .. (bootstrap.expansion_points or 0)
-  lines[#lines + 1] = "Ingress tier: " .. defs.build_ingress_tier_summary()
 
   return lines
-end
-
-local function ensure_status_frame(player)
-  local frame = player.gui.left[defs.STATUS_FRAME_NAME]
-
-  if frame then
-    return frame
-  end
-
-  return player.gui.left.add({
-    type = "frame",
-    name = defs.STATUS_FRAME_NAME,
-    direction = "vertical",
-    caption = {"gui.fes-status-title"}
-  })
-end
-
-function gui_runtime.refresh_status_gui(player)
-  if not (player and player.valid) then
-    return
-  end
-
-  local frame = player.gui.left[defs.STATUS_FRAME_NAME]
-
-  if not frame then
-    return
-  end
-
-  frame.clear()
-
-  for _, line in ipairs(build_status_lines()) do
-    frame.add({
-      type = "label",
-      caption = line
-    })
-  end
-end
-
-function gui_runtime.sync_status_gui(player)
-  if not (player and player.valid) then
-    return
-  end
-
-  ensure_status_frame(player)
-  gui_runtime.refresh_status_gui(player)
-end
-
-function gui_runtime.refresh_all_status_guis()
-  for _, player in pairs(game.players) do
-    gui_runtime.sync_status_gui(player)
-  end
 end
 
 local function build_debug_lines()
@@ -257,6 +205,14 @@ function gui_runtime.refresh_shop_gui(player, anchor_runtime)
   })
   frame.add({
     type = "label",
+    caption = {
+      "gui.fes-shop-ingress-rate",
+      defs.get_current_ingress_tier().label,
+      defs.format_decimal(defs.get_ingress_item_rate_per_second())
+    }
+  })
+  frame.add({
+    type = "label",
     caption = {"gui.fes-shop-line-cost", defs.get_line_purchase_cost()}
   })
 
@@ -322,7 +278,6 @@ function gui_runtime.sync_shop_gui(player, anchor_runtime)
     return
   end
 
-  gui_runtime.sync_status_gui(player)
   ensure_shop_button(player)
   gui_runtime.refresh_shop_gui(player, anchor_runtime)
 end
