@@ -80,6 +80,7 @@ local function build_status_lines()
   local next_band = defs.get_expansion_research_band_for_level(next_level)
 
   lines[#lines + 1] = "Square: " .. bootstrap.square_size .. "x" .. bootstrap.square_size
+  lines[#lines + 1] = "Background tile: " .. defs.get_background_tile_name()
   lines[#lines + 1] = "Logistics setting: "
     .. (defs.is_logistic_network_automation_enabled() and "enabled" or "disabled")
   lines[#lines + 1] = "Expansion research: " .. completed_levels .. " levels completed"

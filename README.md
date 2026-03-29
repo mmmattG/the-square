@@ -19,6 +19,8 @@ Because square-expansion technologies are generated in the data stage, their pre
 
 `Enable logistic network automation` is also a per-save map setting. It is off by default, which blocks `active provider`, `buffer`, `requester`, and `storage` chests while still allowing passive providers, roboports, and logistic/construction bots.
 
+`Background tile` is a per-save map setting under `Mod settings -> Map`. It repaints the square floor uniformly, with curated dry tiles plus lab tiles and a special checkerboard option. Water, concrete, and stone-brick style tiles are intentionally excluded.
+
 Square growth is now driven directly by research. Each completed level of `Square expansion` immediately expands the map by one ring and awards expansion points for the newly unlocked tiles.
 
 Research now includes custom expanding-square technologies:
@@ -27,6 +29,8 @@ Research now includes custom expanding-square technologies:
 - `Dual-lane ingress`, `Red ingress`, and `Blue ingress` are one-time researches unlocked after `Logistics`, `Logistics 2`, and `Logistics 3`. Each copies the science cost of the logistics technology that gates it.
 
 For manual testing, enable the per-player `Developer mode` runtime setting. That adds an `Expand square` button to the top-left UI plus a debug panel showing the current square-expansion progression state.
+
+Issue `#18` was resolved by `PR #52`, which fixed the border/background rendering regressions that prompted the earlier experiments here.
 
 `make install` builds the zip and copies it into your local Factorio mods directory. By default the install script auto-detects:
 
