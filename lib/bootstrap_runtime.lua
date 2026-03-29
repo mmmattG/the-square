@@ -1,6 +1,62 @@
 local defs = require("lib.runtime_defs")
 
 local bootstrap_runtime = {}
+local EXPANDED_SURFACE_MARGIN = 1
+local ensure_surface_dimensions
+
+local function get_target_surface_size(square_size, expansions_completed)
+  local extra_margin = (expansions_completed or 0) > 0 and EXPANDED_SURFACE_MARGIN or 0
+
+  return square_size + (extra_margin * 2)
+end
+
+local function copy_map_gen_settings_with_size(surface, target_surface_size)
+  local existing_settings = surface.map_gen_settings or {}
+  local settings = {}
+
+  for key, value in pairs(existing_settings) do
+    settings[key] = value
+  end
+
+  settings.width = target_surface_size
+  settings.height = target_surface_size
+  settings.starting_points = {{x = 0, y = 0}}
+  settings.peaceful_mode = true
+  settings.no_enemies_mode = true
+  return settings
+end
+
+local function build_outer_band_areas(square_size, surface_size)
+  local surface_bounds = defs.get_square_bounds(surface_size)
+  local square_bounds = defs.get_square_bounds(square_size)
+  local areas = {
+    {
+      left_top = surface_bounds.left_top,
+      right_bottom = {x = surface_bounds.right_bottom.x, y = square_bounds.left_top.y}
+    },
+    {
+      left_top = {x = surface_bounds.left_top.x, y = square_bounds.right_bottom.y},
+      right_bottom = surface_bounds.right_bottom
+    },
+    {
+      left_top = {x = surface_bounds.left_top.x, y = square_bounds.left_top.y},
+      right_bottom = {x = square_bounds.left_top.x, y = square_bounds.right_bottom.y}
+    },
+    {
+      left_top = {x = square_bounds.right_bottom.x, y = square_bounds.left_top.y},
+      right_bottom = {x = surface_bounds.right_bottom.x, y = square_bounds.right_bottom.y}
+    }
+  }
+  local filtered_areas = {}
+
+  for _, area in ipairs(areas) do
+    if area.left_top.x < area.right_bottom.x and area.left_top.y < area.right_bottom.y then
+      filtered_areas[#filtered_areas + 1] = area
+    end
+  end
+
+  return filtered_areas
+end
 
 local function get_edge_positions(bounds, side)
   local positions = {}
@@ -138,23 +194,7 @@ local function build_clean_square_tiles(size)
 end
 
 local function build_anchor_ring_tiles(square_size, surface_size)
-  local surface_bounds = defs.get_square_bounds(surface_size)
-  local tiles = {}
-
-  for y = surface_bounds.left_top.y, surface_bounds.right_bottom.y - 1 do
-    for x = surface_bounds.left_top.x, surface_bounds.right_bottom.x - 1 do
-      local position = {x = x, y = y}
-
-      if not defs.is_inside_bounds(defs.get_square_bounds(square_size), position) then
-        tiles[#tiles + 1] = {
-          name = defs.get_managed_tile_name(square_size, surface_size, position),
-          position = position
-        }
-      end
-    end
-  end
-
-  return tiles
+  return {}
 end
 
 function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, surface_size)
@@ -167,6 +207,8 @@ function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, s
   if #tile_updates > 0 then
     surface.set_tiles(tile_updates, false, true, true, false)
   end
+
+  regenerate_outer_band_from_temp_surface(surface, square_size, surface_size)
 end
 
 local function build_bootstrap_tiles(square_size, surface_size)
@@ -207,6 +249,38 @@ local function build_resize_tile_updates(old_square_size, old_surface_size, new_
   return tiles
 end
 
+local function regenerate_outer_band_from_temp_surface(surface, square_size, surface_size)
+  if not (surface and surface.valid) or surface_size <= square_size then
+    return
+  end
+
+  local temp_surface_name = defs.SURFACE_NAME .. "-regen-" .. game.tick
+  local temp_surface = game.create_surface(
+    temp_surface_name,
+    copy_map_gen_settings_with_size(surface, surface_size)
+  )
+
+  temp_surface.peaceful_mode = true
+  temp_surface.no_enemies_mode = true
+  ensure_surface_dimensions(temp_surface, surface_size)
+
+  for _, area in ipairs(build_outer_band_areas(square_size, surface_size)) do
+    temp_surface.clone_area({
+      source_area = area,
+      destination_area = area,
+      destination_surface = surface,
+      clone_tiles = true,
+      clone_entities = false,
+      clone_decoratives = true,
+      clear_destination_decoratives = true,
+      expand_map = false,
+      create_build_effect_smoke = false
+    })
+  end
+
+  game.delete_surface(temp_surface)
+end
+
 local function destroy_noise_entities(surface)
   for _, entity in ipairs(surface.find_entities()) do
     if entity.valid and entity.type ~= "character" then
@@ -216,7 +290,7 @@ local function destroy_noise_entities(surface)
 end
 
 local function build_surface_map_gen_settings(square_size)
-  local surface_size = defs.get_surface_size(square_size)
+  local surface_size = get_target_surface_size(square_size, 0)
 
   return {
     width = surface_size,
@@ -232,8 +306,13 @@ function bootstrap_runtime.ensure_bootstrap_state_defaults()
     return
   end
 
+  local target_surface_size = get_target_surface_size(
+    storage.bootstrap.square_size,
+    storage.bootstrap.expansions_completed or 0
+  )
+
   storage.bootstrap.surface_name = storage.bootstrap.surface_name or defs.SURFACE_NAME
-  storage.bootstrap.surface_size = storage.bootstrap.surface_size or defs.get_surface_size(storage.bootstrap.square_size)
+  storage.bootstrap.surface_size = target_surface_size
   storage.bootstrap.expansion_points = storage.bootstrap.expansion_points or 0
   storage.bootstrap.expansions_completed = storage.bootstrap.expansions_completed or 0
   storage.bootstrap.ingress_tier = storage.bootstrap.ingress_tier or 1
@@ -244,7 +323,7 @@ function bootstrap_runtime.ensure_bootstrap_state_defaults()
   storage.utilization_metrics = nil
 end
 
-local function ensure_surface_dimensions(surface, target_surface_size)
+ensure_surface_dimensions = function(surface, target_surface_size)
   local map_gen_settings = surface.map_gen_settings
 
   if map_gen_settings.width ~= target_surface_size or map_gen_settings.height ~= target_surface_size then
@@ -259,7 +338,7 @@ end
 
 function bootstrap_runtime.ensure_bootstrap_surface(anchor_runtime)
   local square_size = defs.get_square_size()
-  local surface_size = defs.get_surface_size(square_size)
+  local surface_size = get_target_surface_size(square_size, 0)
   local surface = game.surfaces[defs.SURFACE_NAME]
 
   if not surface then
@@ -441,9 +520,13 @@ function bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
   end
 
   local previous_square_size = bootstrap.square_size
-  local previous_surface_size = bootstrap.surface_size or defs.get_surface_size(previous_square_size)
+  local previous_surface_size = bootstrap.surface_size or get_target_surface_size(
+    previous_square_size,
+    bootstrap.expansions_completed or 0
+  )
   local next_square_size = previous_square_size + 2
-  local next_surface_size = defs.get_surface_size(next_square_size)
+  local next_expansions_completed = (bootstrap.expansions_completed or 0) + 1
+  local next_surface_size = get_target_surface_size(next_square_size, next_expansions_completed)
   local newly_unlocked_tiles = defs.get_next_expansion_tile_reward(previous_square_size)
 
   leave_trailing_stubs_for_expansion(surface)
@@ -451,10 +534,11 @@ function bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
 
   bootstrap.square_size = next_square_size
   bootstrap.surface_size = next_surface_size
-  bootstrap.expansions_completed = (bootstrap.expansions_completed or 0) + 1
+  bootstrap.expansions_completed = next_expansions_completed
   bootstrap_runtime.add_expansion_points(newly_unlocked_tiles)
 
   apply_square_resize(surface, previous_square_size, previous_surface_size, next_square_size, next_surface_size)
+  regenerate_outer_band_from_temp_surface(surface, next_square_size, next_surface_size)
   bootstrap_runtime.chart_play_area(game.forces.player, surface, next_surface_size)
 
   if anchor_runtime then
@@ -534,6 +618,7 @@ function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
   call_freeplay("set_skip_intro", true)
   call_freeplay("set_disable_crashsite", true)
   game.forces.player.set_spawn_position({x = 0, y = 0}, surface)
+  ensure_surface_dimensions(surface, bootstrap.surface_size or defs.get_surface_size(bootstrap.square_size))
 
   if anchor_runtime then
     anchor_runtime.ensure_starter_anchors()

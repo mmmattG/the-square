@@ -859,11 +859,6 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
   local anchor_position = tile_position
 
   if not side then
-    side = defs.get_playable_edge_side_for_position(bootstrap.square_size, tile_position)
-    anchor_position = side and defs.move_position(tile_position, side, 1) or nil
-  end
-
-  if not side then
     reject_anchor_placement(entity, actor, {"message.fes-managed-line-invalid-edge"})
     return
   end

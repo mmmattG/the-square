@@ -17,7 +17,7 @@ runtime_defs.CHART_MARGIN = 1
 runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS = 8
 runtime_defs.ANCHOR_SLOT_PROXY_NAME = "fes-anchor-slot-proxy"
 runtime_defs.PLACE_MANAGED_ANCHOR_INPUT_NAME = "fes-place-managed-anchor"
-runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH = 2
+runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH = 0
 runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION = 8
 runtime_defs.DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
 runtime_defs.DEBUG_FRAME_NAME = "fes_debug_frame"
@@ -389,10 +389,6 @@ end
 
 function runtime_defs.is_anchor_ring_position(square_size, position)
   return bootstrap_layout.is_anchor_ring_position(square_size, position)
-end
-
-function runtime_defs.get_playable_edge_side_for_position(square_size, position)
-  return bootstrap_layout.get_playable_edge_side_for_position(square_size, position)
 end
 
 function runtime_defs.get_managed_tile_name(square_size, surface_size, position)
