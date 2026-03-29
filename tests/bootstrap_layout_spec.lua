@@ -35,14 +35,14 @@ run_test("anchor ring tiles stay out of map", function()
   )
 end)
 
-run_test("playable square stays walkable floor", function()
+run_test("playable square uses the selected uniform tile", function()
   local square_size = 12
   local surface_size = bootstrap_layout.get_surface_size(square_size, 1)
 
   assert_equal(
-    bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = 0}),
-    "grass-1",
-    "the playable square should keep floor tiles"
+    bootstrap_layout.get_managed_tile_name(square_size, surface_size, "sand-3", "out-of-map", {x = 0, y = 0}),
+    "sand-3",
+    "the playable square should use the configured tile"
   )
 end)
 

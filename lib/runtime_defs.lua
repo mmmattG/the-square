@@ -9,10 +9,17 @@ runtime_defs.SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH = "fes-expansion-tiles-per-research"
 runtime_defs.SETTING_LINE_PURCHASE_COST = "fes-line-purchase-cost"
 runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
+runtime_defs.SETTING_BACKGROUND_TILE = "fes-background-tile"
 runtime_defs.SETTING_DEV_MODE = "fes-dev-mode"
 runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
 runtime_defs.FLOOR_TILE_NAME = "grass-1"
 runtime_defs.VOID_TILE_NAME = "out-of-map"
+runtime_defs.DEFAULT_BACKGROUND_TILE_NAME = "grass-1"
+runtime_defs.CHECKERBOARD_BACKGROUND_TILE_NAME = "checkerboard"
+runtime_defs.CHECKERBOARD_TILE_NAMES = {
+  even = "lab-dark-1",
+  odd = "lab-dark-2"
+}
 runtime_defs.CHART_MARGIN = 1
 runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS = 8
 runtime_defs.ANCHOR_SLOT_PROXY_NAME = "fes-anchor-slot-proxy"
@@ -280,6 +287,16 @@ function runtime_defs.get_surface_size(square_size)
   return bootstrap_layout.get_surface_size(square_size, runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH)
 end
 
+function runtime_defs.get_background_tile_name()
+  local background_tile_setting = settings.global[runtime_defs.SETTING_BACKGROUND_TILE]
+
+  if background_tile_setting and background_tile_setting.value then
+    return background_tile_setting.value
+  end
+
+  return runtime_defs.DEFAULT_BACKGROUND_TILE_NAME
+end
+
 function runtime_defs.get_anchor_bounds(square_size)
   return bootstrap_layout.get_anchor_bounds(square_size)
 end
@@ -392,10 +409,19 @@ function runtime_defs.is_anchor_ring_position(square_size, position)
 end
 
 function runtime_defs.get_managed_tile_name(square_size, surface_size, position)
+  local background_tile_name = runtime_defs.get_background_tile_name()
+
+  if background_tile_name == runtime_defs.CHECKERBOARD_BACKGROUND_TILE_NAME
+    and bootstrap_layout.is_inside_bounds(bootstrap_layout.get_square_bounds(square_size), position) then
+    local parity = math.abs(position.x + position.y) % 2 == 0 and "even" or "odd"
+
+    return runtime_defs.CHECKERBOARD_TILE_NAMES[parity]
+  end
+
   return bootstrap_layout.get_managed_tile_name(
     square_size,
     surface_size,
-    runtime_defs.FLOOR_TILE_NAME,
+    background_tile_name,
     runtime_defs.VOID_TILE_NAME,
     position
   )

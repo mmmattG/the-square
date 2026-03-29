@@ -34,17 +34,51 @@ data:extend({
     order = "d"
   },
   {
+    type = "string-setting",
+    name = "fes-background-tile",
+    setting_type = "runtime-global",
+    default_value = "grass-1",
+    allowed_values = {
+      "grass-1",
+      "grass-2",
+      "grass-3",
+      "grass-4",
+      "dirt-1",
+      "dirt-2",
+      "dirt-3",
+      "dirt-4",
+      "dirt-5",
+      "dirt-6",
+      "dirt-7",
+      "dry-dirt",
+      "sand-1",
+      "sand-2",
+      "sand-3",
+      "red-desert-0",
+      "red-desert-1",
+      "red-desert-2",
+      "red-desert-3",
+      "landfill",
+      "lab-dark-1",
+      "lab-dark-2",
+      "lab-white",
+      "nuclear-ground",
+      "checkerboard"
+    },
+    order = "e"
+  },
+  {
     type = "bool-setting",
     name = "fes-dev-mode",
     setting_type = "runtime-per-user",
     default_value = false,
-    order = "e"
+    order = "f"
   },
   {
     type = "bool-setting",
     name = "fes-ingress-placement-debug",
     setting_type = "runtime-per-user",
     default_value = false,
-    order = "f"
+    order = "g"
   }
 })

@@ -4,7 +4,7 @@ local bootstrap_runtime = {}
 local ensure_surface_dimensions
 
 local function get_target_surface_size(square_size, expansions_completed)
-  return square_size + 2
+  return defs.get_surface_size(square_size)
 end
 
 local function get_edge_positions(bounds, side)
