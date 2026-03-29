@@ -1,5 +1,7 @@
 # the-square
 
+Contact: https://discord.gg/HytACasPxY
+
 Local development commands:
 
 ```sh
