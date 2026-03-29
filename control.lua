@@ -11,6 +11,7 @@ local STARTER_ANCHOR_OUTER_RING_WIDTH = 2
 local STARTER_ANCHOR_LAYOUT_VERSION = 8
 local DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
 local DEBUG_FRAME_NAME = "fes_debug_frame"
+local STATUS_FRAME_NAME = "fes_status_frame"
 local SHOP_BUTTON_NAME = "fes_shop_button"
 local SHOP_FRAME_NAME = "fes_shop_frame"
 local UTILIZATION_UPDATE_INTERVAL_TICKS = 60
@@ -113,6 +114,7 @@ INGRESS_TIER_DEFINITIONS = {
 
 local update_utilization_metrics
 local refresh_all_debug_guis
+local refresh_all_status_guis
 local print_ingress_placement_debug
 local snap_entity_position_to_tile
 local sync_all_shop_guis
@@ -1882,7 +1884,7 @@ local function ensure_debug_frame(player)
   })
 end
 
-local function build_debug_lines()
+local function build_status_lines()
   local bootstrap = storage.bootstrap
   local metrics = storage.utilization_metrics
   local lines = {}
@@ -1895,25 +1897,92 @@ local function build_debug_lines()
   local next_reward = get_next_expansion_tile_reward(bootstrap.square_size)
 
   lines[#lines + 1] = "Square: " .. bootstrap.square_size .. "x" .. bootstrap.square_size
+  lines[#lines + 1] = "Logistics setting: "
+    .. (is_logistic_network_automation_enabled() and "enabled" or "disabled")
   lines[#lines + 1] = "Utilization: " .. format_ratio_percent(metrics.utilization_ratio)
     .. " (" .. metrics.active_footprint_tiles .. " / " .. metrics.total_tiles .. " tiles)"
-  lines[#lines + 1] = "Active entities: " .. metrics.active_entity_count
   lines[#lines + 1] = "Growth rate: " .. format_decimal(metrics.growth_rate_per_second) .. " tiles/s"
     .. " (" .. format_decimal(metrics.growth_rate_per_minute) .. " tiles/min)"
-  lines[#lines + 1] = "Formula: growth/s = utilization x (square size / " .. GROWTH_RATE_SIZE_DIVISOR .. ")"
+  lines[#lines + 1] = "Progress: " .. format_decimal(bootstrap.growth_progress or 0)
+    .. " / " .. next_reward
   lines[#lines + 1] = "Research multiplier: " .. format_decimal(metrics.expansion_speed_multiplier)
     .. "x from " .. metrics.expansion_speed_research_levels .. " expansion-speed levels"
+  lines[#lines + 1] = "Active entities: " .. metrics.active_entity_count
+  lines[#lines + 1] = "Expansion points: " .. (bootstrap.expansion_points or 0)
+  lines[#lines + 1] = "Ingress tier: " .. build_ingress_tier_summary()
+  lines[#lines + 1] = "Next reward: " .. next_reward .. " tiles and " .. next_reward .. " expansion points"
+
+  return lines
+end
+
+local function ensure_status_frame(player)
+  local frame = player.gui.left[STATUS_FRAME_NAME]
+
+  if frame then
+    return frame
+  end
+
+  return player.gui.left.add({
+    type = "frame",
+    name = STATUS_FRAME_NAME,
+    direction = "vertical",
+    caption = {"gui.fes-status-title"}
+  })
+end
+
+local function refresh_status_gui(player)
+  if not (player and player.valid) then
+    return
+  end
+
+  local frame = player.gui.left[STATUS_FRAME_NAME]
+
+  if not frame then
+    return
+  end
+
+  frame.clear()
+
+  for _, line in ipairs(build_status_lines()) do
+    frame.add({
+      type = "label",
+      caption = line
+    })
+  end
+end
+
+local function sync_status_gui(player)
+  if not (player and player.valid) then
+    return
+  end
+
+  ensure_status_frame(player)
+  refresh_status_gui(player)
+end
+
+refresh_all_status_guis = function()
+  for _, player in pairs(game.players) do
+    sync_status_gui(player)
+  end
+end
+
+local function build_debug_lines()
+  local lines = build_status_lines()
+
+  if lines[1] == "No utilization data yet." then
+    return lines
+  end
+
+  local bootstrap = storage.bootstrap
+  local metrics = storage.utilization_metrics
+
+  lines[#lines + 1] = "Formula: growth/s = utilization x (square size / " .. GROWTH_RATE_SIZE_DIVISOR .. ")"
   lines[#lines + 1] = "Current: " .. format_decimal(metrics.growth_rate_per_second)
     .. " = " .. format_decimal(metrics.base_growth_rate_per_second)
     .. " x " .. format_decimal(metrics.expansion_speed_multiplier)
   lines[#lines + 1] = "Base: " .. format_decimal(metrics.base_growth_rate_per_second)
     .. " = " .. format_decimal(metrics.utilization_ratio)
     .. " x (" .. bootstrap.square_size .. " / " .. GROWTH_RATE_SIZE_DIVISOR .. ")"
-  lines[#lines + 1] = "Progress: " .. format_decimal(bootstrap.growth_progress or 0)
-    .. " / " .. next_reward
-  lines[#lines + 1] = "Expansion points: " .. (bootstrap.expansion_points or 0)
-  lines[#lines + 1] = "Ingress tier: " .. build_ingress_tier_summary()
-  lines[#lines + 1] = "Next reward: " .. next_reward .. " expansion points"
   lines[#lines + 1] = "Breakdown:"
 
   for _, key in ipairs(COUNTED_CATEGORY_ORDER) do
@@ -2121,6 +2190,7 @@ local function sync_shop_gui(player)
     return
   end
 
+  sync_status_gui(player)
   ensure_shop_button(player)
   refresh_shop_gui(player)
 end
@@ -2184,6 +2254,7 @@ update_utilization_metrics = function()
   local metrics = evaluate_utilization(surface, bootstrap.square_size)
 
   storage.utilization_metrics = metrics
+  refresh_all_status_guis()
 
   return metrics
 end
@@ -2247,6 +2318,7 @@ local function bootstrap_world()
 
   apply_logistic_network_setting_to_all_forces()
   update_utilization_metrics()
+  refresh_all_status_guis()
   sync_all_dev_guis()
   sync_all_shop_guis()
 end
@@ -2277,6 +2349,7 @@ local function refresh_spawn_routing()
 
   apply_logistic_network_setting_to_all_forces()
   update_utilization_metrics()
+  refresh_all_status_guis()
   sync_all_dev_guis()
   sync_all_shop_guis()
 end
@@ -2320,6 +2393,7 @@ script.on_event(defines.events.on_player_created, function(event)
 
   if player then
     teleport_player_to_square(player)
+    sync_status_gui(player)
     sync_dev_gui(player)
     sync_shop_gui(player)
   end
@@ -2330,6 +2404,7 @@ script.on_event(defines.events.on_player_respawned, function(event)
 
   if player then
     teleport_player_to_square(player)
+    sync_status_gui(player)
     sync_dev_gui(player)
     sync_shop_gui(player)
   end
@@ -2423,6 +2498,7 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
 
   if event.setting == SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION then
     apply_logistic_network_setting_to_all_forces()
+    refresh_all_status_guis()
     return
   end
 
@@ -2432,6 +2508,7 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
     if player then
       sync_dev_gui(player)
       sync_shop_gui(player)
+      sync_status_gui(player)
     end
   end
 end)
@@ -2449,6 +2526,7 @@ script.on_event(defines.events.on_research_finished, function(event)
       storage.bootstrap.expansion_speed_research_levels = (storage.bootstrap.expansion_speed_research_levels or 0) + 1
       update_utilization_metrics()
       refresh_all_debug_guis()
+      refresh_all_status_guis()
       announce_expansion_speed_research(research.force)
       break
     end
