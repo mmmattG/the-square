@@ -121,12 +121,8 @@ INGRESS_TIER_DEFINITIONS = {
   }
 }
 
-local update_utilization_metrics
-local refresh_all_debug_guis
-local refresh_all_status_guis
 local print_ingress_placement_debug
 local snap_entity_position_to_tile
-local sync_all_shop_guis
 local player_insert_or_spill
 local get_anchor_entity_name_for_current_tier
 
