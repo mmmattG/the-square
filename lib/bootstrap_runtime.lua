@@ -1,6 +1,13 @@
 local defs = require("lib.runtime_defs")
 
 local bootstrap_runtime = {}
+local EXPANDED_SURFACE_MARGIN = 1
+
+local function get_target_surface_size(square_size, expansions_completed)
+  local extra_margin = (expansions_completed or 0) > 0 and EXPANDED_SURFACE_MARGIN or 0
+
+  return square_size + (extra_margin * 2)
+end
 
 local function get_edge_positions(bounds, side)
   local positions = {}
@@ -200,7 +207,7 @@ local function destroy_noise_entities(surface)
 end
 
 local function build_surface_map_gen_settings(square_size)
-  local surface_size = defs.get_surface_size(square_size)
+  local surface_size = get_target_surface_size(square_size, 0)
 
   return {
     width = surface_size,
@@ -216,7 +223,10 @@ function bootstrap_runtime.ensure_bootstrap_state_defaults()
     return
   end
 
-  local target_surface_size = defs.get_surface_size(storage.bootstrap.square_size)
+  local target_surface_size = get_target_surface_size(
+    storage.bootstrap.square_size,
+    storage.bootstrap.expansions_completed or 0
+  )
 
   storage.bootstrap.surface_name = storage.bootstrap.surface_name or defs.SURFACE_NAME
   storage.bootstrap.surface_size = target_surface_size
@@ -245,7 +255,7 @@ end
 
 function bootstrap_runtime.ensure_bootstrap_surface(anchor_runtime)
   local square_size = defs.get_square_size()
-  local surface_size = defs.get_surface_size(square_size)
+  local surface_size = get_target_surface_size(square_size, 0)
   local surface = game.surfaces[defs.SURFACE_NAME]
 
   if not surface then
@@ -427,9 +437,13 @@ function bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
   end
 
   local previous_square_size = bootstrap.square_size
-  local previous_surface_size = bootstrap.surface_size or defs.get_surface_size(previous_square_size)
+  local previous_surface_size = bootstrap.surface_size or get_target_surface_size(
+    previous_square_size,
+    bootstrap.expansions_completed or 0
+  )
   local next_square_size = previous_square_size + 2
-  local next_surface_size = defs.get_surface_size(next_square_size)
+  local next_expansions_completed = (bootstrap.expansions_completed or 0) + 1
+  local next_surface_size = get_target_surface_size(next_square_size, next_expansions_completed)
   local newly_unlocked_tiles = defs.get_next_expansion_tile_reward(previous_square_size)
 
   leave_trailing_stubs_for_expansion(surface)
@@ -437,7 +451,7 @@ function bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
 
   bootstrap.square_size = next_square_size
   bootstrap.surface_size = next_surface_size
-  bootstrap.expansions_completed = (bootstrap.expansions_completed or 0) + 1
+  bootstrap.expansions_completed = next_expansions_completed
   bootstrap_runtime.add_expansion_points(newly_unlocked_tiles)
 
   apply_square_resize(surface, previous_square_size, previous_surface_size, next_square_size, next_surface_size)
