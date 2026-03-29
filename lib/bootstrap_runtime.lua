@@ -1,13 +1,10 @@
 local defs = require("lib.runtime_defs")
 
 local bootstrap_runtime = {}
-local EXPANDED_SURFACE_MARGIN = 1
 local ensure_surface_dimensions
 
 local function get_target_surface_size(square_size, expansions_completed)
-  local extra_margin = (expansions_completed or 0) > 0 and EXPANDED_SURFACE_MARGIN or 0
-
-  return square_size + (extra_margin * 2)
+  return square_size
 end
 
 local function copy_map_gen_settings_with_size(surface, target_surface_size)
