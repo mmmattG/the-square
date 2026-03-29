@@ -18,11 +18,11 @@ local LINE_PURCHASE_COST = 12
 local MAX_INGRESS_TIER = 4
 local EXPANSION_SPEED_RESEARCH_PER_LEVEL_MULTIPLIER = 0.05
 local EXPANSION_SPEED_RESEARCH_BANDS = {
-  {name = "fes-expansion-speed-1", start_level = 1},
-  {name = "fes-expansion-speed-2", start_level = 6},
-  {name = "fes-expansion-speed-3", start_level = 11},
-  {name = "fes-expansion-speed-4", start_level = 16},
-  {name = "fes-expansion-speed-5", start_level = 21}
+  {name = "fes-expansion-speed-automation", start_level = 1},
+  {name = "fes-expansion-speed-logistic", start_level = 6},
+  {name = "fes-expansion-speed-chemical", start_level = 11},
+  {name = "fes-expansion-speed-production-utility", start_level = 16},
+  {name = "fes-expansion-speed-space", start_level = 21}
 }
 local DIRECTION_BY_SIDE
 local OFFSET_BY_SIDE

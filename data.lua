@@ -17,7 +17,7 @@ local item_ingress_belt_tiers = {
 
 local expansion_speed_research_bands = {
   {
-    name = "fes-expansion-speed-1",
+    name = "fes-expansion-speed-automation",
     localised_name = {"technology-name.fes-expansion-speed"},
     icon = "__base__/graphics/icons/lab.png",
     order = "c-a[expansion-speed]-a[automation]",
@@ -29,28 +29,28 @@ local expansion_speed_research_bands = {
     }
   },
   {
-    name = "fes-expansion-speed-2",
+    name = "fes-expansion-speed-logistic",
     localised_name = {"technology-name.fes-expansion-speed"},
     icon = "__base__/graphics/icons/lab.png",
     order = "c-a[expansion-speed]-b[logistic]",
     count_formula = "75*(L-5)",
     start_level = 6,
     max_level = 10,
-    prerequisites = {"fes-expansion-speed-1"},
+    prerequisites = {"fes-expansion-speed-automation"},
     ingredients = {
       {"automation-science-pack", 1},
       {"logistic-science-pack", 1}
     }
   },
   {
-    name = "fes-expansion-speed-3",
+    name = "fes-expansion-speed-chemical",
     localised_name = {"technology-name.fes-expansion-speed"},
     icon = "__base__/graphics/icons/lab.png",
     order = "c-a[expansion-speed]-c[chemical]",
     count_formula = "125*(L-10)",
     start_level = 11,
     max_level = 15,
-    prerequisites = {"fes-expansion-speed-2"},
+    prerequisites = {"fes-expansion-speed-logistic"},
     ingredients = {
       {"automation-science-pack", 1},
       {"logistic-science-pack", 1},
@@ -58,14 +58,14 @@ local expansion_speed_research_bands = {
     }
   },
   {
-    name = "fes-expansion-speed-4",
+    name = "fes-expansion-speed-production-utility",
     localised_name = {"technology-name.fes-expansion-speed"},
     icon = "__base__/graphics/icons/lab.png",
     order = "c-a[expansion-speed]-d[production-utility]",
     count_formula = "200*(L-15)",
     start_level = 16,
     max_level = 20,
-    prerequisites = {"fes-expansion-speed-3"},
+    prerequisites = {"fes-expansion-speed-chemical"},
     ingredients = {
       {"automation-science-pack", 1},
       {"logistic-science-pack", 1},
@@ -75,14 +75,14 @@ local expansion_speed_research_bands = {
     }
   },
   {
-    name = "fes-expansion-speed-5",
+    name = "fes-expansion-speed-space",
     localised_name = {"technology-name.fes-expansion-speed"},
     icon = "__base__/graphics/icons/lab.png",
     order = "c-a[expansion-speed]-e[space]",
     count_formula = "300*(L-20)",
     start_level = 21,
     max_level = "infinite",
-    prerequisites = {"fes-expansion-speed-4"},
+    prerequisites = {"fes-expansion-speed-production-utility"},
     ingredients = {
       {"automation-science-pack", 1},
       {"logistic-science-pack", 1},
