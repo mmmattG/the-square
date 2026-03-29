@@ -66,6 +66,36 @@ local square_expansion_research_bands = {
   }
 }
 
+local ingress_research_definitions = {
+  {
+    name = "fes-ingress-dual-lane",
+    icon = "__base__/graphics/icons/transport-belt.png",
+    prerequisite_technology_name = "logistics",
+    previous_ingress_technology_name = nil,
+    localised_name = {"technology-name.fes-ingress-dual-lane"},
+    localised_description = {"technology-description.fes-ingress-dual-lane"},
+    effect_description = {"technology-effect.fes-ingress-dual-lane"}
+  },
+  {
+    name = "fes-ingress-red",
+    icon = "__base__/graphics/icons/fast-transport-belt.png",
+    prerequisite_technology_name = "logistics-2",
+    previous_ingress_technology_name = "fes-ingress-dual-lane",
+    localised_name = {"technology-name.fes-ingress-red"},
+    localised_description = {"technology-description.fes-ingress-red"},
+    effect_description = {"technology-effect.fes-ingress-red"}
+  },
+  {
+    name = "fes-ingress-blue",
+    icon = "__base__/graphics/icons/express-transport-belt.png",
+    prerequisite_technology_name = "logistics-3",
+    previous_ingress_technology_name = "fes-ingress-red",
+    localised_name = {"technology-name.fes-ingress-blue"},
+    localised_description = {"technology-description.fes-ingress-blue"},
+    effect_description = {"technology-effect.fes-ingress-blue"}
+  }
+}
+
 local tips_and_tricks_items = {
   {
     name = "fes-mod",
@@ -293,6 +323,42 @@ local function build_square_expansion_technology(definition)
   }
 end
 
+local function copy_technology_unit(technology_name)
+  local technology = data.raw.technology[technology_name]
+
+  if not technology or not technology.unit then
+    error("Missing technology unit for " .. technology_name)
+  end
+
+  return table.deepcopy(technology.unit)
+end
+
+local function build_ingress_research_technology(definition)
+  local prerequisites = {definition.prerequisite_technology_name}
+
+  if definition.previous_ingress_technology_name then
+    prerequisites[#prerequisites + 1] = definition.previous_ingress_technology_name
+  end
+
+  return {
+    type = "technology",
+    name = definition.name,
+    localised_name = definition.localised_name,
+    localised_description = definition.localised_description,
+    icon = definition.icon,
+    icon_size = 64,
+    order = "c-b[" .. definition.name .. "]",
+    prerequisites = prerequisites,
+    unit = copy_technology_unit(definition.prerequisite_technology_name),
+    effects = {
+      {
+        type = "nothing",
+        effect_description = definition.effect_description
+      }
+    }
+  }
+end
+
 local function get_expansion_research_band(level)
   local selected_band = square_expansion_research_bands[1]
 
@@ -368,6 +434,10 @@ for level = 1, expansion_research.MAX_LEVEL do
     ingredients = band.ingredients,
     count = expansion_research.get_research_unit_count(starting_square_size, tiles_per_research, level)
   })
+end
+
+for _, definition in ipairs(ingress_research_definitions) do
+  prototypes[#prototypes + 1] = build_ingress_research_technology(definition)
 end
 
 for _, definition in ipairs(tips_and_tricks_items) do

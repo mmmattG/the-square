@@ -18,24 +18,33 @@ data:extend({
     order = "b"
   },
   {
+    type = "int-setting",
+    name = "fes-line-purchase-cost",
+    setting_type = "runtime-global",
+    default_value = 1000,
+    minimum_value = 1,
+    maximum_value = 1000000,
+    order = "c"
+  },
+  {
     type = "bool-setting",
     name = "fes-enable-logistic-network-automation",
     setting_type = "runtime-global",
     default_value = false,
-    order = "c"
+    order = "d"
   },
   {
     type = "bool-setting",
     name = "fes-dev-mode",
     setting_type = "runtime-per-user",
     default_value = false,
-    order = "d"
+    order = "e"
   },
   {
     type = "bool-setting",
     name = "fes-ingress-placement-debug",
     setting_type = "runtime-per-user",
     default_value = false,
-    order = "e"
+    order = "f"
   }
 })
