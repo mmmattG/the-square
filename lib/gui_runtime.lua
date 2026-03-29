@@ -259,7 +259,7 @@ function gui_runtime.refresh_shop_gui(player, anchor_runtime)
   frame.add({
     type = "label",
     caption = {"gui.fes-shop-line-cost", defs.get_line_purchase_cost()}
-  end
+  })
 
   for _, definition in ipairs(defs.INPUT_DEFINITIONS) do
     local flow = frame.add({
