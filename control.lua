@@ -1,5 +1,6 @@
 local SURFACE_NAME = "fes-bootstrap"
 local bootstrap_layout = require("lib.bootstrap_layout")
+local item_ingress = require("lib.item_ingress")
 local resource_balance = require("lib.resource_balance")
 local SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
 local SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
@@ -8,6 +9,7 @@ local SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
 local FLOOR_TILE_NAME = "grass-1"
 local VOID_TILE_NAME = "out-of-map"
 local CHART_MARGIN = 1
+local ITEM_ANCHOR_PUMP_INTERVAL_TICKS = 1
 local ITEM_ANCHOR_INTERVAL_TICKS = 8
 local ANCHOR_SLOT_PROXY_NAME = "fes-anchor-slot-proxy"
 local PLACE_MANAGED_ANCHOR_INPUT_NAME = "fes-place-managed-anchor"
@@ -235,7 +237,8 @@ local function create_managed_anchor(definition, flow, side, position)
       or get_ingress_item_name(definition.resource),
     entity_name = flow == "egress"
       and get_egress_entity_name(definition.resource)
-      or get_ingress_entity_name(definition.resource)
+      or get_ingress_entity_name(definition.resource),
+    item_progress = {0, 0}
   }
 end
 
@@ -758,9 +761,10 @@ end
 
 local function build_ingress_tier_summary()
   local tier = get_current_ingress_tier()
-  local item_lane_counts = tier.item_lane_counts or {0, 0}
-  local total_item_count = (item_lane_counts[1] or 0) + (item_lane_counts[2] or 0)
-  local item_rate_per_second = total_item_count * (60 / ITEM_ANCHOR_INTERVAL_TICKS)
+  local item_rate_per_second = item_ingress.get_total_items_per_second(
+    tier.item_lane_counts or {0, 0},
+    ITEM_ANCHOR_INTERVAL_TICKS
+  )
   local fluid_rate_per_second = (tier.fluid_amount_per_interval or 0) * (60 / ITEM_ANCHOR_INTERVAL_TICKS)
 
   return tier.label
@@ -1261,6 +1265,7 @@ local function ensure_starter_anchor_state()
 
     for _, anchor in ipairs(migrated_anchors) do
       anchor.flow = anchor.flow or "ingress"
+      anchor.item_progress = anchor.item_progress or {0, 0}
       anchor.item_name = anchor.item_name or (
         anchor.flow == "egress"
           and get_egress_item_name(anchor.resource)
@@ -1285,6 +1290,7 @@ local function ensure_starter_anchor_state()
 
   for _, anchor in ipairs(storage.starter_anchors.anchors) do
     anchor.flow = anchor.flow or "ingress"
+    anchor.item_progress = anchor.item_progress or {0, 0}
     migrate_anchor_to_anchor_ring(bootstrap.square_size, anchor)
   end
 
@@ -1317,6 +1323,25 @@ local function ensure_starter_anchors()
   end
 
   ensure_anchor_slot_proxies(surface, bootstrap.square_size, starter_anchors)
+end
+
+local function get_item_anchor_emissions(anchor, ingress_tier, elapsed_ticks)
+  if not anchor then
+    return {
+      lane_emissions = {0, 0},
+      carried_progress = {0, 0}
+    }
+  end
+
+  local emission = item_ingress.compute_lane_emissions(
+    ingress_tier.item_lane_counts or {0, 0},
+    ITEM_ANCHOR_INTERVAL_TICKS,
+    anchor.item_progress or {0, 0},
+    elapsed_ticks
+  )
+
+  anchor.item_progress = emission.carried_progress
+  return emission
 end
 
 local function pump_item_anchor(entity, resource, lane_index, item_count)
@@ -1382,11 +1407,17 @@ local function get_active_uranium_anchors(ingress_tier)
       and entity
       and entity.valid
     then
-      anchors[#anchors + 1] = {
-        anchor = anchor,
-        entity = entity,
-        capacity = (ingress_tier.item_lane_counts[1] or 0) + (ingress_tier.item_lane_counts[2] or 0)
-      }
+      local emission = get_item_anchor_emissions(anchor, ingress_tier, ITEM_ANCHOR_PUMP_INTERVAL_TICKS)
+      local requested_count = (emission.lane_emissions[1] or 0) + (emission.lane_emissions[2] or 0)
+
+      if requested_count > 0 then
+        anchors[#anchors + 1] = {
+          anchor = anchor,
+          entity = entity,
+          requested_emission = emission,
+          capacity = requested_count
+        }
+      end
     end
   end
 
@@ -1449,15 +1480,16 @@ local function get_active_uranium_budget_per_interval(uranium_anchors)
   return budget.ore_budget
 end
 
-local function pump_uranium_ingress_anchor(entity, ingress_tier, shared_budget)
+local function pump_uranium_ingress_anchor(entity, requested_emission, shared_budget)
   if shared_budget <= 0 then
     return 0
   end
 
-  local lane_one_target = math.min(shared_budget, ingress_tier.item_lane_counts[1] or 0)
+  local lane_emissions = requested_emission and requested_emission.lane_emissions or {0, 0}
+  local lane_one_target = math.min(shared_budget, lane_emissions[1] or 0)
   local inserted = pump_item_anchor(entity, "uranium-ore", 1, lane_one_target)
   local remaining_budget = shared_budget - inserted
-  local lane_two_target = math.min(remaining_budget, ingress_tier.item_lane_counts[2] or 0)
+  local lane_two_target = math.min(remaining_budget, lane_emissions[2] or 0)
 
   inserted = inserted + pump_item_anchor(entity, "uranium-ore", 2, lane_two_target)
   return inserted
@@ -1489,11 +1521,15 @@ local function pump_starter_anchors()
       if anchor.kind == "item" then
         if anchor.resource == "uranium-ore" then
           local allocated_budget = uranium_allocations[uranium_anchor_index] or 0
-          pump_uranium_ingress_anchor(entity, ingress_tier, allocated_budget)
+          local uranium_anchor = uranium_anchors[uranium_anchor_index]
+
+          pump_uranium_ingress_anchor(entity, uranium_anchor and uranium_anchor.requested_emission, allocated_budget)
           uranium_anchor_index = uranium_anchor_index + 1
         else
-          pump_item_anchor(entity, anchor.resource, 1, ingress_tier.item_lane_counts[1] or 0)
-          pump_item_anchor(entity, anchor.resource, 2, ingress_tier.item_lane_counts[2] or 0)
+          local emission = get_item_anchor_emissions(anchor, ingress_tier, ITEM_ANCHOR_PUMP_INTERVAL_TICKS)
+
+          pump_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
+          pump_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
         end
       else
         entity.insert_fluid({
@@ -3032,9 +3068,12 @@ script.on_event(defines.events.on_research_finished, function(event)
   end
 end)
 
+script.on_nth_tick(ITEM_ANCHOR_PUMP_INTERVAL_TICKS, function()
+  pump_starter_anchors()
+end)
+
 script.on_nth_tick(ITEM_ANCHOR_INTERVAL_TICKS, function()
   ensure_starter_anchors()
-  pump_starter_anchors()
   update_all_player_anchor_previews()
 end)
 
