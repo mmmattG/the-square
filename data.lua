@@ -1,3 +1,5 @@
+local expansion_research = require("lib.expansion_research")
+
 local ingress_resources = {
   {resource = "iron-ore", kind = "item", icon = "__base__/graphics/icons/iron-ore.png", order = "a[ingress]-a[iron-ore]"},
   {resource = "copper-ore", kind = "item", icon = "__base__/graphics/icons/copper-ore.png", order = "a[ingress]-b[copper-ore]"},
@@ -21,37 +23,20 @@ local item_ingress_belt_tiers = {
 
 local square_expansion_research_bands = {
   {
-    name = "fes-square-expansion-automation",
-    localised_name = {"technology-name.fes-square-expansion"},
-    icon = "__base__/graphics/icons/lab.png",
-    order = "c-a[square-expansion]-a[automation]",
     start_level = 1,
-    max_level = 10,
     ingredients = {
       {"automation-science-pack", 1}
     }
   },
   {
-    name = "fes-square-expansion-logistic",
-    localised_name = {"technology-name.fes-square-expansion"},
-    icon = "__base__/graphics/icons/lab.png",
-    order = "c-a[square-expansion]-b[logistic]",
     start_level = 11,
-    max_level = 20,
-    prerequisites = {"fes-square-expansion-automation"},
     ingredients = {
       {"automation-science-pack", 1},
       {"logistic-science-pack", 1}
     }
   },
   {
-    name = "fes-square-expansion-chemical",
-    localised_name = {"technology-name.fes-square-expansion"},
-    icon = "__base__/graphics/icons/lab.png",
-    order = "c-a[square-expansion]-c[chemical]",
     start_level = 21,
-    max_level = 30,
-    prerequisites = {"fes-square-expansion-logistic"},
     ingredients = {
       {"automation-science-pack", 1},
       {"logistic-science-pack", 1},
@@ -59,13 +44,7 @@ local square_expansion_research_bands = {
     }
   },
   {
-    name = "fes-square-expansion-production-utility",
-    localised_name = {"technology-name.fes-square-expansion"},
-    icon = "__base__/graphics/icons/lab.png",
-    order = "c-a[square-expansion]-d[production-utility]",
     start_level = 31,
-    max_level = 40,
-    prerequisites = {"fes-square-expansion-chemical"},
     ingredients = {
       {"automation-science-pack", 1},
       {"logistic-science-pack", 1},
@@ -75,13 +54,7 @@ local square_expansion_research_bands = {
     }
   },
   {
-    name = "fes-square-expansion-space",
-    localised_name = {"technology-name.fes-square-expansion"},
-    icon = "__base__/graphics/icons/lab.png",
-    order = "c-a[square-expansion]-e[space]",
     start_level = 41,
-    max_level = "infinite",
-    prerequisites = {"fes-square-expansion-production-utility"},
     ingredients = {
       {"automation-science-pack", 1},
       {"logistic-science-pack", 1},
@@ -299,17 +272,15 @@ local function build_square_expansion_technology(definition)
   return {
     type = "technology",
     name = definition.name,
-    localised_name = definition.localised_name,
+    localised_name = {"technology-name.fes-square-expansion"},
     localised_description = {"technology-description.fes-square-expansion"},
-    icon = definition.icon,
+    icon = "__base__/graphics/icons/lab.png",
     icon_size = 64,
     order = definition.order,
     upgrade = true,
-    max_level = definition.max_level,
-    level = definition.start_level,
     prerequisites = definition.prerequisites,
     unit = {
-      count = 1,
+      count = definition.count,
       ingredients = definition.ingredients,
       time = 30
     },
@@ -320,6 +291,20 @@ local function build_square_expansion_technology(definition)
       }
     }
   }
+end
+
+local function get_expansion_research_band(level)
+  local selected_band = square_expansion_research_bands[1]
+
+  for _, band in ipairs(square_expansion_research_bands) do
+    if level >= band.start_level then
+      selected_band = band
+    else
+      break
+    end
+  end
+
+  return selected_band
 end
 
 local function build_tips_item(definition)
@@ -370,8 +355,19 @@ for _, definition in ipairs(egress_resources) do
   prototypes[#prototypes + 1] = build_egress_entity(definition)
 end
 
-for _, definition in ipairs(square_expansion_research_bands) do
-  prototypes[#prototypes + 1] = build_square_expansion_technology(definition)
+local starting_square_size = settings.startup["fes-starting-square-size"].value
+local tiles_per_research = settings.startup["fes-expansion-tiles-per-research"].value
+
+for level = 1, expansion_research.MAX_LEVEL do
+  local band = get_expansion_research_band(level)
+
+  prototypes[#prototypes + 1] = build_square_expansion_technology({
+    name = expansion_research.get_technology_name(level),
+    order = string.format("c-a[square-expansion]-%04d", level),
+    prerequisites = level > 1 and {expansion_research.get_technology_name(level - 1)} or nil,
+    ingredients = band.ingredients,
+    count = expansion_research.get_research_unit_count(starting_square_size, tiles_per_research, level)
+  })
 end
 
 for _, definition in ipairs(tips_and_tricks_items) do

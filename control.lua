@@ -13,7 +13,6 @@ end
 
 local function bootstrap_world()
   bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
-  growth_runtime.apply_expansion_research_costs_to_all_forces()
 end
 
 local function handle_player_join_or_respawn(event)
@@ -36,6 +35,10 @@ script.on_configuration_changed(function()
     bootstrap_runtime.ensure_bootstrap_state_defaults()
     anchor_runtime.ensure_starter_anchor_state()
 
+    if storage.bootstrap.square_size ~= defs.get_square_size() then
+      bootstrap_runtime.notify_square_size_change_applies_to_new_saves()
+    end
+
     local surface = game.surfaces[storage.bootstrap.surface_name]
 
     if surface then
@@ -43,7 +46,6 @@ script.on_configuration_changed(function()
     end
 
     bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
-    growth_runtime.apply_expansion_research_costs_to_all_forces()
     return
   end
 
@@ -131,20 +133,6 @@ script.on_event(defs.PLACE_MANAGED_ANCHOR_INPUT_NAME, function(event)
 end)
 
 script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
-  if event.setting == defs.SETTING_STARTING_SQUARE_SIZE then
-    if storage.bootstrap then
-      bootstrap_runtime.notify_square_size_change_applies_to_new_saves()
-    end
-
-    growth_runtime.apply_expansion_research_costs_to_all_forces()
-    return
-  end
-
-  if event.setting == defs.SETTING_EXPANSION_TILES_PER_RESEARCH then
-    growth_runtime.apply_expansion_research_costs_to_all_forces()
-    return
-  end
-
   if event.setting == defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION then
     anchor_runtime.apply_logistic_network_setting_to_all_forces()
     gui_runtime.refresh_all_status_guis()

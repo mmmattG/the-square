@@ -1,5 +1,7 @@
 local expansion_research = {}
 
+expansion_research.MAX_LEVEL = 1000
+
 local function round_up_to_nearest_10(value)
   return math.ceil(value / 10) * 10
 end
@@ -28,6 +30,10 @@ function expansion_research.get_research_unit_count(starting_square_size, tiles_
   end
 
   return math.max(10, round_up_to_nearest_10(raw_count))
+end
+
+function expansion_research.get_technology_name(level)
+  return string.format("fes-square-expansion-%04d", level)
 end
 
 return expansion_research

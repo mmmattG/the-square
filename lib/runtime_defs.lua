@@ -1,4 +1,5 @@
 local bootstrap_layout = require("lib.bootstrap_layout")
+local expansion_research = require("lib.expansion_research")
 local item_ingress = require("lib.item_ingress")
 
 local runtime_defs = {}
@@ -25,29 +26,30 @@ runtime_defs.SHOP_FRAME_NAME = "fes_shop_frame"
 runtime_defs.LINE_PURCHASE_COST = 12
 runtime_defs.MAX_INGRESS_TIER = 4
 runtime_defs.EXPANSION_RESEARCH_LEVELS_PER_TIER = 10
+runtime_defs.MAX_EXPANSION_RESEARCH_LEVEL = expansion_research.MAX_LEVEL
 runtime_defs.EXPANSION_RESEARCH_BANDS = {
   {
-    name = "fes-square-expansion-automation",
+    name = "Automation science",
     start_level = 1,
     label = "Automation science"
   },
   {
-    name = "fes-square-expansion-logistic",
+    name = "Automation + logistic science",
     start_level = 11,
     label = "Automation + logistic science"
   },
   {
-    name = "fes-square-expansion-chemical",
+    name = "Automation + logistic + chemical science",
     start_level = 21,
     label = "Automation + logistic + chemical science"
   },
   {
-    name = "fes-square-expansion-production-utility",
+    name = "Automation + logistic + chemical + production + utility science",
     start_level = 31,
     label = "Automation + logistic + chemical + production + utility science"
   },
   {
-    name = "fes-square-expansion-space",
+    name = "All science through space",
     start_level = 41,
     label = "All science through space"
   }
@@ -238,11 +240,11 @@ function runtime_defs.create_managed_anchor(definition, flow, side, position)
 end
 
 function runtime_defs.get_square_size()
-  return settings.global[runtime_defs.SETTING_STARTING_SQUARE_SIZE].value
+  return settings.startup[runtime_defs.SETTING_STARTING_SQUARE_SIZE].value
 end
 
 function runtime_defs.get_expansion_tiles_per_research()
-  return settings.global[runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH].value
+  return settings.startup[runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH].value
 end
 
 function runtime_defs.is_logistic_network_automation_enabled()
@@ -340,13 +342,7 @@ function runtime_defs.get_expansion_research_band_for_level(level)
 end
 
 function runtime_defs.is_expansion_research_name(research_name)
-  for _, band in ipairs(runtime_defs.EXPANSION_RESEARCH_BANDS) do
-    if band.name == research_name then
-      return true
-    end
-  end
-
-  return false
+  return string.match(research_name or "", "^fes%-square%-expansion%-%d%d%d%d$") ~= nil
 end
 
 function runtime_defs.is_inside_bounds(bounds, position)

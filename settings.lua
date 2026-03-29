@@ -2,7 +2,7 @@ data:extend({
   {
     type = "int-setting",
     name = "fes-starting-square-size",
-    setting_type = "runtime-global",
+    setting_type = "startup",
     default_value = 7,
     minimum_value = 4,
     maximum_value = 255,
@@ -11,7 +11,7 @@ data:extend({
   {
     type = "int-setting",
     name = "fes-expansion-tiles-per-research",
-    setting_type = "runtime-global",
+    setting_type = "startup",
     default_value = 7,
     minimum_value = 1,
     maximum_value = 1000,
