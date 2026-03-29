@@ -68,17 +68,26 @@ data:extend({
     order = "e"
   },
   {
+    type = "int-setting",
+    name = "fes-screenshot-quality",
+    setting_type = "runtime-global",
+    default_value = 100,
+    minimum_value = 1,
+    maximum_value = 100,
+    order = "f"
+  },
+  {
     type = "bool-setting",
     name = "fes-dev-mode",
     setting_type = "runtime-per-user",
     default_value = false,
-    order = "f"
+    order = "g"
   },
   {
     type = "bool-setting",
     name = "fes-ingress-placement-debug",
     setting_type = "runtime-per-user",
     default_value = false,
-    order = "g"
+    order = "h"
   }
 })

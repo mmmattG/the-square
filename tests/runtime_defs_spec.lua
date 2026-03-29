@@ -11,6 +11,9 @@ defines = {
 
 settings = {
   global = {
+    ["fes-screenshot-quality"] = {
+      value = 87
+    },
     ["fes-background-tile"] = {
       value = "checkerboard"
     }
@@ -72,5 +75,13 @@ run_test("expansion research name detection accepts the finite and infinite prot
     runtime_defs.is_expansion_research_name("logistics"),
     false,
     "other technology names should not match"
+  )
+end)
+
+run_test("screenshot quality comes from the runtime-global setting", function()
+  assert_equal(
+    runtime_defs.get_screenshot_quality(),
+    87,
+    "screenshot captures should use the configured quality percentage"
   )
 end)

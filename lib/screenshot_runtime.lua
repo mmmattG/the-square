@@ -38,6 +38,7 @@ function screenshot_runtime.take_base_screenshot(player)
     resolution = capture.resolution,
     zoom = capture.zoom,
     path = path,
+    quality = defs.get_screenshot_quality(),
     show_gui = false,
     show_entity_info = false,
     show_cursor_building_preview = false,
@@ -48,7 +49,8 @@ function screenshot_runtime.take_base_screenshot(player)
     "message.fes-screenshot-saved",
     path,
     bootstrap.square_size,
-    defs.BASE_SCREENSHOT_MARGIN_TILES
+    defs.BASE_SCREENSHOT_MARGIN_TILES,
+    defs.get_screenshot_quality()
   })
 end
 
