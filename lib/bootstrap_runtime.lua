@@ -1,61 +1,10 @@
 local defs = require("lib.runtime_defs")
 
 local bootstrap_runtime = {}
-local EXPANDED_SURFACE_MARGIN = 1
 local ensure_surface_dimensions
 
 local function get_target_surface_size(square_size, expansions_completed)
-  local extra_margin = (expansions_completed or 0) > 0 and EXPANDED_SURFACE_MARGIN or 0
-
-  return square_size + (extra_margin * 2)
-end
-
-local function copy_map_gen_settings_with_size(surface, target_surface_size)
-  local existing_settings = surface.map_gen_settings or {}
-  local settings = {}
-
-  for key, value in pairs(existing_settings) do
-    settings[key] = value
-  end
-
-  settings.width = target_surface_size
-  settings.height = target_surface_size
-  settings.starting_points = {{x = 0, y = 0}}
-  settings.peaceful_mode = true
-  settings.no_enemies_mode = true
-  return settings
-end
-
-local function build_outer_band_areas(square_size, surface_size)
-  local surface_bounds = defs.get_square_bounds(surface_size)
-  local square_bounds = defs.get_square_bounds(square_size)
-  local areas = {
-    {
-      left_top = surface_bounds.left_top,
-      right_bottom = {x = surface_bounds.right_bottom.x, y = square_bounds.left_top.y}
-    },
-    {
-      left_top = {x = surface_bounds.left_top.x, y = square_bounds.right_bottom.y},
-      right_bottom = surface_bounds.right_bottom
-    },
-    {
-      left_top = {x = surface_bounds.left_top.x, y = square_bounds.left_top.y},
-      right_bottom = {x = square_bounds.left_top.x, y = square_bounds.right_bottom.y}
-    },
-    {
-      left_top = {x = square_bounds.right_bottom.x, y = square_bounds.left_top.y},
-      right_bottom = {x = surface_bounds.right_bottom.x, y = square_bounds.right_bottom.y}
-    }
-  }
-  local filtered_areas = {}
-
-  for _, area in ipairs(areas) do
-    if area.left_top.x < area.right_bottom.x and area.left_top.y < area.right_bottom.y then
-      filtered_areas[#filtered_areas + 1] = area
-    end
-  end
-
-  return filtered_areas
+  return square_size + 2
 end
 
 local function get_edge_positions(bounds, side)
@@ -177,14 +126,14 @@ local function call_freeplay(interface_name, value)
   end
 end
 
-local function build_clean_square_tiles(size)
-  local bounds = defs.get_square_bounds(size)
+local function build_managed_surface_tiles(square_size, surface_size)
+  local surface_bounds = defs.get_square_bounds(surface_size)
   local tiles = {}
 
-  for y = bounds.left_top.y, bounds.right_bottom.y - 1 do
-    for x = bounds.left_top.x, bounds.right_bottom.x - 1 do
+  for y = surface_bounds.left_top.y, surface_bounds.right_bottom.y - 1 do
+    for x = surface_bounds.left_top.x, surface_bounds.right_bottom.x - 1 do
       tiles[#tiles + 1] = {
-        name = defs.FLOOR_TILE_NAME,
+        name = defs.get_managed_tile_name(square_size, surface_size, {x = x, y = y}),
         position = {x = x, y = y}
       }
     end
@@ -193,33 +142,22 @@ local function build_clean_square_tiles(size)
   return tiles
 end
 
-local function build_anchor_ring_tiles(square_size, surface_size)
-  return {}
-end
-
 function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, surface_size)
   if not surface then
     return
   end
 
-  local tile_updates = build_anchor_ring_tiles(square_size, surface_size)
+  local tile_updates = build_managed_surface_tiles(square_size, surface_size)
 
   if #tile_updates > 0 then
-    surface.set_tiles(tile_updates, false, true, true, false)
+    -- Keep tile correction enabled so Factorio rebuilds the soft edge transition
+    -- between the playable floor and the out-of-map ring immediately.
+    surface.set_tiles(tile_updates, true, true, true, false)
   end
-
-  regenerate_outer_band_from_temp_surface(surface, square_size, surface_size)
 end
 
 local function build_bootstrap_tiles(square_size, surface_size)
-  local tiles = build_clean_square_tiles(square_size)
-  local anchor_ring_tiles = build_anchor_ring_tiles(square_size, surface_size)
-
-  for _, tile in ipairs(anchor_ring_tiles) do
-    tiles[#tiles + 1] = tile
-  end
-
-  return tiles
+  return build_managed_surface_tiles(square_size, surface_size)
 end
 
 local function build_resize_tile_updates(old_square_size, old_surface_size, new_square_size, new_surface_size)
@@ -247,38 +185,6 @@ local function build_resize_tile_updates(old_square_size, old_surface_size, new_
   end
 
   return tiles
-end
-
-local function regenerate_outer_band_from_temp_surface(surface, square_size, surface_size)
-  if not (surface and surface.valid) or surface_size <= square_size then
-    return
-  end
-
-  local temp_surface_name = defs.SURFACE_NAME .. "-regen-" .. game.tick
-  local temp_surface = game.create_surface(
-    temp_surface_name,
-    copy_map_gen_settings_with_size(surface, surface_size)
-  )
-
-  temp_surface.peaceful_mode = true
-  temp_surface.no_enemies_mode = true
-  ensure_surface_dimensions(temp_surface, surface_size)
-
-  for _, area in ipairs(build_outer_band_areas(square_size, surface_size)) do
-    temp_surface.clone_area({
-      source_area = area,
-      destination_area = area,
-      destination_surface = surface,
-      clone_tiles = true,
-      clone_entities = false,
-      clone_decoratives = true,
-      clear_destination_decoratives = true,
-      expand_map = false,
-      create_build_effect_smoke = false
-    })
-  end
-
-  game.delete_surface(temp_surface)
 end
 
 local function destroy_noise_entities(surface)
@@ -351,7 +257,9 @@ function bootstrap_runtime.ensure_bootstrap_surface(anchor_runtime)
   surface.destroy_decoratives({})
   surface.clear_hidden_tiles()
   destroy_noise_entities(surface)
-  surface.set_tiles(build_bootstrap_tiles(square_size, surface_size), false, true, true, false)
+  -- Bootstrap writes need the same correction pass or the initial void edge stays hard
+  -- until some later edit causes Factorio to recompute neighboring transitions.
+  surface.set_tiles(build_bootstrap_tiles(square_size, surface_size), true, true, true, false)
 
   storage.bootstrap = storage.bootstrap or {}
   storage.bootstrap.square_size = square_size
@@ -502,7 +410,9 @@ local function apply_square_resize(surface, old_square_size, old_surface_size, n
   )
 
   if #tile_updates > 0 then
-    surface.set_tiles(tile_updates, false, true, true, false)
+    -- Expansion only paints the changed ring, so correction must stay on here as well
+    -- to refresh the softened border around the updated out-of-map tiles.
+    surface.set_tiles(tile_updates, true, true, true, false)
   end
 end
 
@@ -538,7 +448,6 @@ function bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
   bootstrap_runtime.add_expansion_points(newly_unlocked_tiles)
 
   apply_square_resize(surface, previous_square_size, previous_surface_size, next_square_size, next_surface_size)
-  regenerate_outer_band_from_temp_surface(surface, next_square_size, next_surface_size)
   bootstrap_runtime.chart_play_area(game.forces.player, surface, next_surface_size)
 
   if anchor_runtime then

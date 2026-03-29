@@ -56,9 +56,14 @@ end
 
 function bootstrap_layout.get_managed_tile_name(square_size, surface_size, floor_tile_name, void_tile_name, position)
   local square_bounds = bootstrap_layout.get_square_bounds(square_size)
+  local surface_bounds = bootstrap_layout.get_square_bounds(surface_size)
 
   if bootstrap_layout.is_inside_bounds(square_bounds, position) then
     return floor_tile_name
+  end
+
+  if bootstrap_layout.is_inside_bounds(surface_bounds, position) then
+    return void_tile_name
   end
 
   return nil
