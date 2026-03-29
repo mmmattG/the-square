@@ -239,8 +239,7 @@ local function build_ingress_item(definition)
     icon_size = 64,
     subgroup = definition.kind == "fluid" and "energy-pipe-distribution" or "belt",
     order = definition.order,
-    stack_size = 50,
-    place_result = ingress_entity_name(definition.resource, definition.kind == "item" and "yellow" or nil)
+    stack_size = 50
   }
 end
 
@@ -303,8 +302,46 @@ local function build_egress_item(definition)
     icon_size = 64,
     subgroup = "energy-pipe-distribution",
     order = definition.order,
-    stack_size = 50,
-    place_result = egress_entity_name(definition.resource)
+    stack_size = 50
+  }
+end
+
+local function build_anchor_slot_proxy()
+  return {
+    type = "simple-entity-with-owner",
+    name = "fes-anchor-slot-proxy",
+    icon = "__base__/graphics/icons/ghost.png",
+    icon_size = 64,
+    flags = {
+      "not-on-map",
+      "placeable-off-grid",
+      "not-blueprintable",
+      "not-deconstructable",
+      "not-flammable"
+    },
+    hidden_in_factoriopedia = true,
+    selectable_in_game = true,
+    collision_box = {{0, 0}, {0, 0}},
+    collision_mask = {},
+    selection_box = {{-0.45, -0.45}, {0.45, 0.45}},
+    max_health = 1,
+    render_layer = "object",
+    picture = {
+      filename = "__base__/graphics/icons/ghost.png",
+      size = 64,
+      scale = 0.35,
+      tint = {r = 0.85, g = 0.85, b = 0.85, a = 0.35}
+    }
+  }
+end
+
+local function build_anchor_place_input()
+  return {
+    type = "custom-input",
+    name = "fes-place-managed-anchor",
+    linked_game_control = "build",
+    consuming = "none",
+    include_selected_prototype = true
   }
 end
 
@@ -397,6 +434,9 @@ prototypes[#prototypes + 1] = {
   name = "fes-rules",
   order = "o[factorio-expanding-square]"
 }
+
+prototypes[#prototypes + 1] = build_anchor_slot_proxy()
+prototypes[#prototypes + 1] = build_anchor_place_input()
 
 for _, definition in ipairs(ingress_resources) do
   prototypes[#prototypes + 1] = build_ingress_item(definition)
