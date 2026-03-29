@@ -217,6 +217,8 @@ function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, s
     return
   end
 
+  surface.clear_hidden_tiles()
+
   local tile_updates = build_anchor_ring_tiles(square_size, surface_size)
 
   if #tile_updates > 0 then
@@ -475,6 +477,7 @@ end
 
 local function apply_square_resize(surface, old_square_size, old_surface_size, new_square_size, new_surface_size)
   ensure_surface_dimensions(surface, new_surface_size)
+  surface.clear_hidden_tiles()
 
   local tile_updates = build_resize_tile_updates(
     old_square_size,
