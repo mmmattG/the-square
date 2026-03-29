@@ -138,23 +138,7 @@ local function build_clean_square_tiles(size)
 end
 
 local function build_anchor_ring_tiles(square_size, surface_size)
-  local surface_bounds = defs.get_square_bounds(surface_size)
-  local tiles = {}
-
-  for y = surface_bounds.left_top.y, surface_bounds.right_bottom.y - 1 do
-    for x = surface_bounds.left_top.x, surface_bounds.right_bottom.x - 1 do
-      local position = {x = x, y = y}
-
-      if not defs.is_inside_bounds(defs.get_square_bounds(square_size), position) then
-        tiles[#tiles + 1] = {
-          name = defs.get_managed_tile_name(square_size, surface_size, position),
-          position = position
-        }
-      end
-    end
-  end
-
-  return tiles
+  return {}
 end
 
 function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, surface_size)
