@@ -162,7 +162,8 @@ local function ensure_screenshot_button(player)
   return player.gui.top.add({
     type = "button",
     name = defs.SCREENSHOT_BUTTON_NAME,
-    caption = {"gui.fes-screenshot-button"}
+    caption = {"gui.fes-screenshot-button"},
+    tooltip = {"gui.fes-screenshot-button-tooltip", defs.BASE_SCREENSHOT_DIRECTORY}
   })
 end
 
