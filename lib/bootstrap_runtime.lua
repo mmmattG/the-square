@@ -236,10 +236,12 @@ function bootstrap_runtime.ensure_bootstrap_state_defaults()
   storage.bootstrap.surface_size = storage.bootstrap.surface_size or defs.get_surface_size(storage.bootstrap.square_size)
   storage.bootstrap.expansion_points = storage.bootstrap.expansion_points or 0
   storage.bootstrap.expansions_completed = storage.bootstrap.expansions_completed or 0
-  storage.bootstrap.growth_progress = storage.bootstrap.growth_progress or 0
   storage.bootstrap.ingress_tier = storage.bootstrap.ingress_tier or 1
-  storage.bootstrap.expansion_speed_research_levels = storage.bootstrap.expansion_speed_research_levels or 0
+  storage.bootstrap.expansion_research_levels = storage.bootstrap.expansion_research_levels or 0
   storage.bootstrap.uranium_ore_progress_carry = storage.bootstrap.uranium_ore_progress_carry or 0
+  storage.bootstrap.growth_progress = nil
+  storage.bootstrap.expansion_speed_research_levels = nil
+  storage.utilization_metrics = nil
 end
 
 local function ensure_surface_dimensions(surface, target_surface_size)
@@ -317,10 +319,6 @@ end
 
 function bootstrap_runtime.add_expansion_points(amount)
   storage.bootstrap.expansion_points = (storage.bootstrap.expansion_points or 0) + amount
-end
-
-function bootstrap_runtime.add_growth_progress(amount)
-  storage.bootstrap.growth_progress = (storage.bootstrap.growth_progress or 0) + amount
 end
 
 local function move_starter_anchors_outward()
@@ -429,7 +427,7 @@ local function apply_square_resize(surface, old_square_size, old_surface_size, n
   end
 end
 
-function bootstrap_runtime.expand_square(player, gui_runtime, growth_runtime, anchor_runtime)
+function bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
   local bootstrap = storage.bootstrap
 
   if not bootstrap then
@@ -485,16 +483,12 @@ function bootstrap_runtime.expand_square(player, gui_runtime, growth_runtime, an
     player.play_sound({path = "utility/new_objective"})
   end
 
-  if growth_runtime then
-    growth_runtime.update_utilization_metrics(gui_runtime)
-  end
-
   if gui_runtime then
     gui_runtime.refresh_all_debug_guis()
   end
 end
 
-function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime, growth_runtime)
+function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
   call_freeplay("set_skip_intro", true)
   call_freeplay("set_disable_crashsite", true)
 
@@ -515,10 +509,6 @@ function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime, growth_r
     bootstrap_runtime.teleport_player_to_square(player)
   end
 
-  if growth_runtime then
-    growth_runtime.update_utilization_metrics(gui_runtime)
-  end
-
   if gui_runtime then
     gui_runtime.refresh_all_status_guis()
     gui_runtime.sync_all_dev_guis()
@@ -526,7 +516,7 @@ function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime, growth_r
   end
 end
 
-function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime, growth_runtime)
+function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
   local bootstrap = storage.bootstrap
 
   if not bootstrap then
@@ -552,10 +542,6 @@ function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime, gr
 
   for _, player in pairs(game.players) do
     bootstrap_runtime.teleport_player_to_square(player)
-  end
-
-  if growth_runtime then
-    growth_runtime.update_utilization_metrics(gui_runtime)
   end
 
   if gui_runtime then

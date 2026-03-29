@@ -19,110 +19,42 @@ local item_ingress_belt_tiers = {
   {key = "blue", prototype_name = "express-transport-belt"}
 }
 
-local expansion_speed_research_bands = {
+local square_expansion_research_bands = {
   {
-    name = "fes-expansion-speed-automation",
-    localised_name = {"technology-name.fes-expansion-speed"},
+    name = "fes-square-expansion-automation",
+    localised_name = {"technology-name.fes-square-expansion"},
     icon = "__base__/graphics/icons/lab.png",
-    order = "c-a[expansion-speed]-a[automation]",
+    order = "c-a[square-expansion]-a[automation]",
     count_formula = "50*(L)",
     start_level = 1,
-    max_level = 5,
-    ingredients = {
-      {"automation-science-pack", 1}
-    }
-  },
-  {
-    name = "fes-expansion-speed-logistic",
-    localised_name = {"technology-name.fes-expansion-speed"},
-    icon = "__base__/graphics/icons/lab.png",
-    order = "c-a[expansion-speed]-b[logistic]",
-    count_formula = "75*(L-5)",
-    start_level = 6,
     max_level = 10,
-    prerequisites = {"fes-expansion-speed-automation"},
-    ingredients = {
-      {"automation-science-pack", 1},
-      {"logistic-science-pack", 1}
-    }
-  },
-  {
-    name = "fes-expansion-speed-chemical",
-    localised_name = {"technology-name.fes-expansion-speed"},
-    icon = "__base__/graphics/icons/lab.png",
-    order = "c-a[expansion-speed]-c[chemical]",
-    count_formula = "125*(L-10)",
-    start_level = 11,
-    max_level = 15,
-    prerequisites = {"fes-expansion-speed-logistic"},
-    ingredients = {
-      {"automation-science-pack", 1},
-      {"logistic-science-pack", 1},
-      {"chemical-science-pack", 1}
-    }
-  },
-  {
-    name = "fes-expansion-speed-production-utility",
-    localised_name = {"technology-name.fes-expansion-speed"},
-    icon = "__base__/graphics/icons/lab.png",
-    order = "c-a[expansion-speed]-d[production-utility]",
-    count_formula = "200*(L-15)",
-    start_level = 16,
-    max_level = 20,
-    prerequisites = {"fes-expansion-speed-chemical"},
-    ingredients = {
-      {"automation-science-pack", 1},
-      {"logistic-science-pack", 1},
-      {"chemical-science-pack", 1},
-      {"production-science-pack", 1},
-      {"utility-science-pack", 1}
-    }
-  },
-  {
-    name = "fes-expansion-speed-space",
-    localised_name = {"technology-name.fes-expansion-speed"},
-    icon = "__base__/graphics/icons/lab.png",
-    order = "c-a[expansion-speed]-e[space]",
-    count_formula = "300*(L-20)",
-    start_level = 21,
-    max_level = "infinite",
-    prerequisites = {"fes-expansion-speed-production-utility"},
-    ingredients = {
-      {"automation-science-pack", 1},
-      {"logistic-science-pack", 1},
-      {"chemical-science-pack", 1},
-      {"production-science-pack", 1},
-      {"utility-science-pack", 1},
-      {"space-science-pack", 1}
-    }
-  }
-}
-
-local dummy_research_definitions = {
-  {
-    name = "fes-dummy-research-red",
-    icon = "__base__/graphics/icons/automation-science-pack.png",
-    order = "c-b[dummy-research]-a[automation]",
-    count_formula = "30*(L)",
     ingredients = {
       {"automation-science-pack", 1}
     }
   },
   {
-    name = "fes-dummy-research-green",
-    icon = "__base__/graphics/icons/logistic-science-pack.png",
-    order = "c-b[dummy-research]-b[logistic]",
-    count_formula = "45*(L)",
+    name = "fes-square-expansion-logistic",
+    localised_name = {"technology-name.fes-square-expansion"},
+    icon = "__base__/graphics/icons/lab.png",
+    order = "c-a[square-expansion]-b[logistic]",
+    count_formula = "75*(L-10)",
+    start_level = 11,
+    max_level = 20,
+    prerequisites = {"fes-square-expansion-automation"},
     ingredients = {
       {"automation-science-pack", 1},
       {"logistic-science-pack", 1}
     }
   },
   {
-    name = "fes-dummy-research-blue",
-    icon = "__base__/graphics/icons/chemical-science-pack.png",
-    order = "c-b[dummy-research]-c[chemical]",
-    count_formula = "75*(L)",
+    name = "fes-square-expansion-chemical",
+    localised_name = {"technology-name.fes-square-expansion"},
+    icon = "__base__/graphics/icons/lab.png",
+    order = "c-a[square-expansion]-c[chemical]",
+    count_formula = "125*(L-20)",
+    start_level = 21,
+    max_level = 30,
+    prerequisites = {"fes-square-expansion-logistic"},
     ingredients = {
       {"automation-science-pack", 1},
       {"logistic-science-pack", 1},
@@ -130,10 +62,14 @@ local dummy_research_definitions = {
     }
   },
   {
-    name = "fes-dummy-research-production-utility",
-    icon = "__base__/graphics/icons/production-science-pack.png",
-    order = "c-b[dummy-research]-d[production-utility]",
-    count_formula = "125*(L)",
+    name = "fes-square-expansion-production-utility",
+    localised_name = {"technology-name.fes-square-expansion"},
+    icon = "__base__/graphics/icons/lab.png",
+    order = "c-a[square-expansion]-d[production-utility]",
+    count_formula = "200*(L-30)",
+    start_level = 31,
+    max_level = 40,
+    prerequisites = {"fes-square-expansion-chemical"},
     ingredients = {
       {"automation-science-pack", 1},
       {"logistic-science-pack", 1},
@@ -143,10 +79,14 @@ local dummy_research_definitions = {
     }
   },
   {
-    name = "fes-dummy-research-space",
-    icon = "__base__/graphics/icons/space-science-pack.png",
-    order = "c-b[dummy-research]-e[space]",
-    count_formula = "200*(L)",
+    name = "fes-square-expansion-space",
+    localised_name = {"technology-name.fes-square-expansion"},
+    icon = "__base__/graphics/icons/lab.png",
+    order = "c-a[square-expansion]-e[space]",
+    count_formula = "300*(L-40)",
+    start_level = 41,
+    max_level = "infinite",
+    prerequisites = {"fes-square-expansion-production-utility"},
     ingredients = {
       {"automation-science-pack", 1},
       {"logistic-science-pack", 1},
@@ -174,8 +114,8 @@ local tips_and_tricks_items = {
     indent = 1
   },
   {
-    name = "fes-utilization-and-growth",
-    order = "c[utilization-and-growth]",
+    name = "fes-expansion-research",
+    order = "c[expansion-research]",
     category = "fes-rules",
     icon = "__base__/graphics/icons/lab.png",
     indent = 1
@@ -360,12 +300,12 @@ local function build_egress_entity(definition)
   return source
 end
 
-local function build_expansion_speed_technology(definition)
+local function build_square_expansion_technology(definition)
   return {
     type = "technology",
     name = definition.name,
     localised_name = definition.localised_name,
-    localised_description = {"technology-description.fes-expansion-speed"},
+    localised_description = {"technology-description.fes-square-expansion"},
     icon = definition.icon,
     icon_size = 64,
     order = definition.order,
@@ -381,30 +321,7 @@ local function build_expansion_speed_technology(definition)
     effects = {
       {
         type = "nothing",
-        effect_description = {"technology-effect.fes-expansion-speed"}
-      }
-    }
-  }
-end
-
-local function build_dummy_research(definition)
-  return {
-    type = "technology",
-    name = definition.name,
-    localised_description = {"technology-description." .. definition.name},
-    icon = definition.icon,
-    icon_size = 64,
-    order = definition.order,
-    max_level = "infinite",
-    unit = {
-      count_formula = definition.count_formula,
-      ingredients = definition.ingredients,
-      time = 30
-    },
-    effects = {
-      {
-        type = "nothing",
-        effect_description = {"technology-effect.fes-dummy-research"}
+        effect_description = {"technology-effect.fes-square-expansion"}
       }
     }
   }
@@ -458,12 +375,8 @@ for _, definition in ipairs(egress_resources) do
   prototypes[#prototypes + 1] = build_egress_entity(definition)
 end
 
-for _, definition in ipairs(expansion_speed_research_bands) do
-  prototypes[#prototypes + 1] = build_expansion_speed_technology(definition)
-end
-
-for _, definition in ipairs(dummy_research_definitions) do
-  prototypes[#prototypes + 1] = build_dummy_research(definition)
+for _, definition in ipairs(square_expansion_research_bands) do
+  prototypes[#prototypes + 1] = build_square_expansion_technology(definition)
 end
 
 for _, definition in ipairs(tips_and_tricks_items) do

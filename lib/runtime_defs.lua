@@ -21,17 +21,35 @@ runtime_defs.DEBUG_FRAME_NAME = "fes_debug_frame"
 runtime_defs.STATUS_FRAME_NAME = "fes_status_frame"
 runtime_defs.SHOP_BUTTON_NAME = "fes_shop_button"
 runtime_defs.SHOP_FRAME_NAME = "fes_shop_frame"
-runtime_defs.UTILIZATION_UPDATE_INTERVAL_TICKS = 60
-runtime_defs.GROWTH_RATE_SIZE_DIVISOR = 12
 runtime_defs.LINE_PURCHASE_COST = 12
 runtime_defs.MAX_INGRESS_TIER = 4
-runtime_defs.EXPANSION_SPEED_RESEARCH_PER_LEVEL_MULTIPLIER = 0.05
-runtime_defs.EXPANSION_SPEED_RESEARCH_BANDS = {
-  {name = "fes-expansion-speed-automation", start_level = 1},
-  {name = "fes-expansion-speed-logistic", start_level = 6},
-  {name = "fes-expansion-speed-chemical", start_level = 11},
-  {name = "fes-expansion-speed-production-utility", start_level = 16},
-  {name = "fes-expansion-speed-space", start_level = 21}
+runtime_defs.EXPANSION_RESEARCH_LEVELS_PER_TIER = 10
+runtime_defs.EXPANSION_RESEARCH_BANDS = {
+  {
+    name = "fes-square-expansion-automation",
+    start_level = 1,
+    label = "Automation science"
+  },
+  {
+    name = "fes-square-expansion-logistic",
+    start_level = 11,
+    label = "Automation + logistic science"
+  },
+  {
+    name = "fes-square-expansion-chemical",
+    start_level = 21,
+    label = "Automation + logistic + chemical science"
+  },
+  {
+    name = "fes-square-expansion-production-utility",
+    start_level = 31,
+    label = "Automation + logistic + chemical + production + utility science"
+  },
+  {
+    name = "fes-square-expansion-space",
+    start_level = 41,
+    label = "All science through space"
+  }
 }
 runtime_defs.FORBIDDEN_LOGISTIC_CONTAINER_NAMES = {
   ["active-provider-chest"] = true,
@@ -292,6 +310,38 @@ function runtime_defs.get_next_expansion_tile_reward(square_size)
   local next_square_size = square_size + 2
 
   return runtime_defs.get_square_area(next_square_size) - runtime_defs.get_square_area(square_size)
+end
+
+function runtime_defs.get_completed_expansion_research_levels()
+  if not storage.bootstrap then
+    return 0
+  end
+
+  return storage.bootstrap.expansion_research_levels or 0
+end
+
+function runtime_defs.get_expansion_research_band_for_level(level)
+  local band = runtime_defs.EXPANSION_RESEARCH_BANDS[1]
+
+  for _, candidate in ipairs(runtime_defs.EXPANSION_RESEARCH_BANDS) do
+    if level >= candidate.start_level then
+      band = candidate
+    else
+      break
+    end
+  end
+
+  return band
+end
+
+function runtime_defs.is_expansion_research_name(research_name)
+  for _, band in ipairs(runtime_defs.EXPANSION_RESEARCH_BANDS) do
+    if band.name == research_name then
+      return true
+    end
+  end
+
+  return false
 end
 
 function runtime_defs.is_inside_bounds(bounds, position)
