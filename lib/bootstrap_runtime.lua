@@ -1,9 +1,20 @@
 local defs = require("lib.runtime_defs")
 
 local bootstrap_runtime = {}
+local EXPANDED_SURFACE_MARGIN = 1
 local ensure_surface_dimensions
 
 local function get_target_surface_size(square_size, expansions_completed)
+  local extra_margin = (expansions_completed or 0) > 0 and EXPANDED_SURFACE_MARGIN or 0
+
+  return square_size + (extra_margin * 2)
+end
+
+local function get_visible_floor_size(square_size, expansions_completed)
+  if (expansions_completed or 0) > 0 then
+    return math.max(1, square_size - 2)
+  end
+
   return square_size
 end
 
@@ -190,6 +201,19 @@ local function build_clean_square_tiles(size)
   return tiles
 end
 
+local function repaint_visible_floor(surface, square_size, expansions_completed)
+  if not (surface and surface.valid) then
+    return
+  end
+
+  local visible_floor_size = get_visible_floor_size(square_size, expansions_completed)
+  local tile_updates = build_clean_square_tiles(visible_floor_size)
+
+  if #tile_updates > 0 then
+    surface.set_tiles(tile_updates, false, true, true, false)
+  end
+end
+
 local function build_anchor_ring_tiles(square_size, surface_size)
   return {}
 end
@@ -206,10 +230,11 @@ function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, s
   end
 
   regenerate_outer_band_from_temp_surface(surface, square_size, surface_size)
+  repaint_visible_floor(surface, square_size, storage.bootstrap and storage.bootstrap.expansions_completed or 0)
 end
 
 local function build_bootstrap_tiles(square_size, surface_size)
-  local tiles = build_clean_square_tiles(square_size)
+  local tiles = build_clean_square_tiles(get_visible_floor_size(square_size, 0))
   local anchor_ring_tiles = build_anchor_ring_tiles(square_size, surface_size)
 
   for _, tile in ipairs(anchor_ring_tiles) do
@@ -501,6 +526,8 @@ local function apply_square_resize(surface, old_square_size, old_surface_size, n
   if #tile_updates > 0 then
     surface.set_tiles(tile_updates, false, true, true, false)
   end
+
+  repaint_visible_floor(surface, new_square_size, (storage.bootstrap and storage.bootstrap.expansions_completed or 0) + 1)
 end
 
 function bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
