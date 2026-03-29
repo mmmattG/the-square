@@ -888,6 +888,13 @@ local function find_entity_at_position(surface, prototype_name, position)
   return entities[1]
 end
 
+local function get_tile_center_position(position)
+  return {
+    x = position.x + 0.5,
+    y = position.y + 0.5
+  }
+end
+
 local function configure_source_anchor_entity(entity, direction)
   if not (entity and entity.valid) then
     return
@@ -1201,7 +1208,7 @@ local function ensure_anchor_slot_proxies(surface, square_size, starter_anchors)
 
   for _, position in ipairs(get_anchor_ring_positions(square_size)) do
     local position_key = get_position_key(position)
-    local proxy = find_entity_at_position(surface, ANCHOR_SLOT_PROXY_NAME, position)
+    local proxy = find_entity_at_position(surface, ANCHOR_SLOT_PROXY_NAME, get_tile_center_position(position))
 
     if occupied_positions[position_key] then
       if proxy and proxy.valid then
@@ -1210,7 +1217,7 @@ local function ensure_anchor_slot_proxies(surface, square_size, starter_anchors)
     elseif not proxy then
       surface.create_entity({
         name = ANCHOR_SLOT_PROXY_NAME,
-        position = position,
+        position = get_tile_center_position(position),
         force = game.forces.player
       })
     end
