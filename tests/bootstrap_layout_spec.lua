@@ -19,19 +19,19 @@ local function run_test(name, fn)
   io.stdout:write("PASS " .. name .. "\n")
 end
 
-run_test("anchor ring tiles stay out-of-map", function()
+run_test("anchor ring tiles stay buildable floor", function()
   local square_size = 12
   local surface_size = bootstrap_layout.get_surface_size(square_size, 2)
 
   assert_equal(
     bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -7}),
-    "out-of-map",
-    "north anchor ring should remain out-of-map"
+    "grass-1",
+    "north anchor ring should stay buildable"
   )
   assert_equal(
     bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 6, y = 0}),
-    "out-of-map",
-    "east anchor ring should remain out-of-map"
+    "grass-1",
+    "east anchor ring should stay buildable"
   )
 end)
 
@@ -43,6 +43,17 @@ run_test("playable square stays walkable floor", function()
     bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = 0}),
     "grass-1",
     "the playable square should keep floor tiles"
+  )
+end)
+
+run_test("outer perimeter outside the anchor ring stays out-of-map", function()
+  local square_size = 12
+  local surface_size = bootstrap_layout.get_surface_size(square_size, 2)
+
+  assert_equal(
+    bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -8}),
+    "out-of-map",
+    "the outer perimeter should remain void"
   )
 end)
 

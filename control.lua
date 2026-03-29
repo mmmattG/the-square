@@ -1855,6 +1855,57 @@ local function teleport_player_to_square(player)
   chart_play_area(player.force, surface, bootstrap.surface_size or bootstrap.square_size)
 end
 
+local function get_inward_position_for_anchor_ring(square_size, tile_position)
+  local side = get_anchor_side_for_position(square_size, tile_position)
+
+  if side == "north" then
+    return {x = tile_position.x + 0.5, y = tile_position.y + 1.5}
+  end
+
+  if side == "east" then
+    return {x = tile_position.x - 0.5, y = tile_position.y + 0.5}
+  end
+
+  if side == "south" then
+    return {x = tile_position.x + 0.5, y = tile_position.y - 0.5}
+  end
+
+  if side == "west" then
+    return {x = tile_position.x + 1.5, y = tile_position.y + 0.5}
+  end
+
+  return nil
+end
+
+local function keep_player_out_of_anchor_ring(player)
+  local bootstrap = storage.bootstrap
+
+  if not (player and player.valid and bootstrap and player.surface and player.surface.name == bootstrap.surface_name) then
+    return
+  end
+
+  local tile_position = snap_entity_position_to_tile(player.position)
+
+  if not is_anchor_ring_position(bootstrap.square_size, tile_position) then
+    return
+  end
+
+  local target_position = get_inward_position_for_anchor_ring(bootstrap.square_size, tile_position)
+
+  if not target_position then
+    return
+  end
+
+  local safe_position = player.surface.find_non_colliding_position("character", target_position, 1, 0.25)
+
+  if safe_position then
+    player.teleport(safe_position, player.surface)
+    return
+  end
+
+  teleport_player_to_square(player)
+end
+
 local function add_expansion_points(amount)
   storage.bootstrap.expansion_points = (storage.bootstrap.expansion_points or 0) + amount
 end
@@ -2652,6 +2703,14 @@ script.on_event(defines.events.on_player_respawned, function(event)
     sync_status_gui(player)
     sync_dev_gui(player)
     sync_shop_gui(player)
+  end
+end)
+
+script.on_event(defines.events.on_player_changed_position, function(event)
+  local player = game.get_player(event.player_index)
+
+  if player then
+    keep_player_out_of_anchor_ring(player)
   end
 end)
 
