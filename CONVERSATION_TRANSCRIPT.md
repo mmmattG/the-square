@@ -627,7 +627,7 @@ Full number is good as the ratio of lanes needed to size should remain similar o
 
 ## Artifact Requests
 
-**User:** Yes you can write a prd now. There is no github repo yet, so create one with the same name as this folder factorio-expanding-square. Also create a ubiquitous-language document and commit that. Use gh cli. Also for user stories base the as a early game player, as a late game player, as a speedrun player etc for who is playing. And focus it on the problems that they are choosing to solve for fun.
+**User:** Yes you can write a prd now. There is no github repo yet, so create one with the same name as this folder The Square. Also create a ubiquitous-language document and commit that. Use gh cli. Also for user stories base the as a early game player, as a late game player, as a speedrun player etc for who is playing. And focus it on the problems that they are choosing to solve for fun.
 
 **User:** Repo should be private
 

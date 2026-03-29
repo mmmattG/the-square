@@ -1,4 +1,4 @@
-# factorio-expanding-square
+# The Square
 
 Local development commands:
 

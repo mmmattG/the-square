@@ -1,6 +1,6 @@
 # Feature List
 
-This document lists planned features for `factorio-expanding-square`, grouped first by planned timeframe and then loosely by category.
+This document lists planned features for `The Square`, grouped first by planned timeframe and then loosely by category.
 
 ## Planned For V1
 
