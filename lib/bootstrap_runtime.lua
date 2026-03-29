@@ -11,7 +11,13 @@ local function get_target_surface_size(square_size, expansions_completed)
 end
 
 local function copy_map_gen_settings_with_size(surface, target_surface_size)
-  local settings = table.deepcopy(surface.map_gen_settings)
+  local existing_settings = surface.map_gen_settings or {}
+  local settings = {}
+
+  for key, value in pairs(existing_settings) do
+    settings[key] = value
+  end
+
   settings.width = target_surface_size
   settings.height = target_surface_size
   settings.starting_points = {{x = 0, y = 0}}
