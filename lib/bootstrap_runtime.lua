@@ -10,6 +10,23 @@ local function get_target_surface_size(square_size, expansions_completed)
   return square_size + (extra_margin * 2)
 end
 
+local function copy_map_gen_settings_with_size(surface, target_surface_size)
+  local existing_settings = surface.map_gen_settings or {}
+  local settings = {}
+
+  for key, value in pairs(existing_settings) do
+    settings[key] = value
+  end
+
+  settings.width = target_surface_size
+  settings.height = target_surface_size
+  settings.starting_points = {{x = 0, y = 0}}
+  settings.peaceful_mode = true
+  settings.no_enemies_mode = true
+
+  return settings
+end
+
 local function build_outer_band_areas(square_size, surface_size)
   local surface_bounds = defs.get_square_bounds(surface_size)
   local square_bounds = defs.get_square_bounds(square_size)
@@ -29,6 +46,38 @@ local function build_outer_band_areas(square_size, surface_size)
     {
       left_top = {x = square_bounds.right_bottom.x, y = square_bounds.left_top.y},
       right_bottom = {x = surface_bounds.right_bottom.x, y = square_bounds.right_bottom.y}
+    }
+  }
+  local filtered_areas = {}
+
+  for _, area in ipairs(areas) do
+    if area.left_top.x < area.right_bottom.x and area.left_top.y < area.right_bottom.y then
+      filtered_areas[#filtered_areas + 1] = area
+    end
+  end
+
+  return filtered_areas
+end
+
+local function build_generated_margin_areas(square_size, surface_size)
+  local surface_bounds = defs.get_square_bounds(surface_size)
+  local border_bounds = defs.get_square_bounds(square_size + 2)
+  local areas = {
+    {
+      left_top = surface_bounds.left_top,
+      right_bottom = {x = surface_bounds.right_bottom.x, y = border_bounds.left_top.y}
+    },
+    {
+      left_top = {x = surface_bounds.left_top.x, y = border_bounds.right_bottom.y},
+      right_bottom = surface_bounds.right_bottom
+    },
+    {
+      left_top = {x = surface_bounds.left_top.x, y = border_bounds.left_top.y},
+      right_bottom = {x = border_bounds.left_top.x, y = border_bounds.right_bottom.y}
+    },
+    {
+      left_top = {x = border_bounds.right_bottom.x, y = border_bounds.left_top.y},
+      right_bottom = {x = surface_bounds.right_bottom.x, y = border_bounds.right_bottom.y}
     }
   }
   local filtered_areas = {}
@@ -212,12 +261,45 @@ local function clear_outer_band_decoratives(surface, square_size, surface_size)
   end
 end
 
+local function regenerate_generated_margin_from_temp_surface(surface, square_size, surface_size)
+  if not (surface and surface.valid) or surface_size <= (square_size + 2) then
+    return
+  end
+
+  local temp_surface_name = defs.SURFACE_NAME .. "-regen-" .. game.tick
+  local temp_surface = game.create_surface(
+    temp_surface_name,
+    copy_map_gen_settings_with_size(surface, surface_size)
+  )
+
+  temp_surface.peaceful_mode = true
+  temp_surface.no_enemies_mode = true
+  ensure_surface_dimensions(temp_surface, surface_size)
+
+  for _, area in ipairs(build_generated_margin_areas(square_size, surface_size)) do
+    temp_surface.clone_area({
+      source_area = area,
+      destination_area = area,
+      destination_surface = surface,
+      clone_tiles = true,
+      clone_entities = false,
+      clone_decoratives = true,
+      clear_destination_decoratives = true,
+      expand_map = false,
+      create_build_effect_smoke = false
+    })
+  end
+
+  game.delete_surface(temp_surface)
+end
+
 function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, surface_size)
   if not surface then
     return
   end
 
   surface.clear_hidden_tiles()
+  regenerate_generated_margin_from_temp_surface(surface, square_size, surface_size)
 
   local tile_updates = build_anchor_ring_tiles(square_size, surface_size)
 
@@ -478,6 +560,7 @@ end
 local function apply_square_resize(surface, old_square_size, old_surface_size, new_square_size, new_surface_size)
   ensure_surface_dimensions(surface, new_surface_size)
   surface.clear_hidden_tiles()
+  regenerate_generated_margin_from_temp_surface(surface, new_square_size, new_surface_size)
 
   local tile_updates = build_resize_tile_updates(
     old_square_size,
