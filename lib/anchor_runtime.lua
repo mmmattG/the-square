@@ -192,6 +192,25 @@ local function assign_anchor_position(anchor, side, position)
   return true
 end
 
+local function record_anchor_placement_progress(anchor, force, surface)
+  if not (
+    anchor
+    and anchor.flow == "ingress"
+    and anchor.resource == "crude-oil"
+    and force
+    and force.valid ~= false
+    and type(force.get_entity_build_count_statistics) == "function"
+  ) then
+    return
+  end
+
+  local statistics = force.get_entity_build_count_statistics(surface)
+
+  if statistics and statistics.valid ~= false and type(statistics.on_flow) == "function" then
+    statistics.on_flow("crude-oil", -1)
+  end
+end
+
 local function is_fluid_anchor_too_close(anchor, position, side)
   local starter_anchors = storage.starter_anchors
 
@@ -917,7 +936,11 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
   end
 
   entity.destroy({raise_destroy = false})
-  assign_anchor_position(anchor, side, anchor_position)
+
+  if assign_anchor_position(anchor, side, anchor_position) then
+    record_anchor_placement_progress(anchor, entity.force, entity.surface)
+  end
+
   anchor_runtime.ensure_starter_anchors()
 end
 
@@ -957,7 +980,10 @@ function anchor_runtime.handle_managed_anchor_slot_click(player)
     return
   end
 
-  assign_anchor_position(anchor, side, tile_position)
+  if assign_anchor_position(anchor, side, tile_position) then
+    record_anchor_placement_progress(anchor, player.force, player.surface)
+  end
+
   anchor_runtime.ensure_starter_anchors()
   anchor_runtime.update_player_anchor_preview(player)
 end
