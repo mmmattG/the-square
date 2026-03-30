@@ -83,6 +83,7 @@ end
 local function build_force_with_oil_processing(prerequisites_researched)
   local fluid_handling = {researched = prerequisites_researched}
   local oil_gathering = {researched = prerequisites_researched}
+  local played_sounds = {}
 
   local oil_processing = {
     researched = false,
@@ -94,6 +95,12 @@ local function build_force_with_oil_processing(prerequisites_researched)
 
   return {
     valid = true,
+    play_sound = function(sound)
+      played_sounds[#played_sounds + 1] = sound
+    end,
+    get_played_sounds = function()
+      return played_sounds
+    end,
     technologies = {
       ["fluid-handling"] = fluid_handling,
       ["oil-gathering"] = oil_gathering,
@@ -186,6 +193,7 @@ run_test("placing crude oil ingress unlocks oil processing once prerequisites ar
     false,
     "oil processing should stay locked until its prerequisites are researched"
   )
+  assert_equal(#force.get_played_sounds(), 0, "no research sound should play before prerequisites are met")
 
   anchor_runtime.handle_anchor_mined({
     valid = true,
@@ -214,6 +222,12 @@ run_test("placing crude oil ingress unlocks oil processing once prerequisites ar
     force.technologies["oil-processing"].researched,
     true,
     "re-placing crude oil ingress should unlock oil processing once prerequisites are met"
+  )
+  assert_equal(#force.get_played_sounds(), 1, "unlocking oil processing should play the research-complete sound once")
+  assert_equal(
+    force.get_played_sounds()[1].path,
+    "utility/research_completed",
+    "unlocking oil processing should use the normal research-complete sound"
   )
 end)
 
@@ -255,6 +269,12 @@ run_test("placing crude oil ingress unlocks oil processing immediately when prer
     true,
     "crude oil placement should unlock oil processing immediately when prerequisites are already researched"
   )
+  assert_equal(#force.get_played_sounds(), 1, "immediate unlock should play the research-complete sound once")
+  assert_equal(
+    force.get_played_sounds()[1].path,
+    "utility/research_completed",
+    "immediate unlock should use the normal research-complete sound"
+  )
 end)
 
 run_test("placing non-crude ingress does not unlock oil processing", function()
@@ -291,4 +311,5 @@ run_test("placing non-crude ingress does not unlock oil processing", function()
   anchor_runtime.handle_managed_anchor_slot_click(player)
 
   assert_equal(force.technologies["oil-processing"].researched, false, "only crude oil placement should unlock oil processing")
+  assert_equal(#force.get_played_sounds(), 0, "non-crude placement should not play the research-complete sound")
 end)

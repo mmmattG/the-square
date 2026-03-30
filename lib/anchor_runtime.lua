@@ -193,14 +193,24 @@ local function assign_anchor_position(anchor, side, position)
 end
 
 local function print_crude_oil_debug_message(recipient, message)
-  if recipient and recipient.valid and type(recipient.print) == "function" then
-    recipient.print(message)
+  if not (
+    recipient
+    and recipient.valid
+    and recipient.object_name == "LuaPlayer"
+    and type(recipient.print) == "function"
+    and settings
+    and type(settings.get_player_settings) == "function"
+  ) then
     return
   end
 
-  if game and type(game.print) == "function" then
-    game.print(message)
+  local player_settings = settings.get_player_settings(recipient)
+
+  if not (player_settings and player_settings[defs.SETTING_DEV_MODE] and player_settings[defs.SETTING_DEV_MODE].value) then
+    return
   end
+
+  recipient.print(message)
 end
 
 local function are_all_prerequisites_researched(technology)
@@ -252,6 +262,9 @@ local function try_unlock_oil_processing(anchor, force, debug_recipient)
   end
 
   technology.researched = true
+  if type(force.play_sound) == "function" then
+    force.play_sound({path = "utility/research_completed"})
+  end
   print_crude_oil_debug_message(debug_recipient, "FES debug: unlocked oil-processing from crude oil ingress placement")
 end
 
