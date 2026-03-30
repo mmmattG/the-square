@@ -4,3 +4,4 @@ Date: 2026-03-30
   Features:
     - Added a top-bar Base screenshot button that captures the current square to script-output, with settings for pixels per tile and alt-mode overlays in the mod settings.
     - Placing a crude oil ingress now unlocks oil processing automatically once its normal prerequisites are researched (If you still need to unlock it break and replace it).
+    - Placing a uranium ore ingress now unlocks uranium processing automatically once its normal prerequisites are researched (If you still need to unlock it break and replace it).
