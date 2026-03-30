@@ -192,6 +192,82 @@ local function assign_anchor_position(anchor, side, position)
   return true
 end
 
+local function print_crude_oil_debug_message(recipient, message)
+  if not (
+    recipient
+    and recipient.valid
+    and recipient.object_name == "LuaPlayer"
+    and type(recipient.print) == "function"
+    and settings
+    and type(settings.get_player_settings) == "function"
+  ) then
+    return
+  end
+
+  local player_settings = settings.get_player_settings(recipient)
+
+  if not (player_settings and player_settings[defs.SETTING_DEV_MODE] and player_settings[defs.SETTING_DEV_MODE].value) then
+    return
+  end
+
+  recipient.print(message)
+end
+
+local function are_all_prerequisites_researched(technology)
+  if not technology or technology.valid == false then
+    return false
+  end
+
+  local prerequisites = technology.prerequisites or {}
+
+  for _, prerequisite in pairs(prerequisites) do
+    if not prerequisite.researched then
+      return false
+    end
+  end
+
+  return true
+end
+
+local function try_unlock_oil_processing(anchor, force, debug_recipient)
+  if not (
+    anchor
+    and anchor.flow == "ingress"
+    and anchor.resource == "crude-oil"
+    and force
+    and force.valid ~= false
+    and force.technologies
+  ) then
+    return
+  end
+
+  local technology = force.technologies["oil-processing"]
+
+  if not technology then
+    print_crude_oil_debug_message(debug_recipient, "FES debug: oil-processing technology not found")
+    return
+  end
+
+  if technology.researched then
+    print_crude_oil_debug_message(debug_recipient, "FES debug: oil-processing already researched")
+    return
+  end
+
+  if not are_all_prerequisites_researched(technology) then
+    print_crude_oil_debug_message(
+      debug_recipient,
+      "FES debug: crude oil ingress placed but oil-processing prerequisites are not researched"
+    )
+    return
+  end
+
+  technology.researched = true
+  if type(force.play_sound) == "function" then
+    force.play_sound({path = "utility/research_completed"})
+  end
+  print_crude_oil_debug_message(debug_recipient, "FES debug: unlocked oil-processing from crude oil ingress placement")
+end
+
 local function is_fluid_anchor_too_close(anchor, position, side)
   local starter_anchors = storage.starter_anchors
 
@@ -917,7 +993,15 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
   end
 
   entity.destroy({raise_destroy = false})
-  assign_anchor_position(anchor, side, anchor_position)
+
+  if assign_anchor_position(anchor, side, anchor_position) then
+    if anchor.flow == "ingress" and anchor.resource == "crude-oil" then
+      print_crude_oil_debug_message(actor, "FES debug: placed crude oil ingress via build event")
+    end
+
+    try_unlock_oil_processing(anchor, entity.force, actor)
+  end
+
   anchor_runtime.ensure_starter_anchors()
 end
 
@@ -957,7 +1041,14 @@ function anchor_runtime.handle_managed_anchor_slot_click(player)
     return
   end
 
-  assign_anchor_position(anchor, side, tile_position)
+  if assign_anchor_position(anchor, side, tile_position) then
+    if anchor.flow == "ingress" and anchor.resource == "crude-oil" then
+      print_crude_oil_debug_message(player, "FES debug: placed crude oil ingress via anchor slot")
+    end
+
+    try_unlock_oil_processing(anchor, player.force, player)
+  end
+
   anchor_runtime.ensure_starter_anchors()
   anchor_runtime.update_player_anchor_preview(player)
 end

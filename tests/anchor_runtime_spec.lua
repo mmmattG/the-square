@@ -27,6 +27,11 @@ storage = {
   }
 }
 
+game = {
+  surfaces = {},
+  players = {}
+}
+
 local anchor_runtime = require("lib.anchor_runtime")
 local runtime_defs = require("lib.runtime_defs")
 
@@ -75,6 +80,35 @@ local function build_player()
   }
 end
 
+local function build_force_with_oil_processing(prerequisites_researched)
+  local fluid_handling = {researched = prerequisites_researched}
+  local oil_gathering = {researched = prerequisites_researched}
+  local played_sounds = {}
+
+  local oil_processing = {
+    researched = false,
+    prerequisites = {
+      ["fluid-handling"] = fluid_handling,
+      ["oil-gathering"] = oil_gathering
+    }
+  }
+
+  return {
+    valid = true,
+    play_sound = function(sound)
+      played_sounds[#played_sounds + 1] = sound
+    end,
+    get_played_sounds = function()
+      return played_sounds
+    end,
+    technologies = {
+      ["fluid-handling"] = fluid_handling,
+      ["oil-gathering"] = oil_gathering,
+      ["oil-processing"] = oil_processing
+    }
+  }
+end
+
 run_test("uranium purchase also grants one sulfuric acid egress line", function()
   storage.bootstrap.expansion_points = 5000
 
@@ -119,4 +153,163 @@ run_test("fluid egress faces inward on the managed border", function()
     defines.direction.east,
     "west-side fluid egress should face inward"
   )
+end)
+
+run_test("placing crude oil ingress unlocks oil processing once prerequisites are researched", function()
+  storage.bootstrap.surface_name = "fes-bootstrap"
+
+  local force = build_force_with_oil_processing(false)
+  local player = build_player()
+  player.force = force
+  player.surface = {name = "fes-bootstrap"}
+  player.selected = {
+    valid = true,
+    name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
+    position = {x = -6, y = -7}
+  }
+  local first_cursor_stack = {
+    valid_for_read = true,
+    name = runtime_defs.get_ingress_item_name("crude-oil"),
+    count = 1
+  }
+  first_cursor_stack.clear = function()
+    first_cursor_stack.valid_for_read = false
+    first_cursor_stack.name = nil
+    first_cursor_stack.count = 0
+  end
+  player.cursor_stack = first_cursor_stack
+
+  storage.starter_anchors = {
+    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = {
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("crude-oil"), "ingress", nil, nil)
+    }
+  }
+
+  anchor_runtime.handle_managed_anchor_slot_click(player)
+
+  assert_equal(
+    force.technologies["oil-processing"].researched,
+    false,
+    "oil processing should stay locked until its prerequisites are researched"
+  )
+  assert_equal(#force.get_played_sounds(), 0, "no research sound should play before prerequisites are met")
+
+  anchor_runtime.handle_anchor_mined({
+    valid = true,
+    name = runtime_defs.get_ingress_entity_name("crude-oil", 1),
+    position = {x = -6, y = -7}
+  })
+
+  local second_cursor_stack = {
+    valid_for_read = true,
+    name = runtime_defs.get_ingress_item_name("crude-oil"),
+    count = 1
+  }
+  second_cursor_stack.clear = function()
+    second_cursor_stack.valid_for_read = false
+    second_cursor_stack.name = nil
+    second_cursor_stack.count = 0
+  end
+  player.cursor_stack = second_cursor_stack
+
+  force.technologies["fluid-handling"].researched = true
+  force.technologies["oil-gathering"].researched = true
+
+  anchor_runtime.handle_managed_anchor_slot_click(player)
+
+  assert_equal(
+    force.technologies["oil-processing"].researched,
+    true,
+    "re-placing crude oil ingress should unlock oil processing once prerequisites are met"
+  )
+  assert_equal(#force.get_played_sounds(), 1, "unlocking oil processing should play the research-complete sound once")
+  assert_equal(
+    force.get_played_sounds()[1].path,
+    "utility/research_completed",
+    "unlocking oil processing should use the normal research-complete sound"
+  )
+end)
+
+run_test("placing crude oil ingress unlocks oil processing immediately when prerequisites are already researched", function()
+  storage.bootstrap.surface_name = "fes-bootstrap"
+
+  local force = build_force_with_oil_processing(true)
+  local player = build_player()
+  player.force = force
+  player.surface = {name = "fes-bootstrap"}
+  player.selected = {
+    valid = true,
+    name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
+    position = {x = -6, y = -7}
+  }
+  local cursor_stack = {
+    valid_for_read = true,
+    name = runtime_defs.get_ingress_item_name("crude-oil"),
+    count = 1
+  }
+  cursor_stack.clear = function()
+    cursor_stack.valid_for_read = false
+    cursor_stack.name = nil
+    cursor_stack.count = 0
+  end
+  player.cursor_stack = cursor_stack
+
+  storage.starter_anchors = {
+    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = {
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("crude-oil"), "ingress", nil, nil)
+    }
+  }
+
+  anchor_runtime.handle_managed_anchor_slot_click(player)
+
+  assert_equal(
+    force.technologies["oil-processing"].researched,
+    true,
+    "crude oil placement should unlock oil processing immediately when prerequisites are already researched"
+  )
+  assert_equal(#force.get_played_sounds(), 1, "immediate unlock should play the research-complete sound once")
+  assert_equal(
+    force.get_played_sounds()[1].path,
+    "utility/research_completed",
+    "immediate unlock should use the normal research-complete sound"
+  )
+end)
+
+run_test("placing non-crude ingress does not unlock oil processing", function()
+  storage.bootstrap.surface_name = "fes-bootstrap"
+
+  local force = build_force_with_oil_processing(true)
+  local player = build_player()
+  player.force = force
+  player.surface = {name = "fes-bootstrap"}
+  player.selected = {
+    valid = true,
+    name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
+    position = {x = -6, y = -7}
+  }
+  local cursor_stack = {
+    valid_for_read = true,
+    name = runtime_defs.get_ingress_item_name("iron-ore"),
+    count = 1
+  }
+  cursor_stack.clear = function()
+    cursor_stack.valid_for_read = false
+    cursor_stack.name = nil
+    cursor_stack.count = 0
+  end
+  player.cursor_stack = cursor_stack
+
+  storage.starter_anchors = {
+    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = {
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", nil, nil)
+    }
+  }
+
+  anchor_runtime.handle_managed_anchor_slot_click(player)
+
+  assert_equal(force.technologies["oil-processing"].researched, false, "only crude oil placement should unlock oil processing")
+  assert_equal(#force.get_played_sounds(), 0, "non-crude placement should not play the research-complete sound")
 end)
