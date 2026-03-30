@@ -80,26 +80,25 @@ local function build_player()
   }
 end
 
-local function build_entity_build_stats_recorder()
-  local flows = {}
+local function build_force_with_oil_processing(prerequisites_researched)
+  local fluid_handling = {researched = prerequisites_researched}
+  local oil_gathering = {researched = prerequisites_researched}
 
-  return {
-    valid = true,
-    on_flow = function(name, count)
-      flows[#flows + 1] = {name = name, count = count}
-    end,
-    get_flows = function()
-      return flows
-    end
+  local oil_processing = {
+    researched = false,
+    prerequisites = {
+      ["fluid-handling"] = fluid_handling,
+      ["oil-gathering"] = oil_gathering
+    }
   }
-end
 
-local function build_force_with_entity_build_stats(statistics)
   return {
     valid = true,
-    get_entity_build_count_statistics = function(_)
-      return statistics
-    end
+    technologies = {
+      ["fluid-handling"] = fluid_handling,
+      ["oil-gathering"] = oil_gathering,
+      ["oil-processing"] = oil_processing
+    }
   }
 end
 
@@ -149,11 +148,10 @@ run_test("fluid egress faces inward on the managed border", function()
   )
 end)
 
-run_test("placing crude oil ingress counts as mining crude oil each time it is placed", function()
+run_test("placing crude oil ingress unlocks oil processing once prerequisites are researched", function()
   storage.bootstrap.surface_name = "fes-bootstrap"
 
-  local statistics = build_entity_build_stats_recorder()
-  local force = build_force_with_entity_build_stats(statistics)
+  local force = build_force_with_oil_processing(false)
   local player = build_player()
   player.force = force
   player.surface = {name = "fes-bootstrap"}
@@ -183,10 +181,11 @@ run_test("placing crude oil ingress counts as mining crude oil each time it is p
 
   anchor_runtime.handle_managed_anchor_slot_click(player)
 
-  local flows = statistics.get_flows()
-  assert_equal(#flows, 1, "first crude oil placement should record one mined-entity event")
-  assert_equal(flows[1].name, "crude-oil", "crude oil placement should report the crude-oil entity")
-  assert_equal(flows[1].count, -1, "crude oil placement should record a mined count")
+  assert_equal(
+    force.technologies["oil-processing"].researched,
+    false,
+    "oil processing should stay locked until its prerequisites are researched"
+  )
 
   anchor_runtime.handle_anchor_mined({
     valid = true,
@@ -206,19 +205,62 @@ run_test("placing crude oil ingress counts as mining crude oil each time it is p
   end
   player.cursor_stack = second_cursor_stack
 
+  force.technologies["fluid-handling"].researched = true
+  force.technologies["oil-gathering"].researched = true
+
   anchor_runtime.handle_managed_anchor_slot_click(player)
 
-  flows = statistics.get_flows()
-  assert_equal(#flows, 2, "re-placing crude oil ingress should record mining again")
-  assert_equal(flows[2].name, "crude-oil", "re-placement should still report crude-oil")
-  assert_equal(flows[2].count, -1, "re-placement should record another mined count")
+  assert_equal(
+    force.technologies["oil-processing"].researched,
+    true,
+    "re-placing crude oil ingress should unlock oil processing once prerequisites are met"
+  )
 end)
 
-run_test("placing non-crude ingress does not record crude oil mining progress", function()
+run_test("placing crude oil ingress unlocks oil processing immediately when prerequisites are already researched", function()
   storage.bootstrap.surface_name = "fes-bootstrap"
 
-  local statistics = build_entity_build_stats_recorder()
-  local force = build_force_with_entity_build_stats(statistics)
+  local force = build_force_with_oil_processing(true)
+  local player = build_player()
+  player.force = force
+  player.surface = {name = "fes-bootstrap"}
+  player.selected = {
+    valid = true,
+    name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
+    position = {x = -6, y = -7}
+  }
+  local cursor_stack = {
+    valid_for_read = true,
+    name = runtime_defs.get_ingress_item_name("crude-oil"),
+    count = 1
+  }
+  cursor_stack.clear = function()
+    cursor_stack.valid_for_read = false
+    cursor_stack.name = nil
+    cursor_stack.count = 0
+  end
+  player.cursor_stack = cursor_stack
+
+  storage.starter_anchors = {
+    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = {
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("crude-oil"), "ingress", nil, nil)
+    }
+  }
+
+  anchor_runtime.handle_managed_anchor_slot_click(player)
+
+  assert_equal(
+    force.technologies["oil-processing"].researched,
+    true,
+    "crude oil placement should unlock oil processing immediately when prerequisites are already researched"
+  )
+end)
+
+run_test("placing non-crude ingress does not unlock oil processing", function()
+  storage.bootstrap.surface_name = "fes-bootstrap"
+
+  local force = build_force_with_oil_processing(true)
   local player = build_player()
   player.force = force
   player.surface = {name = "fes-bootstrap"}
@@ -248,5 +290,5 @@ run_test("placing non-crude ingress does not record crude oil mining progress", 
 
   anchor_runtime.handle_managed_anchor_slot_click(player)
 
-  assert_equal(#statistics.get_flows(), 0, "only crude oil placement should bridge the mining trigger")
+  assert_equal(force.technologies["oil-processing"].researched, false, "only crude oil placement should unlock oil processing")
 end)
