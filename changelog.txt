@@ -1,0 +1,6 @@
+---------------------------------------------------------------------------------------------------
+Version: 0.1.1
+Date: 2026-03-30
+  Features:
+    - Added a top-bar Base screenshot button that captures the current square to script-output, with settings for pixels per tile and alt-mode overlays.
+    - Placing a crude oil ingress now unlocks oil processing automatically once its normal prerequisites are researched.
