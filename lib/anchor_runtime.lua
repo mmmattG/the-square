@@ -192,7 +192,7 @@ local function assign_anchor_position(anchor, side, position)
   return true
 end
 
-local function print_crude_oil_debug_message(recipient, message)
+local function print_anchor_debug_message(recipient, message)
   if not (
     recipient
     and recipient.valid
@@ -229,11 +229,11 @@ local function are_all_prerequisites_researched(technology)
   return true
 end
 
-local function try_unlock_oil_processing(anchor, force, debug_recipient)
+local function try_unlock_ingress_technology(anchor, force, debug_recipient, resource_name, technology_name, resource_label)
   if not (
     anchor
     and anchor.flow == "ingress"
-    and anchor.resource == "crude-oil"
+    and anchor.resource == resource_name
     and force
     and force.valid ~= false
     and force.technologies
@@ -241,22 +241,22 @@ local function try_unlock_oil_processing(anchor, force, debug_recipient)
     return
   end
 
-  local technology = force.technologies["oil-processing"]
+  local technology = force.technologies[technology_name]
 
   if not technology then
-    print_crude_oil_debug_message(debug_recipient, "FES debug: oil-processing technology not found")
+    print_anchor_debug_message(debug_recipient, "FES debug: " .. technology_name .. " technology not found")
     return
   end
 
   if technology.researched then
-    print_crude_oil_debug_message(debug_recipient, "FES debug: oil-processing already researched")
+    print_anchor_debug_message(debug_recipient, "FES debug: " .. technology_name .. " already researched")
     return
   end
 
   if not are_all_prerequisites_researched(technology) then
-    print_crude_oil_debug_message(
+    print_anchor_debug_message(
       debug_recipient,
-      "FES debug: crude oil ingress placed but oil-processing prerequisites are not researched"
+      "FES debug: " .. resource_label .. " ingress placed but " .. technology_name .. " prerequisites are not researched"
     )
     return
   end
@@ -265,7 +265,18 @@ local function try_unlock_oil_processing(anchor, force, debug_recipient)
   if type(force.play_sound) == "function" then
     force.play_sound({path = "utility/research_completed"})
   end
-  print_crude_oil_debug_message(debug_recipient, "FES debug: unlocked oil-processing from crude oil ingress placement")
+  print_anchor_debug_message(
+    debug_recipient,
+    "FES debug: unlocked " .. technology_name .. " from " .. resource_label .. " ingress placement"
+  )
+end
+
+local function try_unlock_oil_processing(anchor, force, debug_recipient)
+  try_unlock_ingress_technology(anchor, force, debug_recipient, "crude-oil", "oil-processing", "crude oil")
+end
+
+local function try_unlock_uranium_processing(anchor, force, debug_recipient)
+  try_unlock_ingress_technology(anchor, force, debug_recipient, "uranium-ore", "uranium-processing", "uranium ore")
 end
 
 local function is_fluid_anchor_too_close(anchor, position, side)
@@ -996,10 +1007,15 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
 
   if assign_anchor_position(anchor, side, anchor_position) then
     if anchor.flow == "ingress" and anchor.resource == "crude-oil" then
-      print_crude_oil_debug_message(actor, "FES debug: placed crude oil ingress via build event")
+      print_anchor_debug_message(actor, "FES debug: placed crude oil ingress via build event")
+    end
+
+    if anchor.flow == "ingress" and anchor.resource == "uranium-ore" then
+      print_anchor_debug_message(actor, "FES debug: placed uranium ore ingress via build event")
     end
 
     try_unlock_oil_processing(anchor, entity.force, actor)
+    try_unlock_uranium_processing(anchor, entity.force, actor)
   end
 
   anchor_runtime.ensure_starter_anchors()
@@ -1043,10 +1059,15 @@ function anchor_runtime.handle_managed_anchor_slot_click(player)
 
   if assign_anchor_position(anchor, side, tile_position) then
     if anchor.flow == "ingress" and anchor.resource == "crude-oil" then
-      print_crude_oil_debug_message(player, "FES debug: placed crude oil ingress via anchor slot")
+      print_anchor_debug_message(player, "FES debug: placed crude oil ingress via anchor slot")
+    end
+
+    if anchor.flow == "ingress" and anchor.resource == "uranium-ore" then
+      print_anchor_debug_message(player, "FES debug: placed uranium ore ingress via anchor slot")
     end
 
     try_unlock_oil_processing(anchor, player.force, player)
+    try_unlock_uranium_processing(anchor, player.force, player)
   end
 
   anchor_runtime.ensure_starter_anchors()
