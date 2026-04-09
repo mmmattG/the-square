@@ -35,8 +35,6 @@ artifact_path=$("$repo_root/scripts/build-mod.sh")
 mkdir -p "$mods_dir"
 
 find "$mods_dir" -maxdepth 1 \( -name "${mod_name}" -o -name "${mod_name}_*.zip" \) -exec rm -rf {} +
-# Clean up the short-lived incompatible package name introduced during the branding rename.
-find "$mods_dir" -maxdepth 1 \( -name "the-square" -o -name "the-square_*.zip" \) -exec rm -rf {} +
 cp "$artifact_path" "$mods_dir/"
 
 printf 'Installed %s to %s\n' "$(basename "$artifact_path")" "$mods_dir"
