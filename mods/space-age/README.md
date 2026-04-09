@@ -1,6 +1,6 @@
 # the-square-space-age
 
-This directory is the Space Age-only mod workspace inside the `the-square` monorepo.
+This directory is the Space Age add-on mod workspace inside the `the-square` monorepo. It is intended to load alongside the base `the-square` mod and requires both the base mod and the Space Age expansion.
 
 Contact: https://discord.gg/HytACasPxY
 
