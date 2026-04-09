@@ -1,0 +1,11 @@
+{
+  "name": "the-square-tooling",
+  "private": true,
+  "description": "Repo-local CLI tooling for terminal-first Factorio mod development.",
+  "engines": {
+    "node": ">=22.7.0"
+  },
+  "devDependencies": {
+    "factoriomod-debug": "^2.0.10"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime": {
+    "version": "Lua 5.2",
+    "path": [
+      "?.lua"
+    ],
+    "plugin": ".cache/fmtk/luals-addon/factorio/plugin.lua"
+  },
+  "workspace": {
+    "checkThirdParty": false,
+    "userThirdParty": [
+      ".cache/fmtk/luals-addon"
+    ],
+    "library": [
+      "lib",
+      "tests",
+      ".cache/fmtk/luals-addon/factorio/library"
+    ],
+    "ignoreDir": [
+      ".cache",
+      ".git",
+      ".venv",
+      "build",
+      "node_modules"
+    ]
+  },
+  "diagnostics": {
+    "globals": [
+      "__DebugAdapter",
+      "__Profiler",
+      "data",
+      "defines",
+      "mods",
+      "package",
+      "settings",
+      "storage"
+    ],
+    "disable": [
+      "lowercase-global"
+    ]
+  }
+}

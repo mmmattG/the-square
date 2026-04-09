@@ -40,7 +40,7 @@ function screenshot_runtime.take_base_screenshot(player)
     zoom = capture.zoom,
     path = path,
     show_gui = false,
-    show_entity_info = defs.is_screenshot_alt_mode_enabled(),
+    show_entity_info = defs.is_screenshot_alt_mode_enabled() == true,
     show_cursor_building_preview = false,
     force_render = true
   })

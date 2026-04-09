@@ -8,11 +8,35 @@ Local development commands:
 make build
 make install
 make test
+make tools-bootstrap
+make luals-meta
+make lint
+make fmtk-package
 ```
 
 `make build` creates a versioned Factorio mod zip in `./build/` using the `name` and `version` from `info.json`.
 
 `make test` runs every Lua spec in `tests/*_spec.lua` and stops on the first failure. It requires either `luajit` or `lua` to be available on `PATH`; the target prefers `luajit` when both are installed.
+
+`make tools-bootstrap` installs the repo-local Node toolchain from `package.json`. Right now that is the checked-in FMTK CLI dependency used for packaging and LuaLS metadata generation.
+
+`make luals-meta` generates the FMTK LuaLS addon into `.cache/fmtk/luals-addon`. The default input is Factorio API docs from `latest`; override that with `FACTORIO_DOCS_VERSION=<exact-version>` if you need to pin analysis to a specific Factorio patch release.
+
+`make lint` runs LuaLS in terminal mode with the repo-owned [`.luarc.json`](/Users/mmmatt/projects/the-square/.luarc.json). It expects `lua-language-server` to already be installed on your machine or exposed through `LUA_LANGUAGE_SERVER=/path/to/lua-language-server`.
+
+`make fmtk-package` runs FMTK packaging into `build/fmtk/` as an additional packaging/metadata check alongside the existing custom `make build`.
+
+Optional Python tooling for desync and `.dat` inspection lives behind a separate install step:
+
+```sh
+make factorio-tools-install
+./scripts/factorio-tools.sh dat2json script.dat
+./scripts/factorio-tools.sh desync /path/to/desync-report
+```
+
+That path creates `.venv/factorio-tools` and installs the pinned PyPI package from [`requirements/factorio-tools.txt`](/Users/mmmatt/projects/the-square/requirements/factorio-tools.txt). It is intentionally optional so contributors who only need the build/test loop do not need Python tooling on day one.
+
+Terminal-first setup details, including Neovim/LSP usage, live in [docs/TERMINAL_TOOLING.md](/Users/mmmatt/projects/the-square/docs/TERMINAL_TOOLING.md).
 
 If you need to force a specific runtime, override `LUA` directly:
 
