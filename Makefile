@@ -1,42 +1,65 @@
 SHELL := /bin/sh
 
-LUA ?= $(shell command -v luajit 2>/dev/null || command -v lua 2>/dev/null)
+BASE_MOD_DIR := mods/base
+SPACE_AGE_MOD_DIR := mods/space-age
+MOD_DIRS := $(BASE_MOD_DIR) $(SPACE_AGE_MOD_DIR)
 
-.PHONY: build install test tools-bootstrap luals-meta lint fmtk-package factorio-tools-install factorio-tools-dat2json factorio-tools-desync
+.PHONY: build build-base build-space-age install install-base install-space-age deploy-space-age test test-base test-space-age lint lint-base lint-space-age fmtk-package fmtk-package-base fmtk-package-space-age tools-bootstrap tools-bootstrap-base tools-bootstrap-space-age luals-meta luals-meta-base luals-meta-space-age
 
-build:
-	./scripts/build-mod.sh
+build: build-base build-space-age
 
-install:
-	./scripts/install-mod.sh
+build-base:
+	$(MAKE) -C "$(BASE_MOD_DIR)" build
 
-test:
-	@if [ -z "$(LUA)" ]; then \
-		echo "error: expected luajit or lua in PATH" >&2; \
-		exit 1; \
-	fi
-	@for spec in tests/*_spec.lua; do \
-		echo "==> $$spec"; \
-		"$(LUA)" "$$spec" || exit 1; \
-	done
+build-space-age:
+	$(MAKE) -C "$(SPACE_AGE_MOD_DIR)" build
 
-tools-bootstrap:
-	./scripts/bootstrap-node-toolchain.sh
+install: install-base install-space-age
 
-luals-meta:
-	./scripts/generate-luals-addon.sh
+install-base:
+	$(MAKE) -C "$(BASE_MOD_DIR)" install FACTORIO_MODS_DIR="$(FACTORIO_MODS_DIR)"
 
-lint:
-	./scripts/lua-ls-check.sh
+install-space-age:
+	$(MAKE) -C "$(SPACE_AGE_MOD_DIR)" install FACTORIO_MODS_DIR="$(FACTORIO_MODS_DIR)"
 
-fmtk-package:
-	./scripts/fmtk-package.sh
+deploy-space-age: install
 
-factorio-tools-install:
-	./scripts/install-factorio-tools.sh
+test: test-base test-space-age
 
-factorio-tools-dat2json:
-	./scripts/factorio-tools.sh dat2json $(ARGS)
+test-base:
+	$(MAKE) -C "$(BASE_MOD_DIR)" test
 
-factorio-tools-desync:
-	./scripts/factorio-tools.sh desync $(ARGS)
+test-space-age:
+	$(MAKE) -C "$(SPACE_AGE_MOD_DIR)" test
+
+lint: lint-base lint-space-age
+
+lint-base:
+	$(MAKE) -C "$(BASE_MOD_DIR)" lint
+
+lint-space-age:
+	$(MAKE) -C "$(SPACE_AGE_MOD_DIR)" lint
+
+fmtk-package: fmtk-package-base fmtk-package-space-age
+
+fmtk-package-base:
+	$(MAKE) -C "$(BASE_MOD_DIR)" fmtk-package
+
+fmtk-package-space-age:
+	$(MAKE) -C "$(SPACE_AGE_MOD_DIR)" fmtk-package
+
+tools-bootstrap: tools-bootstrap-base tools-bootstrap-space-age
+
+tools-bootstrap-base:
+	$(MAKE) -C "$(BASE_MOD_DIR)" tools-bootstrap
+
+tools-bootstrap-space-age:
+	$(MAKE) -C "$(SPACE_AGE_MOD_DIR)" tools-bootstrap
+
+luals-meta: luals-meta-base luals-meta-space-age
+
+luals-meta-base:
+	$(MAKE) -C "$(BASE_MOD_DIR)" luals-meta
+
+luals-meta-space-age:
+	$(MAKE) -C "$(SPACE_AGE_MOD_DIR)" luals-meta

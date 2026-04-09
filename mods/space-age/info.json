@@ -1,0 +1,31 @@
+{
+  "name": "the-square-space-age",
+  "version": "0.1.0",
+  "title": "The Square: Space Age",
+  "author": "mmmatt",
+  "contact": "https://discord.gg/HytACasPxY",
+  "factorio_version": "2.0",
+  "dependencies": [
+    "base",
+    "space-age >= 2.0.0",
+    "! the-square"
+  ],
+  "package": {
+    "ignore": [
+      ".cache/**",
+      ".luarc.json",
+      ".venv/**",
+      "Makefile",
+      "README.md",
+      "build/**",
+      "docs/**",
+      "node_modules/**",
+      "package-lock.json",
+      "package.json",
+      "scripts/**",
+      "tests/**"
+    ],
+    "readme": "README.md"
+  },
+  "description": "The Square: Space Age is a separate Factorio challenge mod that requires the Space Age expansion.\nYour factory begins inside a tiny square and must grow through planet-specific Square expansion research.\nThe long-term design is one independent square per supported planet.\n\nThis mod is pre-alpha and currently in the middle of the architecture refactor from single-surface vanilla logic to planet-scoped Space Age logic.\n\nFeedback: Join the discord! https://discord.gg/HytACasPxY\n\nDisclaimer: This mod’s code was primarily AI-generated using GPT-5.4 with Codex, with human direction, review, and iteration."
+}

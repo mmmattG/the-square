@@ -1,5 +1,5 @@
-build/
 .DS_Store
-.cache/
-.venv/
-node_modules/
+mods/*/.cache/
+mods/*/.venv/
+mods/*/build/
+mods/*/node_modules/
