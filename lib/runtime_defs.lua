@@ -334,6 +334,7 @@ function runtime_defs.get_screenshot_pixels_per_tile()
   return 32
 end
 
+---@return boolean
 function runtime_defs.is_screenshot_alt_mode_enabled()
   local screenshot_alt_mode_setting = settings.global[runtime_defs.SETTING_SCREENSHOT_ALT_MODE]
 
@@ -341,9 +342,11 @@ function runtime_defs.is_screenshot_alt_mode_enabled()
     return true
   end
 
-  return screenshot_alt_mode_setting.value
+  return screenshot_alt_mode_setting.value == true
 end
 
+---@param square_size integer
+---@return BoundingBox
 function runtime_defs.get_anchor_bounds(square_size)
   return bootstrap_layout.get_anchor_bounds(square_size)
 end
@@ -447,6 +450,9 @@ function runtime_defs.move_position(position, side, distance)
   }
 end
 
+---@param square_size integer
+---@param position MapPosition
+---@return "north"|"east"|"south"|"west"|nil
 function runtime_defs.get_anchor_side_for_position(square_size, position)
   return bootstrap_layout.get_anchor_side_for_position(square_size, position)
 end
@@ -498,11 +504,9 @@ function runtime_defs.format_position(position)
   return "(" .. position.x .. ", " .. position.y .. ")"
 end
 
+---@param position MapPosition
+---@return MapPosition
 function runtime_defs.snap_entity_position_to_tile(position)
-  if not position then
-    return nil
-  end
-
   return {
     x = math.floor(position.x),
     y = math.floor(position.y)

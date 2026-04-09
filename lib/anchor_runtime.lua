@@ -772,6 +772,7 @@ function anchor_runtime.update_player_anchor_preview(player)
     return
   end
 
+  ---@cast bootstrap { square_size: integer }
   local tile_position = defs.snap_entity_position_to_tile(proxy.position)
   local side = defs.get_anchor_side_for_position(bootstrap.square_size, tile_position)
 
@@ -982,6 +983,7 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
     gui_runtime.print_ingress_placement_debug(actor, bootstrap.square_size, entity.position)
   end
 
+  ---@cast bootstrap { square_size: integer }
   local tile_position = defs.snap_entity_position_to_tile(entity.position)
   local side = defs.get_anchor_side_for_position(bootstrap.square_size, tile_position)
   local anchor_position = tile_position
@@ -1040,6 +1042,7 @@ function anchor_runtime.handle_managed_anchor_slot_click(player)
     return
   end
 
+  ---@cast bootstrap { square_size: integer }
   local tile_position = defs.snap_entity_position_to_tile(proxy.position)
   local side = defs.get_anchor_side_for_position(bootstrap.square_size, tile_position)
 

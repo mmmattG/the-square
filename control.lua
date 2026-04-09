@@ -123,6 +123,7 @@ script.on_event(defines.events.on_gui_click, function(event)
 end)
 
 script.on_event(defs.PLACE_MANAGED_ANCHOR_INPUT_NAME, function(event)
+  ---@cast event EventData.CustomInputEvent
   local player = game.get_player(event.player_index)
 
   if player then
