@@ -114,9 +114,10 @@ local function build_debug_lines(player)
   local bootstrap = storage.bootstrap
   local next_level = defs.get_completed_expansion_research_levels() + 1
   local next_band = defs.get_expansion_research_band_for_level(next_level)
+  local next_band_name = next_band.label or next_band.name or "Unknown"
 
   lines[#lines + 1] = "Expansion trigger: complete one level of square-expansion research."
-  lines[#lines + 1] = "Current research band: " .. next_band.name
+  lines[#lines + 1] = "Current research band: " .. next_band_name
   lines[#lines + 1] = "Current square area: " .. defs.get_square_area(bootstrap.square_size) .. " tiles"
   lines[#lines + 1] = "Next ring reward: " .. defs.get_next_expansion_tile_reward(bootstrap.square_size) .. " tiles"
 

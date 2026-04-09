@@ -4,6 +4,10 @@ local planet_state = require("lib.planet_state")
 local bootstrap_runtime = {}
 local ensure_surface_dimensions
 
+local function uses_existing_planet_surface()
+  return defs.SURFACE_NAME == "nauvis"
+end
+
 local function get_target_surface_size(square_size, expansions_completed)
   return defs.get_surface_size(square_size)
 end
@@ -232,6 +236,10 @@ function bootstrap_runtime.ensure_bootstrap_state_defaults()
 end
 
 ensure_surface_dimensions = function(surface, target_surface_size)
+  if uses_existing_planet_surface() then
+    return
+  end
+
   local map_gen_settings = surface.map_gen_settings
 
   if map_gen_settings.width ~= target_surface_size or map_gen_settings.height ~= target_surface_size then
@@ -255,18 +263,22 @@ function bootstrap_runtime.ensure_bootstrap_surface(anchor_runtime)
 
   surface.peaceful_mode = true
   surface.no_enemies_mode = true
-  ensure_surface_dimensions(surface, surface_size)
-  surface.destroy_decoratives({})
-  surface.clear_hidden_tiles()
-  destroy_noise_entities(surface)
-  -- Bootstrap writes need the same correction pass or the initial void edge stays hard
-  -- until some later edit causes Factorio to recompute neighboring transitions.
+
+  if not uses_existing_planet_surface() then
+    ensure_surface_dimensions(surface, surface_size)
+    surface.destroy_decoratives({})
+    surface.clear_hidden_tiles()
+    destroy_noise_entities(surface)
+  end
+
+  -- The Space Age variant starts on the real Nauvis surface so vanilla rockets and
+  -- planet routing keep working. Only the managed square and its anchor ring are repainted.
   surface.set_tiles(build_bootstrap_tiles(square_size, surface_size), true, true, true, false)
 
   storage.bootstrap = storage.bootstrap or {}
   storage.bootstrap.square_size = square_size
   storage.bootstrap.surface_size = surface_size
-  storage.bootstrap.surface_name = defs.SURFACE_NAME
+  storage.bootstrap.surface_name = surface.name
   bootstrap_runtime.ensure_bootstrap_state_defaults()
 
   return surface

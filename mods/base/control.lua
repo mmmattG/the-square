@@ -1,3 +1,7 @@
+if script.active_mods["the-square-space-age"] then
+  return
+end
+
 local anchor_runtime = require("lib.anchor_runtime")
 local bootstrap_runtime = require("lib.bootstrap_runtime")
 local defs = require("lib.runtime_defs")
