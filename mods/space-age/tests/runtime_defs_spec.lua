@@ -63,6 +63,14 @@ run_test("checkerboard still keeps the border out of map", function()
   )
 end)
 
+run_test("planet surfaces stay void outside the square", function()
+  assert_equal(
+    runtime_defs.get_planet_surface_tile_name(7, {x = 50, y = 50}),
+    "out-of-map",
+    "existing planet surfaces should be voided outside the managed square"
+  )
+end)
+
 run_test("expansion research name detection accepts the finite and infinite prototype name", function()
   assert_equal(
     runtime_defs.is_expansion_research_name("fes-square-expansion-nauvis-0007"),

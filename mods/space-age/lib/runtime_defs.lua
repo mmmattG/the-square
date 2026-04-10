@@ -454,6 +454,23 @@ function runtime_defs.get_managed_tile_name(square_size, surface_size, position)
   )
 end
 
+function runtime_defs.get_planet_surface_tile_name(square_size, position)
+  local background_tile_name = runtime_defs.get_background_tile_name()
+
+  if background_tile_name == runtime_defs.CHECKERBOARD_BACKGROUND_TILE_NAME
+    and bootstrap_layout.is_inside_bounds(bootstrap_layout.get_square_bounds(square_size), position) then
+    local parity = math.abs(position.x + position.y) % 2 == 0 and "even" or "odd"
+
+    return runtime_defs.CHECKERBOARD_TILE_NAMES[parity]
+  end
+
+  if bootstrap_layout.is_inside_bounds(bootstrap_layout.get_square_bounds(square_size), position) then
+    return background_tile_name
+  end
+
+  return runtime_defs.VOID_TILE_NAME
+end
+
 function runtime_defs.get_player_force()
   return game and game.forces and game.forces.player or nil
 end

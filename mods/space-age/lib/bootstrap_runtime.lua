@@ -147,8 +147,42 @@ local function build_managed_surface_tiles(square_size, surface_size)
   return tiles
 end
 
+local function build_existing_surface_chunk_tiles(square_size, area)
+  local tiles = {}
+
+  for y = area.left_top.y, area.right_bottom.y - 1 do
+    for x = area.left_top.x, area.right_bottom.x - 1 do
+      tiles[#tiles + 1] = {
+        name = defs.get_planet_surface_tile_name(square_size, {x = x, y = y}),
+        position = {x = x, y = y}
+      }
+    end
+  end
+
+  return tiles
+end
+
+local function refresh_existing_surface_chunk(surface, square_size, area)
+  local tile_updates = build_existing_surface_chunk_tiles(square_size, area)
+
+  if #tile_updates > 0 then
+    surface.set_tiles(tile_updates, true, true, true, false)
+  end
+end
+
 function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, surface_size)
   if not surface then
+    return
+  end
+
+  if uses_existing_planet_surface() then
+    for chunk in surface.get_chunks() do
+      refresh_existing_surface_chunk(surface, square_size, {
+        left_top = {x = chunk.x * 32, y = chunk.y * 32},
+        right_bottom = {x = (chunk.x * 32) + 32, y = (chunk.y * 32) + 32}
+      })
+    end
+
     return
   end
 
@@ -563,6 +597,18 @@ function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
     gui_runtime.sync_all_dev_guis()
     gui_runtime.sync_all_shop_guis(anchor_runtime)
   end
+end
+
+function bootstrap_runtime.handle_chunk_generated(surface, area)
+  if not (surface and area and storage.bootstrap and surface.name == storage.bootstrap.surface_name) then
+    return
+  end
+
+  if not uses_existing_planet_surface() then
+    return
+  end
+
+  refresh_existing_surface_chunk(surface, storage.bootstrap.square_size, area)
 end
 
 function bootstrap_runtime.notify_square_size_change_applies_to_new_saves()

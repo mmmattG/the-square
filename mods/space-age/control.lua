@@ -196,6 +196,10 @@ script.on_event(defines.events.on_research_finished, function(event)
   end
 end)
 
+script.on_event(defines.events.on_chunk_generated, function(event)
+  bootstrap_runtime.handle_chunk_generated(event.surface, event.area)
+end)
+
 script.on_nth_tick(1, function()
   ingress_runtime.pump_starter_anchors()
 end)
