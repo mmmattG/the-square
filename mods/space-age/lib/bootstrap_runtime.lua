@@ -1,4 +1,5 @@
 local defs = require("lib.runtime_defs")
+local planet_catalog = require("lib.planet_catalog")
 local planet_state = require("lib.planet_state")
 
 local bootstrap_runtime = {}
@@ -170,6 +171,14 @@ local function refresh_existing_surface_chunk(surface, square_size, area)
   end
 end
 
+local function get_square_state_for_surface(surface_name)
+  if surface_name == defs.SURFACE_NAME and storage.bootstrap then
+    return storage.bootstrap
+  end
+
+  return planet_state.get_or_create_for_surface(surface_name)
+end
+
 function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, surface_size)
   if not surface then
     return
@@ -193,6 +202,34 @@ function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, s
     -- between the playable floor and the out-of-map ring immediately.
     surface.set_tiles(tile_updates, true, true, true, false)
   end
+end
+
+function bootstrap_runtime.refresh_planet_surface(surface, planet_square_size)
+  if not (surface and planet_square_size) then
+    return
+  end
+
+  for chunk in surface.get_chunks() do
+    refresh_existing_surface_chunk(surface, planet_square_size, {
+      left_top = {x = chunk.x * 32, y = chunk.y * 32},
+      right_bottom = {x = (chunk.x * 32) + 32, y = (chunk.y * 32) + 32}
+    })
+  end
+end
+
+function bootstrap_runtime.refresh_supported_surface(surface)
+  if not surface then
+    return false
+  end
+
+  local square_state = get_square_state_for_surface(surface.name)
+
+  if not square_state then
+    return false
+  end
+
+  bootstrap_runtime.refresh_planet_surface(surface, square_state.square_size)
+  return true
 end
 
 local function build_bootstrap_tiles(square_size, surface_size)
@@ -535,6 +572,70 @@ function bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
   end
 end
 
+function bootstrap_runtime.expand_planet_square(planet_key, player, gui_runtime, anchor_runtime)
+  if planet_key == "nauvis" then
+    bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
+    return true
+  end
+
+  local definition = planet_catalog.get_planet(planet_key)
+
+  if not definition then
+    return false
+  end
+
+  local state = planet_state.ensure_planet(planet_key)
+  local surface = game.surfaces[state.surface_name or definition.surface_name]
+
+  if not surface then
+    return false
+  end
+
+  local previous_square_size = state.square_size
+  local next_square_size = previous_square_size + 2
+  local next_expansions_completed = (state.expansions_completed or 0) + 1
+  local newly_unlocked_tiles = defs.get_next_expansion_tile_reward(previous_square_size)
+
+  state.surface_name = surface.name
+  state.square_size = next_square_size
+  state.surface_size = nil
+  state.expansions_completed = next_expansions_completed
+  state.expansion_points = (state.expansion_points or 0) + newly_unlocked_tiles
+
+  bootstrap_runtime.refresh_planet_surface(surface, next_square_size)
+  bootstrap_runtime.chart_play_area(game.forces.player, surface, defs.get_surface_size(next_square_size))
+
+  surface.print(
+    {"",
+      "[the-square] ",
+      definition.display_name,
+      " expanded from ",
+      previous_square_size,
+      "x",
+      previous_square_size,
+      " to ",
+      next_square_size,
+      "x",
+      next_square_size,
+      ". Awarded ",
+      newly_unlocked_tiles,
+      " expansion points (total: ",
+      state.expansion_points,
+      ")."
+    }
+  )
+
+  if player and player.valid and player.surface == surface then
+    player.play_sound({path = "utility/new_objective"})
+  end
+
+  if gui_runtime then
+    gui_runtime.refresh_all_debug_guis()
+  end
+
+  return true
+end
+
 function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
   call_freeplay("set_skip_intro", true)
   call_freeplay("set_disable_crashsite", true)
@@ -600,15 +701,17 @@ function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
 end
 
 function bootstrap_runtime.handle_chunk_generated(surface, area)
-  if not (surface and area and storage.bootstrap and surface.name == storage.bootstrap.surface_name) then
+  if not (surface and area) then
     return
   end
 
-  if not uses_existing_planet_surface() then
+  local square_state = get_square_state_for_surface(surface.name)
+
+  if not square_state then
     return
   end
 
-  refresh_existing_surface_chunk(surface, storage.bootstrap.square_size, area)
+  refresh_existing_surface_chunk(surface, square_state.square_size, area)
 end
 
 function bootstrap_runtime.notify_square_size_change_applies_to_new_saves()

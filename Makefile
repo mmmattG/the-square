@@ -1,5 +1,17 @@
 SHELL := /bin/sh
 
+FACTORIO_MODS_DIR ?= $(shell \
+	if [ -d "$$HOME/Library/Application Support/factorio/mods" ]; then \
+		printf '%s' "$$HOME/Library/Application Support/factorio/mods"; \
+	elif [ -d "$$HOME/.factorio/mods" ]; then \
+		printf '%s' "$$HOME/.factorio/mods"; \
+	elif grep -qi microsoft /proc/version 2>/dev/null; then \
+		win_user=$$(cd /mnt/c 2>/dev/null && cmd.exe /C "echo %USERNAME%" 2>/dev/null | tr -d '\r'); \
+		if [ -n "$$win_user" ] && [ -d "/mnt/c/Users/$$win_user/AppData/Roaming/Factorio/mods" ]; then \
+			printf '%s' "/mnt/c/Users/$$win_user/AppData/Roaming/Factorio/mods"; \
+		fi; \
+	fi)
+
 BASE_MOD_DIR := mods/base
 SPACE_AGE_MOD_DIR := mods/space-age
 MOD_DIRS := $(BASE_MOD_DIR) $(SPACE_AGE_MOD_DIR)

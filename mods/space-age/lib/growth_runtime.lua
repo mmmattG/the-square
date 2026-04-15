@@ -18,21 +18,15 @@ function growth_runtime.handle_expansion_research_finished(research, bootstrap_r
   local state = planet_state.ensure_planet(research_definition.planet_key)
   state.expansion_research_levels = research_definition.level
 
-  if research_definition.planet_key ~= "nauvis" then
-    research.force.print({
-      "",
-      "Square expansion scaffolding is active for ",
-      research_definition.planet_key,
-      ", but runtime square growth is only implemented for Nauvis in this build."
-    })
-
-    return false
+  if research_definition.planet_key == "nauvis" then
+    storage.bootstrap = storage.bootstrap or {}
+    bootstrap_runtime.ensure_bootstrap_state_defaults()
+    storage.bootstrap.expansion_research_levels = research_definition.level
   end
 
-  storage.bootstrap = storage.bootstrap or {}
-  bootstrap_runtime.ensure_bootstrap_state_defaults()
-  storage.bootstrap.expansion_research_levels = research_definition.level
-  bootstrap_runtime.expand_square(game.players[1], gui_runtime, anchor_runtime)
+  if not bootstrap_runtime.expand_planet_square(research_definition.planet_key, game.players[1], gui_runtime, anchor_runtime) then
+    return false
+  end
 
   if gui_runtime then
     gui_runtime.refresh_all_debug_guis()
@@ -41,7 +35,7 @@ function growth_runtime.handle_expansion_research_finished(research, bootstrap_r
   research.force.print({
     "message.fes-expansion-research-completed",
     research_definition.level,
-    storage.bootstrap.square_size
+    state.square_size
   })
 
   return true

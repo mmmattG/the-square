@@ -21,6 +21,7 @@ make luals-meta
 `make build` builds both mods.
 
 `make install` installs both mods into the same Factorio mods directory. `make deploy-space-age` is kept as an alias for that combined install flow.
+By default, the top-level `Makefile` auto-detects the standard mods directory on macOS, Linux, and WSL-to-Windows Factorio installs.
 
 `make test`, `make lint`, `make fmtk-package`, `make tools-bootstrap`, and `make luals-meta` run the matching target in both mod workspaces.
 

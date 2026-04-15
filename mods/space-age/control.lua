@@ -27,6 +27,18 @@ local function handle_player_join_or_respawn(event)
   end
 end
 
+local function handle_player_surface_changed(event)
+  local player = game.get_player(event.player_index)
+
+  if not player then
+    return
+  end
+
+  bootstrap_runtime.refresh_supported_surface(player.surface)
+  gui_runtime.refresh_all_debug_guis()
+  gui_runtime.sync_shop_gui(player, anchor_runtime)
+end
+
 script.on_init(function()
   planet_state.ensure_all_planets()
   bootstrap_world()
@@ -62,6 +74,7 @@ end)
 
 script.on_event(defines.events.on_player_created, handle_player_join_or_respawn)
 script.on_event(defines.events.on_player_respawned, handle_player_join_or_respawn)
+script.on_event(defines.events.on_player_changed_surface, handle_player_surface_changed)
 
 script.on_event(defines.events.on_player_rotated_entity, function(event)
   anchor_runtime.reset_rotated_anchor(event.entity)
