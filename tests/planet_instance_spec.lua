@@ -20,6 +20,7 @@ settings = {
   }
 }
 
+local planet_config = require("lib.planet_config")
 local planet_instance = require("lib.planet_instance")
 
 local function assert_equal(actual, expected, message)
@@ -91,6 +92,33 @@ run_test("Nauvis Planet Instance owns local Expansion Points", function()
   assert_equal(storage.bootstrap.expansion_points, 10, "adapter should keep the existing alpha storage shape updated")
 end)
 
+run_test("Space Age planet configs default to 17x17 thematic squares", function()
+  settings.startup = {}
+
+  local expected_floor_tiles = {
+    vulcanus = "volcanic-ash-soil",
+    fulgora = "fulgoran-dust",
+    gleba = "wetland-light-green-slime",
+    aquilo = "snow-flat"
+  }
+
+  for planet_name, floor_tile_name in pairs(expected_floor_tiles) do
+    local config = planet_config.get(planet_name)
+
+    assert_equal(config.square_size, 17, planet_name .. " should default to a 17x17 starting square")
+    assert_equal(config.surface_size, 19, planet_name .. " surface should include the managed void ring")
+    assert_equal(config.floor_tile_name, floor_tile_name, planet_name .. " should use its fixed thematic floor")
+  end
+
+  local nauvis_config = planet_config.get("nauvis")
+  assert_equal(nauvis_config.square_size, 9, "Nauvis should keep using the existing compatibility default path")
+  assert_equal(nauvis_config.floor_tile_name, nil, "Nauvis should keep using the legacy background tile path")
+
+  settings.startup = {
+    ["the-square-vulcanus-starting-square-size"] = {value = 11}
+  }
+end)
+
 run_test("Space Age Planet Instance initializes independent planet state", function()
   storage = {}
 
@@ -99,6 +127,7 @@ run_test("Space Age Planet Instance initializes independent planet state", funct
   assert_equal(vulcanus:get_square_size(), 11, "Space Age planets should use their planet startup square size")
   assert_equal(vulcanus:get_surface_name(), "vulcanus", "Space Age planets should use vanilla planet surfaces")
   assert_equal(vulcanus:get_surface_size(), 13, "planet surface size should include the managed void ring")
+  assert_equal(vulcanus:get_floor_tile_name(), "volcanic-ash-soil", "Space Age planets should expose their fixed floor tile")
   assert_equal(storage.planets.vulcanus.square_size, 11, "planet state should be stored independently")
   assert_equal(storage.bootstrap, nil, "initializing another planet should not create Nauvis bootstrap state")
 end)

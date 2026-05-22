@@ -473,10 +473,11 @@ function runtime_defs.is_anchor_ring_position(square_size, position)
   return bootstrap_layout.is_anchor_ring_position(square_size, position)
 end
 
-function runtime_defs.get_managed_tile_name(square_size, surface_size, position)
-  local background_tile_name = runtime_defs.get_background_tile_name()
+function runtime_defs.get_managed_tile_name(square_size, surface_size, position, floor_tile_name)
+  local background_tile_name = floor_tile_name or runtime_defs.get_background_tile_name()
 
-  if background_tile_name == runtime_defs.CHECKERBOARD_BACKGROUND_TILE_NAME
+  if not floor_tile_name
+    and background_tile_name == runtime_defs.CHECKERBOARD_BACKGROUND_TILE_NAME
     and bootstrap_layout.is_inside_bounds(bootstrap_layout.get_square_bounds(square_size), position) then
     local parity = math.abs(position.x + position.y) % 2 == 0 and "even" or "odd"
 

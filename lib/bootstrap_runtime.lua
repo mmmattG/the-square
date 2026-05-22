@@ -128,14 +128,14 @@ local function call_freeplay(interface_name, value)
   end
 end
 
-local function build_managed_surface_tiles(square_size, surface_size)
+local function build_managed_surface_tiles(square_size, surface_size, floor_tile_name)
   local surface_bounds = defs.get_square_bounds(surface_size)
   local tiles = {}
 
   for y = surface_bounds.left_top.y, surface_bounds.right_bottom.y - 1 do
     for x = surface_bounds.left_top.x, surface_bounds.right_bottom.x - 1 do
       tiles[#tiles + 1] = {
-        name = defs.get_managed_tile_name(square_size, surface_size, {x = x, y = y}),
+        name = defs.get_managed_tile_name(square_size, surface_size, {x = x, y = y}, floor_tile_name),
         position = {x = x, y = y}
       }
     end
@@ -144,12 +144,12 @@ local function build_managed_surface_tiles(square_size, surface_size)
   return tiles
 end
 
-function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, surface_size)
+function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, surface_size, floor_tile_name)
   if not surface then
     return
   end
 
-  local tile_updates = build_managed_surface_tiles(square_size, surface_size)
+  local tile_updates = build_managed_surface_tiles(square_size, surface_size, floor_tile_name)
 
   if #tile_updates > 0 then
     -- Keep tile correction enabled so Factorio rebuilds the soft edge transition
@@ -162,13 +162,13 @@ local function build_bootstrap_tiles(square_size, surface_size)
   return build_managed_surface_tiles(square_size, surface_size)
 end
 
-function bootstrap_runtime.build_generated_chunk_tiles(square_size, surface_size, area)
+function bootstrap_runtime.build_generated_chunk_tiles(square_size, surface_size, area, floor_tile_name)
   local tiles = {}
 
   for y = area.left_top.y, area.right_bottom.y - 1 do
     for x = area.left_top.x, area.right_bottom.x - 1 do
       local position = {x = x, y = y}
-      local tile_name = defs.get_managed_tile_name(square_size, surface_size, position) or defs.VOID_TILE_NAME
+      local tile_name = defs.get_managed_tile_name(square_size, surface_size, position, floor_tile_name) or defs.VOID_TILE_NAME
 
       tiles[#tiles + 1] = {
         name = tile_name,
@@ -180,12 +180,12 @@ function bootstrap_runtime.build_generated_chunk_tiles(square_size, surface_size
   return tiles
 end
 
-function bootstrap_runtime.refresh_generated_chunk_tiles(surface, square_size, surface_size, area)
+function bootstrap_runtime.refresh_generated_chunk_tiles(surface, square_size, surface_size, area, floor_tile_name)
   if not (surface and area) then
     return
   end
 
-  local tile_updates = bootstrap_runtime.build_generated_chunk_tiles(square_size, surface_size, area)
+  local tile_updates = bootstrap_runtime.build_generated_chunk_tiles(square_size, surface_size, area, floor_tile_name)
 
   if #tile_updates > 0 then
     surface.set_tiles(tile_updates, true, true, true, false)
@@ -220,7 +220,8 @@ function bootstrap_runtime.refresh_generated_chunk_for_planet_surface(surface, a
     surface,
     planet:get_square_size(),
     planet:get_surface_size(),
-    area
+    area,
+    planet:get_floor_tile_name()
   )
 
   return true

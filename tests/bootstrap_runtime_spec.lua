@@ -74,5 +74,31 @@ run_test("generated chunks on supported Space Age planet surfaces are routed thr
 
   assert_equal(handled, true, "supported planet surfaces should be handled")
   assert_equal(storage.planets.vulcanus.square_size, 5, "chunk routing should initialize planet state")
-  assert_equal(painted_tiles[1].name, "grass-1", "inside the planet square should be painted as floor")
+  assert_equal(painted_tiles[1].name, "volcanic-ash-soil", "Space Age planet squares should use their fixed thematic floor")
+end)
+
+run_test("generated chunks on Nauvis keep using the legacy background tile setting", function()
+  storage = {
+    bootstrap = {
+      square_size = 7,
+      surface_name = "nauvis"
+    }
+  }
+  settings.global["the-square-background-tile"] = {value = "sand-3"}
+  local painted_tiles = nil
+  local surface = {
+    name = "nauvis",
+    set_tiles = function(tiles)
+      painted_tiles = tiles
+    end
+  }
+
+  local handled = bootstrap_runtime.refresh_generated_chunk_for_planet_surface(surface, {
+    left_top = {x = 0, y = 0},
+    right_bottom = {x = 1, y = 1}
+  })
+
+  assert_equal(handled, true, "Nauvis should still be routed through compatibility storage")
+  assert_equal(painted_tiles[1].name, "sand-3", "Nauvis should keep honoring the legacy global background tile")
+  settings.global["the-square-background-tile"] = {value = "grass-1"}
 end)

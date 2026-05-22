@@ -21,7 +21,7 @@ data:extend({
     type = "int-setting",
     name = "the-square-vulcanus-starting-square-size",
     setting_type = "startup",
-    default_value = 7,
+    default_value = 17,
     minimum_value = 4,
     maximum_value = 255,
     order = "a-b"
@@ -30,7 +30,7 @@ data:extend({
     type = "int-setting",
     name = "the-square-fulgora-starting-square-size",
     setting_type = "startup",
-    default_value = 7,
+    default_value = 17,
     minimum_value = 4,
     maximum_value = 255,
     order = "a-c"
@@ -39,7 +39,7 @@ data:extend({
     type = "int-setting",
     name = "the-square-gleba-starting-square-size",
     setting_type = "startup",
-    default_value = 7,
+    default_value = 17,
     minimum_value = 4,
     maximum_value = 255,
     order = "a-d"
@@ -48,7 +48,7 @@ data:extend({
     type = "int-setting",
     name = "the-square-aquilo-starting-square-size",
     setting_type = "startup",
-    default_value = 7,
+    default_value = 17,
     minimum_value = 4,
     maximum_value = 255,
     order = "a-e"

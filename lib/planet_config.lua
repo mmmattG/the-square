@@ -14,10 +14,18 @@ local labels = {
 
 local defaults = {
   nauvis = 7,
-  vulcanus = 7,
-  fulgora = 7,
-  gleba = 7,
-  aquilo = 7
+  vulcanus = 17,
+  fulgora = 17,
+  gleba = 17,
+  aquilo = 17
+}
+
+local floor_tiles = {
+  nauvis = nil,
+  vulcanus = "volcanic-ash-soil",
+  fulgora = "fulgoran-dust",
+  gleba = "wetland-light-green-slime",
+  aquilo = "snow-flat"
 }
 
 local function get_setting_value(scope, setting_name, default_value)
@@ -61,7 +69,8 @@ function planet_config.get(planet_name)
     label = labels[planet_name],
     surface_name = planet_name,
     square_size = square_size,
-    surface_size = defs.get_surface_size(square_size)
+    surface_size = defs.get_surface_size(square_size),
+    floor_tile_name = floor_tiles[planet_name]
   }
 end
 
