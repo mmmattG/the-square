@@ -1,32 +1,9 @@
 local defs = require("lib.runtime_defs")
+local planet_catalog = require("lib.planet_catalog")
 
 local planet_config = {}
 
-planet_config.SUPPORTED_PLANETS = {"nauvis", "vulcanus", "fulgora", "gleba", "aquilo"}
-
-local labels = {
-  nauvis = "Nauvis",
-  vulcanus = "Vulcanus",
-  fulgora = "Fulgora",
-  gleba = "Gleba",
-  aquilo = "Aquilo"
-}
-
-local defaults = {
-  nauvis = 7,
-  vulcanus = 17,
-  fulgora = 17,
-  gleba = 17,
-  aquilo = 17
-}
-
-local floor_tiles = {
-  nauvis = nil,
-  vulcanus = "volcanic-ash-soil",
-  fulgora = "fulgoran-dust",
-  gleba = "wetland-light-green-slime",
-  aquilo = "snow-flat"
-}
+planet_config.SUPPORTED_PLANETS = planet_catalog.SUPPORTED_PLANETS
 
 local function get_setting_value(scope, setting_name, default_value)
   local setting = scope and scope[setting_name]
@@ -43,7 +20,7 @@ function planet_config.get_starting_square_size_setting_name(planet_name)
 end
 
 function planet_config.is_supported_planet(planet_name)
-  return labels[planet_name] ~= nil
+  return planet_catalog.get(planet_name) ~= nil
 end
 
 function planet_config.get(planet_name)
@@ -51,7 +28,8 @@ function planet_config.get(planet_name)
     return nil
   end
 
-  local default_square_size = defaults[planet_name] or 7
+  local catalog_planet = planet_catalog.get(planet_name)
+  local default_square_size = catalog_planet.default_square_size or 7
   local square_size = get_setting_value(
     settings.startup,
     planet_config.get_starting_square_size_setting_name(planet_name),
@@ -66,11 +44,11 @@ function planet_config.get(planet_name)
 
   return {
     name = planet_name,
-    label = labels[planet_name],
+    label = catalog_planet.label,
     surface_name = planet_name,
     square_size = square_size,
     surface_size = defs.get_surface_size(square_size),
-    floor_tile_name = floor_tiles[planet_name]
+    floor_tile_name = catalog_planet.floor_tile_name
   }
 end
 

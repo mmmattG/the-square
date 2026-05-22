@@ -1,6 +1,7 @@
 local bootstrap_layout = require("lib.bootstrap_layout")
 local expansion_research = require("lib.expansion_research")
 local item_ingress = require("lib.item_ingress")
+local planet_catalog = require("lib.planet_catalog")
 
 local runtime_defs = {}
 
@@ -123,53 +124,8 @@ runtime_defs.COUNTED_CATEGORY_LABELS = {
   beacon = "Beacons",
   power = "Power"
 }
-runtime_defs.INPUT_DEFINITIONS_BY_PLANET = {
-  nauvis = {
-    {resource = "iron-ore", kind = "item", starter_side = "north", prerequisite_resource = nil},
-    {resource = "copper-ore", kind = "item", starter_side = "north", prerequisite_resource = nil},
-    {resource = "coal", kind = "item", starter_side = "south", prerequisite_resource = nil},
-    {resource = "stone", kind = "item", starter_side = "south", prerequisite_resource = nil},
-    {resource = "water", kind = "fluid", starter_side = "west", prerequisite_resource = nil},
-    {resource = "wood", kind = "item", starter_side = "east", prerequisite_resource = nil},
-    {resource = "crude-oil", kind = "fluid", starter_side = nil, prerequisite_resource = nil},
-    {resource = "uranium-ore", kind = "item", starter_side = nil, prerequisite_resource = "crude-oil"}
-  },
-  vulcanus = {
-    {resource = "coal", kind = "item", starter_side = "north", prerequisite_resource = nil},
-    {resource = "calcite", kind = "item", starter_side = "east", prerequisite_resource = nil},
-    {resource = "tungsten-ore", kind = "item", starter_side = "south", prerequisite_resource = nil},
-    {resource = "sulfuric-acid", kind = "fluid", starter_side = "west", prerequisite_resource = nil},
-    {resource = "lava", kind = "fluid", starter_side = "west", prerequisite_resource = nil}
-  },
-  fulgora = {
-    {resource = "scrap", kind = "item", starter_side = "north", prerequisite_resource = nil},
-    {resource = "heavy-oil", kind = "fluid", starter_side = "west", prerequisite_resource = nil}
-  },
-  gleba = {
-    {resource = "stone", kind = "item", starter_side = "north", prerequisite_resource = nil},
-    {resource = "water", kind = "fluid", starter_side = "west", prerequisite_resource = nil},
-    {resource = "yumako", kind = "item", starter_side = "south", prerequisite_resource = nil},
-    {resource = "jellynut", kind = "item", starter_side = "east", prerequisite_resource = nil}
-  },
-  aquilo = {
-    {resource = "crude-oil", kind = "fluid", starter_side = "north", prerequisite_resource = nil},
-    {resource = "ammoniacal-solution", kind = "fluid", starter_side = "east", prerequisite_resource = nil},
-    {resource = "fluorine", kind = "fluid", starter_side = "south", prerequisite_resource = nil},
-    {resource = "lithium-brine", kind = "fluid", starter_side = "west", prerequisite_resource = nil}
-  }
-}
-runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET = {
-  nauvis = {
-    {resource = "sulfuric-acid", kind = "fluid", starter_side = nil, prerequisite_resource = "uranium-ore"}
-  },
-  vulcanus = {},
-  fulgora = {},
-  gleba = {
-    {resource = "yumako-seed", kind = "item", starter_side = "south", prerequisite_resource = nil},
-    {resource = "jellynut-seed", kind = "item", starter_side = "east", prerequisite_resource = nil}
-  },
-  aquilo = {}
-}
+runtime_defs.INPUT_DEFINITIONS_BY_PLANET = planet_catalog.build_native_free_resources_by_planet()
+runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET = planet_catalog.build_opt_in_egress_resources_by_planet()
 runtime_defs.INPUT_DEFINITIONS = runtime_defs.INPUT_DEFINITIONS_BY_PLANET.nauvis
 runtime_defs.OUTPUT_DEFINITIONS = runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET.nauvis
 runtime_defs.DIRECTION_BY_SIDE = {

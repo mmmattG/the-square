@@ -43,6 +43,18 @@ run_test("planet starter resource matrix is planet-local", function()
   assert_equal(defs.get_input_definition("stone", "nauvis").starter_side, "south")
 end)
 
+run_test("overlapping resource names keep Planet-local behavior", function()
+  local gleba_stone = defs.get_input_definition("stone", "gleba")
+  local nauvis_stone = defs.get_input_definition("stone", "nauvis")
+
+  assert_equal(gleba_stone.resource, nauvis_stone.resource)
+  assert_equal(gleba_stone == nauvis_stone, false, "shared resource names should not share definition tables")
+
+  gleba_stone.prerequisite_resource = "gleba-local-test"
+  assert_equal(nauvis_stone.prerequisite_resource, nil, "mutating Gleba stone must not change Nauvis stone")
+  gleba_stone.prerequisite_resource = nil
+end)
+
 run_test("starter layout includes planet-local Gleba seed egresses", function()
   local anchors = bootstrap_runtime.build_starter_anchor_layout(17, "gleba")
   local seen = {}
