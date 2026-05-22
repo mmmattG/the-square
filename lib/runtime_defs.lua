@@ -4,7 +4,8 @@ local item_ingress = require("lib.item_ingress")
 
 local runtime_defs = {}
 
-runtime_defs.SURFACE_NAME = "fes-bootstrap"
+runtime_defs.SURFACE_NAME = "nauvis"
+runtime_defs.LEGACY_SURFACE_NAME = "fes-bootstrap"
 runtime_defs.BASE_SCREENSHOT_MARGIN_TILES = 2
 runtime_defs.BASE_SCREENSHOT_DIRECTORY = "the-square"
 runtime_defs.SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"

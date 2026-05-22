@@ -1,4 +1,5 @@
 local defs = require("lib.runtime_defs")
+local planet_instance = require("lib.planet_instance")
 
 local bootstrap_runtime = {}
 local ensure_surface_dimensions
@@ -208,24 +209,12 @@ local function build_surface_map_gen_settings(square_size)
 end
 
 function bootstrap_runtime.ensure_bootstrap_state_defaults()
-  if not storage.bootstrap then
+  local nauvis = planet_instance.ensure_nauvis()
+
+  if not nauvis then
     return
   end
 
-  local target_surface_size = get_target_surface_size(
-    storage.bootstrap.square_size,
-    storage.bootstrap.expansions_completed or 0
-  )
-
-  storage.bootstrap.surface_name = storage.bootstrap.surface_name or defs.SURFACE_NAME
-  storage.bootstrap.surface_size = target_surface_size
-  storage.bootstrap.expansion_points = storage.bootstrap.expansion_points or 0
-  storage.bootstrap.expansions_completed = storage.bootstrap.expansions_completed or 0
-  storage.bootstrap.ingress_tier = storage.bootstrap.ingress_tier or 1
-  storage.bootstrap.expansion_research_levels = storage.bootstrap.expansion_research_levels or 0
-  storage.bootstrap.uranium_ore_progress_carry = storage.bootstrap.uranium_ore_progress_carry or 0
-  storage.bootstrap.growth_progress = nil
-  storage.bootstrap.expansion_speed_research_levels = nil
   storage.utilization_metrics = nil
 end
 
@@ -262,9 +251,9 @@ function bootstrap_runtime.ensure_bootstrap_surface(anchor_runtime)
   surface.set_tiles(build_bootstrap_tiles(square_size, surface_size), true, true, true, false)
 
   storage.bootstrap = storage.bootstrap or {}
-  storage.bootstrap.square_size = square_size
-  storage.bootstrap.surface_size = surface_size
-  storage.bootstrap.surface_name = defs.SURFACE_NAME
+  local nauvis = planet_instance.from_bootstrap(storage.bootstrap)
+  nauvis:set_square_size(square_size)
+  nauvis:set_surface_name(defs.SURFACE_NAME)
   bootstrap_runtime.ensure_bootstrap_state_defaults()
 
   return surface
@@ -305,7 +294,13 @@ function bootstrap_runtime.teleport_player_to_square(player)
 end
 
 function bootstrap_runtime.add_expansion_points(amount)
-  storage.bootstrap.expansion_points = (storage.bootstrap.expansion_points or 0) + amount
+  local nauvis = planet_instance.ensure_nauvis()
+
+  if not nauvis then
+    return
+  end
+
+  nauvis:add_expansion_points(amount)
 end
 
 local function move_starter_anchors_outward()
