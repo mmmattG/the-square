@@ -62,18 +62,7 @@ script.on_event(defines.events.on_player_created, handle_player_join_or_respawn)
 script.on_event(defines.events.on_player_respawned, handle_player_join_or_respawn)
 
 script.on_event(defines.events.on_chunk_generated, function(event)
-  local bootstrap = storage.bootstrap
-
-  if not (bootstrap and event.surface and event.surface.name == bootstrap.surface_name) then
-    return
-  end
-
-  bootstrap_runtime.refresh_generated_chunk_tiles(
-    event.surface,
-    bootstrap.square_size,
-    bootstrap.surface_size or defs.get_surface_size(bootstrap.square_size),
-    event.area
-  )
+  bootstrap_runtime.refresh_generated_chunk_for_planet_surface(event.surface, event.area)
 end)
 
 script.on_event(defines.events.on_player_rotated_entity, function(event)

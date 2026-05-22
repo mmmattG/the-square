@@ -1,4 +1,5 @@
 local defs = require("lib.runtime_defs")
+local planet_config = require("lib.planet_config")
 local planet_instance = require("lib.planet_instance")
 
 local bootstrap_runtime = {}
@@ -204,6 +205,27 @@ function bootstrap_runtime.refresh_all_generated_chunk_tiles(surface, square_siz
   end
 end
 
+function bootstrap_runtime.refresh_generated_chunk_for_planet_surface(surface, area)
+  if not (surface and area) then
+    return false
+  end
+
+  local planet = planet_instance.for_surface(surface.name)
+
+  if not planet then
+    return false
+  end
+
+  bootstrap_runtime.refresh_generated_chunk_tiles(
+    surface,
+    planet:get_square_size(),
+    planet:get_surface_size(),
+    area
+  )
+
+  return true
+end
+
 local function build_resize_tile_updates(old_square_size, old_surface_size, new_square_size, new_surface_size)
   local tiles = {}
   local old_bounds = defs.get_square_bounds(old_surface_size)
@@ -275,7 +297,8 @@ ensure_surface_dimensions = function(surface, target_surface_size)
 end
 
 function bootstrap_runtime.ensure_bootstrap_surface(anchor_runtime)
-  local square_size = defs.get_square_size()
+  local nauvis_config = planet_config.get("nauvis")
+  local square_size = nauvis_config.square_size
   local surface_size = get_target_surface_size(square_size, 0)
   local surface = game.surfaces[defs.SURFACE_NAME]
 

@@ -18,6 +18,9 @@ settings = {
   startup = {
     ["the-square-expansion-tiles-per-research"] = {
       value = 9
+    },
+    ["the-square-vulcanus-starting-square-size"] = {
+      value = 5
     }
   }
 }
@@ -52,4 +55,24 @@ run_test("generated chunks outside managed surface are painted void", function()
   for _, tile in ipairs(tiles) do
     assert_equal(tile.name, "out-of-map", "outside managed area should be void")
   end
+end)
+
+run_test("generated chunks on supported Space Age planet surfaces are routed through planet state", function()
+  storage = {}
+  local painted_tiles = nil
+  local surface = {
+    name = "vulcanus",
+    set_tiles = function(tiles)
+      painted_tiles = tiles
+    end
+  }
+
+  local handled = bootstrap_runtime.refresh_generated_chunk_for_planet_surface(surface, {
+    left_top = {x = 0, y = 0},
+    right_bottom = {x = 1, y = 1}
+  })
+
+  assert_equal(handled, true, "supported planet surfaces should be handled")
+  assert_equal(storage.planets.vulcanus.square_size, 5, "chunk routing should initialize planet state")
+  assert_equal(painted_tiles[1].name, "grass-1", "inside the planet square should be painted as floor")
 end)

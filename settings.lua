@@ -10,6 +10,51 @@ data:extend({
   },
   {
     type = "int-setting",
+    name = "the-square-nauvis-starting-square-size",
+    setting_type = "startup",
+    default_value = 7,
+    minimum_value = 4,
+    maximum_value = 255,
+    order = "a-a"
+  },
+  {
+    type = "int-setting",
+    name = "the-square-vulcanus-starting-square-size",
+    setting_type = "startup",
+    default_value = 7,
+    minimum_value = 4,
+    maximum_value = 255,
+    order = "a-b"
+  },
+  {
+    type = "int-setting",
+    name = "the-square-fulgora-starting-square-size",
+    setting_type = "startup",
+    default_value = 7,
+    minimum_value = 4,
+    maximum_value = 255,
+    order = "a-c"
+  },
+  {
+    type = "int-setting",
+    name = "the-square-gleba-starting-square-size",
+    setting_type = "startup",
+    default_value = 7,
+    minimum_value = 4,
+    maximum_value = 255,
+    order = "a-d"
+  },
+  {
+    type = "int-setting",
+    name = "the-square-aquilo-starting-square-size",
+    setting_type = "startup",
+    default_value = 7,
+    minimum_value = 4,
+    maximum_value = 255,
+    order = "a-e"
+  },
+  {
+    type = "int-setting",
     name = "the-square-expansion-tiles-per-research",
     setting_type = "startup",
     default_value = 7,

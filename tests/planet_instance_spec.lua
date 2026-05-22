@@ -14,6 +14,9 @@ settings = {
     ["the-square-starting-square-size"] = {value = 9},
     ["the-square-expansion-tiles-per-research"] = {value = 2},
     ["the-square-background-tile"] = {value = "grass-1"}
+  },
+  startup = {
+    ["the-square-vulcanus-starting-square-size"] = {value = 11}
   }
 }
 
@@ -86,4 +89,16 @@ run_test("Nauvis Planet Instance owns local Expansion Points", function()
 
   assert_equal(nauvis:get_expansion_points(), 10, "Expansion Points should be added to the Planet Instance")
   assert_equal(storage.bootstrap.expansion_points, 10, "adapter should keep the existing alpha storage shape updated")
+end)
+
+run_test("Space Age Planet Instance initializes independent planet state", function()
+  storage = {}
+
+  local vulcanus = planet_instance.ensure("vulcanus")
+
+  assert_equal(vulcanus:get_square_size(), 11, "Space Age planets should use their planet startup square size")
+  assert_equal(vulcanus:get_surface_name(), "vulcanus", "Space Age planets should use vanilla planet surfaces")
+  assert_equal(vulcanus:get_surface_size(), 13, "planet surface size should include the managed void ring")
+  assert_equal(storage.planets.vulcanus.square_size, 11, "planet state should be stored independently")
+  assert_equal(storage.bootstrap, nil, "initializing another planet should not create Nauvis bootstrap state")
 end)
