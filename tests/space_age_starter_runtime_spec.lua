@@ -96,6 +96,104 @@ run_test("planet starter pumping only uses planet-local anchors", function()
   assert_equal(storage.removed, "yumako-seed", "Gleba egress should drain seed items")
 end)
 
+run_test("Gleba seed egresses supply matching fruit ingresses at normal rates", function()
+  local counts = {inserted = {}, removed = {}}
+
+  local function belt_entity(kind)
+    return {
+      valid = true,
+      get_transport_line = function()
+        return {
+          can_insert_at_back = function() return true end,
+          insert_at_back = function(stack)
+            counts.inserted[stack.name] = (counts.inserted[stack.name] or 0) + stack.count
+          end,
+          remove_item = function(stack)
+            counts.removed[stack.name] = (counts.removed[stack.name] or 0) + stack.count
+            return stack.count
+          end
+        }
+      end
+    }
+  end
+
+  storage = {
+    bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
+    planets = {
+      gleba = {
+        square_size = 17,
+        surface_name = "gleba",
+        starter_anchors = {
+          anchors = {
+            {resource = "yumako", kind = "item", flow = "ingress", position = {x = 0, y = 9}, entity = belt_entity("ingress"), item_progress = {0, 0}},
+            {resource = "jellynut", kind = "item", flow = "ingress", position = {x = 9, y = 0}, entity = belt_entity("ingress"), item_progress = {0, 0}},
+            {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = belt_entity("egress"), item_progress = {0, 0}},
+            {resource = "jellynut-seed", kind = "item", flow = "egress", position = {x = 9, y = 0}, entity = belt_entity("egress"), item_progress = {0, 0}}
+          }
+        }
+      },
+      nauvis = {
+        square_size = 7,
+        surface_name = "nauvis",
+        starter_anchors = {
+          anchors = {
+            {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = belt_entity("egress"), item_progress = {0, 0}}
+          }
+        }
+      }
+    }
+  }
+
+  for _ = 1, defs.ITEM_ANCHOR_INTERVAL_TICKS do
+    ingress_runtime.pump_planet_starter_anchors()
+  end
+
+  assert_equal(counts.removed["yumako-seed"], 1, "Yumako ingress should consume one Gleba-local seed per yellow-lane interval")
+  assert_equal(counts.inserted.yumako, 1, "Yumako ingress should emit at the normal yellow single-lane rate")
+  assert_equal(counts.removed["jellynut-seed"], 1, "Jellynut ingress should consume one Gleba-local seed per yellow-lane interval")
+  assert_equal(counts.inserted.jellynut, 1, "Jellynut ingress should emit at the normal yellow single-lane rate")
+end)
+
+run_test("Gleba fruit ingresses wait for matching seed supply", function()
+  local inserted = nil
+
+  storage = {
+    bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
+    planets = {
+      gleba = {
+        square_size = 17,
+        surface_name = "gleba",
+        starter_anchors = {
+          anchors = {
+            {
+              resource = "yumako",
+              kind = "item",
+              flow = "ingress",
+              position = {x = 0, y = 9},
+              entity = {
+                valid = true,
+                get_transport_line = function()
+                  return {
+                    can_insert_at_back = function() return true end,
+                    insert_at_back = function(stack) inserted = stack.name end
+                  }
+                end
+              },
+              item_progress = {0, 0}
+            }
+          }
+        }
+      }
+    }
+  }
+
+  for _ = 1, defs.ITEM_ANCHOR_INTERVAL_TICKS do
+    ingress_runtime.pump_planet_starter_anchors()
+  end
+
+  assert_equal(inserted, nil, "Gleba fruit should not emit without its matching seed egress")
+end)
+
 run_test("entity presentation maps flow and kind to PRD visuals", function()
   assert_equal(defs.get_anchor_presentation("ingress", "item"), "underground-belt-inward")
   assert_equal(defs.get_anchor_presentation("egress", "item"), "underground-belt-outward")
