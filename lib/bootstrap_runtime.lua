@@ -161,6 +161,36 @@ local function build_bootstrap_tiles(square_size, surface_size)
   return build_managed_surface_tiles(square_size, surface_size)
 end
 
+function bootstrap_runtime.build_generated_chunk_tiles(square_size, surface_size, area)
+  local tiles = {}
+
+  for y = area.left_top.y, area.right_bottom.y - 1 do
+    for x = area.left_top.x, area.right_bottom.x - 1 do
+      local position = {x = x, y = y}
+      local tile_name = defs.get_managed_tile_name(square_size, surface_size, position) or defs.VOID_TILE_NAME
+
+      tiles[#tiles + 1] = {
+        name = tile_name,
+        position = position
+      }
+    end
+  end
+
+  return tiles
+end
+
+function bootstrap_runtime.refresh_generated_chunk_tiles(surface, square_size, surface_size, area)
+  if not (surface and area) then
+    return
+  end
+
+  local tile_updates = bootstrap_runtime.build_generated_chunk_tiles(square_size, surface_size, area)
+
+  if #tile_updates > 0 then
+    surface.set_tiles(tile_updates, true, true, true, false)
+  end
+end
+
 local function build_resize_tile_updates(old_square_size, old_surface_size, new_square_size, new_surface_size)
   local tiles = {}
   local old_bounds = defs.get_square_bounds(old_surface_size)
