@@ -63,7 +63,9 @@ script.on_event(defines.events.on_player_created, handle_player_join_or_respawn)
 script.on_event(defines.events.on_player_respawned, handle_player_join_or_respawn)
 
 script.on_event(defines.events.on_chunk_generated, function(event)
-  bootstrap_runtime.refresh_generated_chunk_for_planet_surface(event.surface, event.area)
+  if bootstrap_runtime.refresh_generated_chunk_for_planet_surface(event.surface, event.area) then
+    anchor_runtime.ensure_planet_starter_anchors(event.surface.name)
+  end
 end)
 
 script.on_event(defines.events.on_player_rotated_entity, function(event)
@@ -227,9 +229,11 @@ end)
 
 script.on_nth_tick(1, function()
   ingress_runtime.pump_starter_anchors()
+  ingress_runtime.pump_planet_starter_anchors()
 end)
 
 script.on_nth_tick(defs.ITEM_ANCHOR_INTERVAL_TICKS, function()
   anchor_runtime.ensure_starter_anchors()
+  anchor_runtime.ensure_all_planet_starter_anchors()
   anchor_runtime.update_all_player_anchor_previews()
 end)

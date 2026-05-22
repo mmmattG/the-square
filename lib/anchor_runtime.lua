@@ -1,5 +1,7 @@
 local bootstrap_runtime = require("lib.bootstrap_runtime")
 local defs = require("lib.runtime_defs")
+local planet_config = require("lib.planet_config")
+local planet_instance = require("lib.planet_instance")
 
 local anchor_runtime = {}
 
@@ -518,6 +520,20 @@ function anchor_runtime.ensure_starter_anchor_state()
   return storage.starter_anchors
 end
 
+local function ensure_anchor_set(surface, square_size, starter_anchors)
+  if not (surface and starter_anchors) then
+    return
+  end
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    if anchor.position then
+      ensure_anchor_entity(surface, anchor)
+    end
+  end
+
+  ensure_anchor_slot_proxies(surface, square_size, starter_anchors)
+end
+
 function anchor_runtime.ensure_starter_anchors()
   local bootstrap = storage.bootstrap
 
@@ -533,17 +549,56 @@ function anchor_runtime.ensure_starter_anchors()
 
   local starter_anchors = anchor_runtime.ensure_starter_anchor_state()
 
-  if not starter_anchors then
+  ensure_anchor_set(surface, bootstrap.square_size, starter_anchors)
+end
+
+function anchor_runtime.ensure_planet_starter_anchor_state(planet_name)
+  if planet_name == "nauvis" then
+    return anchor_runtime.ensure_starter_anchor_state()
+  end
+
+  local planet = planet_instance.ensure(planet_name)
+
+  if not planet then
+    return nil
+  end
+
+  local state = planet:get_bootstrap_storage()
+  state.starter_anchors = state.starter_anchors or {
+    layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = bootstrap_runtime.build_starter_anchor_layout(planet:get_square_size(), planet_name)
+  }
+
+  for _, anchor in ipairs(state.starter_anchors.anchors) do
+    anchor.flow = anchor.flow or "ingress"
+    anchor.item_progress = anchor.item_progress or {0, 0}
+    anchor.direction = anchor.side and defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side) or nil
+    migrate_anchor_to_anchor_ring(planet:get_square_size(), anchor)
+  end
+
+  return state.starter_anchors
+end
+
+function anchor_runtime.ensure_planet_starter_anchors(planet_name)
+  local planet = planet_instance.ensure(planet_name)
+
+  if not planet then
     return
   end
 
-  for _, anchor in ipairs(starter_anchors.anchors) do
-    if anchor.position then
-      ensure_anchor_entity(surface, anchor)
-    end
+  local surface = game.surfaces[planet:get_surface_name()]
+
+  if not surface then
+    return
   end
 
-  ensure_anchor_slot_proxies(surface, bootstrap.square_size, starter_anchors)
+  ensure_anchor_set(surface, planet:get_square_size(), anchor_runtime.ensure_planet_starter_anchor_state(planet_name))
+end
+
+function anchor_runtime.ensure_all_planet_starter_anchors()
+  for _, planet_name in ipairs(planet_config.SUPPORTED_PLANETS) do
+    anchor_runtime.ensure_planet_starter_anchors(planet_name)
+  end
 end
 
 function anchor_runtime.reset_rotated_anchor(entity)

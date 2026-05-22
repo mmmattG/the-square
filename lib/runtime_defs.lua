@@ -320,6 +320,22 @@ function runtime_defs.is_egress_entity_name_for_resource(resource, entity_name)
   return entity_name == runtime_defs.get_egress_entity_name(resource)
 end
 
+function runtime_defs.get_anchor_presentation(flow, kind, resource)
+  if flow == "egress" and kind == "item" then
+    return "underground-belt-outward"
+  end
+
+  if flow == "egress" and kind == "fluid" then
+    return "underground-pipe"
+  end
+
+  if kind == "fluid" then
+    return "offshore-pump"
+  end
+
+  return "underground-belt-inward"
+end
+
 function runtime_defs.create_managed_anchor(definition, flow, side, position)
   return {
     resource = definition.resource,
@@ -348,6 +364,10 @@ function runtime_defs.get_anchor_direction_for_side(flow, kind, side)
       return runtime_defs.DIRECTION_BY_SIDE[side]
     end
 
+    return runtime_defs.REVERSED_DIRECTION_BY_SIDE[side]
+  end
+
+  if flow == "egress" then
     return runtime_defs.REVERSED_DIRECTION_BY_SIDE[side]
   end
 

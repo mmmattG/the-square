@@ -8,11 +8,24 @@ local ingress_resources = {
   {resource = "water", kind = "fluid", icon = "__base__/graphics/icons/fluid/water.png", order = "a[ingress]-e[water]"},
   {resource = "wood", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "a[ingress]-f[wood]"},
   {resource = "crude-oil", kind = "fluid", icon = "__base__/graphics/icons/fluid/crude-oil.png", order = "a[ingress]-g[crude-oil]"},
-  {resource = "uranium-ore", kind = "item", icon = "__base__/graphics/icons/uranium-ore.png", order = "a[ingress]-h[uranium-ore]"}
+  {resource = "uranium-ore", kind = "item", icon = "__base__/graphics/icons/uranium-ore.png", order = "a[ingress]-h[uranium-ore]"},
+  {resource = "calcite", kind = "item", icon = "__base__/graphics/icons/stone.png", order = "a[ingress]-i[calcite]"},
+  {resource = "tungsten-ore", kind = "item", icon = "__base__/graphics/icons/stone.png", order = "a[ingress]-j[tungsten-ore]"},
+  {resource = "sulfuric-acid", kind = "fluid", icon = "__base__/graphics/icons/fluid/sulfuric-acid.png", order = "a[ingress]-k[sulfuric-acid]"},
+  {resource = "lava", kind = "fluid", icon = "__base__/graphics/icons/fluid/crude-oil.png", order = "a[ingress]-l[lava]"},
+  {resource = "scrap", kind = "item", icon = "__base__/graphics/icons/iron-stick.png", order = "a[ingress]-m[scrap]"},
+  {resource = "heavy-oil", kind = "fluid", icon = "__base__/graphics/icons/fluid/heavy-oil.png", order = "a[ingress]-n[heavy-oil]"},
+  {resource = "yumako", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "a[ingress]-o[yumako]"},
+  {resource = "jellynut", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "a[ingress]-p[jellynut]"},
+  {resource = "ammoniacal-solution", kind = "fluid", icon = "__base__/graphics/icons/fluid/water.png", order = "a[ingress]-q[ammoniacal-solution]"},
+  {resource = "fluorine", kind = "fluid", icon = "__base__/graphics/icons/fluid/water.png", order = "a[ingress]-r[fluorine]"},
+  {resource = "lithium-brine", kind = "fluid", icon = "__base__/graphics/icons/fluid/water.png", order = "a[ingress]-s[lithium-brine]"}
 }
 
 local egress_resources = {
-  {resource = "sulfuric-acid", kind = "fluid", icon = "__base__/graphics/icons/fluid/sulfuric-acid.png", order = "b[egress]-a[sulfuric-acid]"}
+  {resource = "sulfuric-acid", kind = "fluid", icon = "__base__/graphics/icons/fluid/sulfuric-acid.png", order = "b[egress]-a[sulfuric-acid]"},
+  {resource = "yumako-seed", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "b[egress]-b[yumako-seed]"},
+  {resource = "jellynut-seed", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "b[egress]-c[jellynut-seed]"}
 }
 
 local item_ingress_belt_tiers = {
@@ -290,7 +303,9 @@ local function build_anchor_place_input()
 end
 
 local function build_egress_entity(definition)
-  local source = table.deepcopy(data.raw["pipe-to-ground"]["pipe-to-ground"])
+  local source = definition.kind == "item"
+    and table.deepcopy(data.raw["underground-belt"]["underground-belt"])
+    or table.deepcopy(data.raw["pipe-to-ground"]["pipe-to-ground"])
   local item_name = egress_item_name(definition.resource)
 
   source.name = egress_entity_name(definition.resource)

@@ -1,0 +1,105 @@
+package.path = "./?.lua;./?/init.lua;" .. package.path
+
+defines = {direction = {south = 1, west = 2, north = 3, east = 4}}
+settings = {global = {}, startup = {}}
+storage = {bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1}}
+game = {forces = {player = {valid = true, mining_drill_productivity_bonus = 0}}}
+
+local anchor_runtime = require("lib.anchor_runtime")
+local ingress_runtime = require("lib.ingress_runtime")
+local defs = require("lib.runtime_defs")
+
+local function assert_equal(actual, expected, message)
+  if actual ~= expected then
+    error((message or "values differ") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(actual))
+  end
+end
+
+local function run_test(name, fn)
+  local ok, err = pcall(fn)
+  if not ok then
+    io.stderr:write("FAIL " .. name .. "\n" .. err .. "\n")
+    os.exit(1)
+  end
+  io.stdout:write("PASS " .. name .. "\n")
+end
+
+run_test("non-Nauvis planets receive configured starter anchors in isolated storage", function()
+  local vulcanus = anchor_runtime.ensure_planet_starter_anchor_state("vulcanus")
+  local gleba = anchor_runtime.ensure_planet_starter_anchor_state("gleba")
+
+  assert_equal(#vulcanus.anchors, 5, "Vulcanus should get five free starter lines")
+  assert_equal(#gleba.anchors, 6, "Gleba should get four ingresses and two egresses")
+  assert_equal(storage.starter_anchors, nil, "planet starter creation should not mutate Nauvis anchors")
+  assert_equal(storage.planets.vulcanus.starter_anchors, vulcanus, "Vulcanus anchors should live under Vulcanus state")
+  assert_equal(storage.planets.gleba.starter_anchors, gleba, "Gleba anchors should live under Gleba state")
+end)
+
+run_test("planet starter pumping only uses planet-local anchors", function()
+  storage.planets = {
+    fulgora = {
+      square_size = 17,
+      surface_name = "fulgora",
+      starter_anchors = {
+        anchors = {
+          {
+            resource = "scrap",
+            kind = "item",
+            flow = "ingress",
+            position = {x = 0, y = -9},
+            entity = {
+              valid = true,
+              get_transport_line = function()
+                return {
+                  can_insert_at_back = function() return true end,
+                  insert_at_back = function(stack)
+                    storage.inserted = stack.name
+                  end
+                }
+              end
+            },
+            item_progress = {0.875, 0}
+          }
+        }
+      }
+    },
+    gleba = {
+      square_size = 17,
+      surface_name = "gleba",
+      starter_anchors = {
+        anchors = {
+          {
+            resource = "yumako-seed",
+            kind = "item",
+            flow = "egress",
+            position = {x = 0, y = 9},
+            entity = {
+              valid = true,
+              get_transport_line = function()
+                return {
+                  remove_item = function(stack)
+                    storage.removed = stack.name
+                    return stack.count
+                  end
+                }
+              end
+            },
+            item_progress = {0.875, 0}
+          }
+        }
+      }
+    }
+  }
+
+  ingress_runtime.pump_planet_starter_anchors()
+  assert_equal(storage.inserted, "scrap", "Fulgora ingress should emit scrap")
+  assert_equal(storage.removed, "yumako-seed", "Gleba egress should drain seed items")
+end)
+
+run_test("entity presentation maps flow and kind to PRD visuals", function()
+  assert_equal(defs.get_anchor_presentation("ingress", "item"), "underground-belt-inward")
+  assert_equal(defs.get_anchor_presentation("egress", "item"), "underground-belt-outward")
+  assert_equal(defs.get_anchor_presentation("ingress", "fluid"), "offshore-pump")
+  assert_equal(defs.get_anchor_presentation("egress", "fluid"), "underground-pipe")
+  assert_equal(defs.get_anchor_direction_for_side("egress", "item", "north"), defines.direction.north)
+end)

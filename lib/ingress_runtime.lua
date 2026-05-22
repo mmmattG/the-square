@@ -1,6 +1,8 @@
 local item_ingress = require("lib.item_ingress")
 local resource_balance = require("lib.resource_balance")
 local defs = require("lib.runtime_defs")
+local planet_config = require("lib.planet_config")
+local planet_instance = require("lib.planet_instance")
 
 local ingress_runtime = {}
 
@@ -46,6 +48,21 @@ local function pump_item_anchor(entity, resource, lane_index, item_count)
   end
 
   return inserted
+end
+
+local function drain_item_anchor(entity, resource, lane_index, item_count)
+  if item_count <= 0 then
+    return 0
+  end
+
+  local line = entity.get_transport_line(lane_index)
+
+  if not line then
+    return 0
+  end
+
+  local removed = line.remove_item({name = resource, count = item_count})
+  return removed or 0
 end
 
 local function drain_fluid_anchor(entity, resource, amount)
@@ -170,6 +187,51 @@ local function pump_uranium_ingress_anchor(entity, requested_emission, shared_bu
   return inserted
 end
 
+local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context)
+  if not starter_anchors then
+    return
+  end
+
+  local uranium_anchor_index = 1
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    local entity = anchor.position and anchor.entity or nil
+
+    if entity and entity.valid then
+      if anchor.flow == "ingress" then
+        if anchor.kind == "item" then
+          if uranium_context and anchor.resource == "uranium-ore" then
+            local allocated_budget = uranium_context.allocations[uranium_anchor_index] or 0
+            local uranium_anchor = uranium_context.anchors[uranium_anchor_index]
+
+            pump_uranium_ingress_anchor(entity, uranium_anchor and uranium_anchor.requested_emission, allocated_budget)
+            uranium_anchor_index = uranium_anchor_index + 1
+          else
+            local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
+
+            pump_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
+            pump_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
+          end
+        else
+          entity.insert_fluid({
+            name = anchor.resource,
+            amount = ingress_tier.fluid_amount_per_interval
+          })
+        end
+      elseif anchor.flow == "egress" then
+        if anchor.kind == "item" then
+          local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
+
+          drain_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
+          drain_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
+        elseif not (uranium_context and anchor.resource == "sulfuric-acid") then
+          drain_fluid_anchor(entity, anchor.resource, ingress_tier.fluid_amount_per_interval)
+        end
+      end
+    end
+  end
+end
+
 function ingress_runtime.pump_starter_anchors()
   local starter_anchors = storage.starter_anchors
 
@@ -186,32 +248,21 @@ function ingress_runtime.pump_starter_anchors()
     uranium_capacities[index] = uranium_anchor.capacity
   end
 
-  local uranium_allocations = resource_balance.allocate_shared_budget(uranium_budget, uranium_capacities).allocations
-  local uranium_anchor_index = 1
+  pump_anchor_set(starter_anchors, ingress_tier, {
+    anchors = uranium_anchors,
+    allocations = resource_balance.allocate_shared_budget(uranium_budget, uranium_capacities).allocations
+  })
+end
 
-  for _, anchor in ipairs(starter_anchors.anchors) do
-    local entity = anchor.position and anchor.entity or nil
+function ingress_runtime.pump_planet_starter_anchors()
+  local ingress_tier = defs.get_current_ingress_tier()
 
-    if entity and entity.valid and anchor.flow == "ingress" then
-      if anchor.kind == "item" then
-        if anchor.resource == "uranium-ore" then
-          local allocated_budget = uranium_allocations[uranium_anchor_index] or 0
-          local uranium_anchor = uranium_anchors[uranium_anchor_index]
+  for _, planet_name in ipairs(planet_config.SUPPORTED_PLANETS) do
+    if planet_name ~= "nauvis" then
+      local planet = storage.planets and storage.planets[planet_name] and planet_instance.ensure(planet_name) or nil
+      local starter_anchors = planet and planet:get_bootstrap_storage().starter_anchors or nil
 
-          pump_uranium_ingress_anchor(entity, uranium_anchor and uranium_anchor.requested_emission, allocated_budget)
-          uranium_anchor_index = uranium_anchor_index + 1
-        else
-          local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
-
-          pump_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
-          pump_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
-        end
-      else
-        entity.insert_fluid({
-          name = anchor.resource,
-          amount = ingress_tier.fluid_amount_per_interval
-        })
-      end
+      pump_anchor_set(starter_anchors, ingress_tier, nil)
     end
   end
 end
