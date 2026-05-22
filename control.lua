@@ -1,6 +1,7 @@
 local anchor_runtime = require("lib.anchor_runtime")
 local bootstrap_runtime = require("lib.bootstrap_runtime")
 local defs = require("lib.runtime_defs")
+local debug_platform_runtime = require("lib.debug_platform_runtime")
 local growth_runtime = require("lib.growth_runtime")
 local gui_runtime = require("lib.gui_runtime")
 local ingress_runtime = require("lib.ingress_runtime")
@@ -112,6 +113,20 @@ script.on_event(defines.events.on_gui_click, function(event)
     if player and gui_runtime.is_dev_mode_enabled(player) then
       bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
       sync_all_runtime_guis()
+    end
+
+    return
+  end
+
+  local debug_orbit_planet = debug_platform_runtime.get_button_planet_name(event.element.name)
+
+  if debug_orbit_planet then
+    if player and gui_runtime.is_dev_mode_enabled(player) and debug_platform_runtime.is_space_age_active() then
+      local result = debug_platform_runtime.teleport_player_to_planet_platform(player, debug_orbit_planet)
+
+      if not result.ok then
+        player.print(result.error)
+      end
     end
 
     return

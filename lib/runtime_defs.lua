@@ -32,11 +32,19 @@ runtime_defs.PLACE_MANAGED_ANCHOR_INPUT_NAME = "fes-place-managed-anchor"
 runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH = 1
 runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION = 12
 runtime_defs.DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
+runtime_defs.DEV_ORBIT_TELEPORT_BUTTON_PREFIX = "fes_dev_orbit_teleport__"
 runtime_defs.DEBUG_FRAME_NAME = "fes_debug_frame"
 runtime_defs.SHOP_BUTTON_NAME = "fes_shop_button"
 runtime_defs.SCREENSHOT_BUTTON_NAME = "fes_screenshot_button"
 runtime_defs.SHOP_FRAME_NAME = "fes_shop_frame"
 runtime_defs.MAX_INGRESS_TIER = 4
+runtime_defs.DEBUG_SPACE_AGE_PLANETS = {
+  {name = "nauvis", label = "Nauvis"},
+  {name = "vulcanus", label = "Vulcanus"},
+  {name = "gleba", label = "Gleba"},
+  {name = "fulgora", label = "Fulgora"},
+  {name = "aquilo", label = "Aquilo"}
+}
 runtime_defs.INGRESS_RESEARCH_DEFINITIONS = {
   {
     technology_name = "fes-ingress-dual-lane",
@@ -489,6 +497,16 @@ end
 
 function runtime_defs.format_resource_name(resource)
   return string.gsub(resource, "%-", " ")
+end
+
+function runtime_defs.is_debug_space_age_planet_name(planet_name)
+  for _, planet in ipairs(runtime_defs.DEBUG_SPACE_AGE_PLANETS) do
+    if planet.name == planet_name then
+      return true
+    end
+  end
+
+  return false
 end
 
 function runtime_defs.format_position(position)

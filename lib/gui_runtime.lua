@@ -1,4 +1,5 @@
 local defs = require("lib.runtime_defs")
+local debug_platform_runtime = require("lib.debug_platform_runtime")
 
 local gui_runtime = {}
 
@@ -129,6 +130,21 @@ function gui_runtime.refresh_debug_gui(player)
       type = "label",
       caption = line
     })
+  end
+
+  if debug_platform_runtime.is_space_age_active() then
+    frame.add({
+      type = "label",
+      caption = {"gui.fes-dev-orbit-teleport-title"}
+    })
+
+    for _, planet in ipairs(defs.DEBUG_SPACE_AGE_PLANETS) do
+      frame.add({
+        type = "button",
+        name = defs.DEV_ORBIT_TELEPORT_BUTTON_PREFIX .. planet.name,
+        caption = {"gui.fes-dev-orbit-teleport-button", planet.label}
+      })
+    end
   end
 end
 
