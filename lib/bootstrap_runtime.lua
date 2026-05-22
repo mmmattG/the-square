@@ -97,15 +97,27 @@ local function choose_spread_positions(positions, count, side)
   return chosen
 end
 
-function bootstrap_runtime.build_starter_anchor_layout(square_size)
+function bootstrap_runtime.build_starter_anchor_layout(square_size, planet_name)
   local bounds = defs.get_anchor_bounds(square_size)
   local resources_by_side = {}
   local anchors = {}
 
-  for _, definition in ipairs(defs.INPUT_DEFINITIONS) do
+  for _, definition in ipairs(defs.get_input_definitions(planet_name)) do
     if definition.starter_side then
       resources_by_side[definition.starter_side] = resources_by_side[definition.starter_side] or {}
       resources_by_side[definition.starter_side][#resources_by_side[definition.starter_side] + 1] = definition
+    end
+  end
+
+  for _, definition in ipairs(defs.get_output_definitions(planet_name)) do
+    if definition.starter_side then
+      resources_by_side[definition.starter_side] = resources_by_side[definition.starter_side] or {}
+      resources_by_side[definition.starter_side][#resources_by_side[definition.starter_side] + 1] = {
+        resource = definition.resource,
+        kind = definition.kind,
+        starter_side = definition.starter_side,
+        flow = "egress"
+      }
     end
   end
 
@@ -115,7 +127,8 @@ function bootstrap_runtime.build_starter_anchor_layout(square_size)
     local chosen_positions = choose_spread_positions(side_positions, #side_resources, side)
 
     for index, definition in ipairs(side_resources) do
-      anchors[#anchors + 1] = defs.create_managed_anchor(definition, "ingress", side, chosen_positions[index])
+      local flow = definition.flow or "ingress"
+      anchors[#anchors + 1] = defs.create_managed_anchor(definition, flow, side, chosen_positions[index])
     end
   end
 

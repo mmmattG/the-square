@@ -123,19 +123,55 @@ runtime_defs.COUNTED_CATEGORY_LABELS = {
   beacon = "Beacons",
   power = "Power"
 }
-runtime_defs.INPUT_DEFINITIONS = {
-  {resource = "iron-ore", kind = "item", starter_side = "north", prerequisite_resource = nil},
-  {resource = "copper-ore", kind = "item", starter_side = "north", prerequisite_resource = nil},
-  {resource = "coal", kind = "item", starter_side = "south", prerequisite_resource = nil},
-  {resource = "stone", kind = "item", starter_side = "south", prerequisite_resource = nil},
-  {resource = "water", kind = "fluid", starter_side = "west", prerequisite_resource = nil},
-  {resource = "wood", kind = "item", starter_side = "east", prerequisite_resource = nil},
-  {resource = "crude-oil", kind = "fluid", starter_side = nil, prerequisite_resource = nil},
-  {resource = "uranium-ore", kind = "item", starter_side = nil, prerequisite_resource = "crude-oil"}
+runtime_defs.INPUT_DEFINITIONS_BY_PLANET = {
+  nauvis = {
+    {resource = "iron-ore", kind = "item", starter_side = "north", prerequisite_resource = nil},
+    {resource = "copper-ore", kind = "item", starter_side = "north", prerequisite_resource = nil},
+    {resource = "coal", kind = "item", starter_side = "south", prerequisite_resource = nil},
+    {resource = "stone", kind = "item", starter_side = "south", prerequisite_resource = nil},
+    {resource = "water", kind = "fluid", starter_side = "west", prerequisite_resource = nil},
+    {resource = "wood", kind = "item", starter_side = "east", prerequisite_resource = nil},
+    {resource = "crude-oil", kind = "fluid", starter_side = nil, prerequisite_resource = nil},
+    {resource = "uranium-ore", kind = "item", starter_side = nil, prerequisite_resource = "crude-oil"}
+  },
+  vulcanus = {
+    {resource = "coal", kind = "item", starter_side = "north", prerequisite_resource = nil},
+    {resource = "calcite", kind = "item", starter_side = "east", prerequisite_resource = nil},
+    {resource = "tungsten-ore", kind = "item", starter_side = "south", prerequisite_resource = nil},
+    {resource = "sulfuric-acid", kind = "fluid", starter_side = "west", prerequisite_resource = nil},
+    {resource = "lava", kind = "fluid", starter_side = "west", prerequisite_resource = nil}
+  },
+  fulgora = {
+    {resource = "scrap", kind = "item", starter_side = "north", prerequisite_resource = nil},
+    {resource = "heavy-oil", kind = "fluid", starter_side = "west", prerequisite_resource = nil}
+  },
+  gleba = {
+    {resource = "stone", kind = "item", starter_side = "north", prerequisite_resource = nil},
+    {resource = "water", kind = "fluid", starter_side = "west", prerequisite_resource = nil},
+    {resource = "yumako", kind = "item", starter_side = "south", prerequisite_resource = nil},
+    {resource = "jellynut", kind = "item", starter_side = "east", prerequisite_resource = nil}
+  },
+  aquilo = {
+    {resource = "crude-oil", kind = "fluid", starter_side = "north", prerequisite_resource = nil},
+    {resource = "ammoniacal-solution", kind = "fluid", starter_side = "east", prerequisite_resource = nil},
+    {resource = "fluorine", kind = "fluid", starter_side = "south", prerequisite_resource = nil},
+    {resource = "lithium-brine", kind = "fluid", starter_side = "west", prerequisite_resource = nil}
+  }
 }
-runtime_defs.OUTPUT_DEFINITIONS = {
-  {resource = "sulfuric-acid", kind = "fluid", starter_side = nil, prerequisite_resource = "uranium-ore"}
+runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET = {
+  nauvis = {
+    {resource = "sulfuric-acid", kind = "fluid", starter_side = nil, prerequisite_resource = "uranium-ore"}
+  },
+  vulcanus = {},
+  fulgora = {},
+  gleba = {
+    {resource = "yumako-seed", kind = "item", starter_side = "south", prerequisite_resource = nil},
+    {resource = "jellynut-seed", kind = "item", starter_side = "east", prerequisite_resource = nil}
+  },
+  aquilo = {}
 }
+runtime_defs.INPUT_DEFINITIONS = runtime_defs.INPUT_DEFINITIONS_BY_PLANET.nauvis
+runtime_defs.OUTPUT_DEFINITIONS = runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET.nauvis
 runtime_defs.DIRECTION_BY_SIDE = {
   north = defines.direction.south,
   east = defines.direction.west,
@@ -228,8 +264,16 @@ function runtime_defs.is_ingress_entity_name_for_resource(resource, entity_name)
   return false
 end
 
-function runtime_defs.get_input_definition(resource)
-  for _, definition in ipairs(runtime_defs.INPUT_DEFINITIONS) do
+function runtime_defs.get_input_definitions(planet_name)
+  return runtime_defs.INPUT_DEFINITIONS_BY_PLANET[planet_name or "nauvis"] or runtime_defs.INPUT_DEFINITIONS
+end
+
+function runtime_defs.get_output_definitions(planet_name)
+  return runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET[planet_name or "nauvis"] or runtime_defs.OUTPUT_DEFINITIONS
+end
+
+function runtime_defs.get_input_definition(resource, planet_name)
+  for _, definition in ipairs(runtime_defs.get_input_definitions(planet_name)) do
     if definition.resource == resource then
       return definition
     end
@@ -238,8 +282,8 @@ function runtime_defs.get_input_definition(resource)
   return nil
 end
 
-function runtime_defs.get_output_definition(resource)
-  for _, definition in ipairs(runtime_defs.OUTPUT_DEFINITIONS) do
+function runtime_defs.get_output_definition(resource, planet_name)
+  for _, definition in ipairs(runtime_defs.get_output_definitions(planet_name)) do
     if definition.resource == resource then
       return definition
     end
@@ -248,14 +292,14 @@ function runtime_defs.get_output_definition(resource)
   return nil
 end
 
-function runtime_defs.get_line_definition(resource)
-  local input_definition = runtime_defs.get_input_definition(resource)
+function runtime_defs.get_line_definition(resource, planet_name)
+  local input_definition = runtime_defs.get_input_definition(resource, planet_name)
 
   if input_definition then
     return input_definition, "ingress"
   end
 
-  local output_definition = runtime_defs.get_output_definition(resource)
+  local output_definition = runtime_defs.get_output_definition(resource, planet_name)
 
   if output_definition then
     return output_definition, "egress"
@@ -450,6 +494,10 @@ end
 
 function runtime_defs.is_inside_bounds(bounds, position)
   return bootstrap_layout.is_inside_bounds(bounds, position)
+end
+
+function runtime_defs.get_square_bounds(square_size)
+  return bootstrap_layout.get_square_bounds(square_size)
 end
 
 function runtime_defs.get_position_key(position)

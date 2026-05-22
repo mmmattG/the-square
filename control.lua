@@ -6,6 +6,7 @@ local growth_runtime = require("lib.growth_runtime")
 local gui_runtime = require("lib.gui_runtime")
 local ingress_runtime = require("lib.ingress_runtime")
 local screenshot_runtime = require("lib.screenshot_runtime")
+local void_item_runtime = require("lib.void_item_runtime")
 
 local function sync_all_runtime_guis()
   gui_runtime.refresh_all_debug_guis()
@@ -75,6 +76,7 @@ end)
 
 local function handle_entity_built(event)
   anchor_runtime.handle_entity_built(event, gui_runtime)
+  void_item_runtime.destroy_if_void_item(event)
   gui_runtime.sync_all_shop_guis(anchor_runtime)
 end
 
@@ -82,6 +84,18 @@ script.on_event(defines.events.on_built_entity, handle_entity_built)
 script.on_event(defines.events.on_robot_built_entity, handle_entity_built)
 script.on_event(defines.events.script_raised_built, handle_entity_built)
 script.on_event(defines.events.script_raised_revive, handle_entity_built)
+
+if defines.events.on_player_dropped_item then
+  script.on_event(defines.events.on_player_dropped_item, function(event)
+    void_item_runtime.destroy_if_void_item(event)
+  end)
+end
+
+if defines.events.on_trigger_created_entity then
+  script.on_event(defines.events.on_trigger_created_entity, function(event)
+    void_item_runtime.destroy_if_void_item(event)
+  end)
+end
 
 local function handle_anchor_removed(event)
   anchor_runtime.handle_anchor_mined(event.entity)
