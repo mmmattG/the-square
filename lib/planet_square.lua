@@ -130,7 +130,7 @@ local function leave_trailing_stubs_for_expansion(surface, managed_lines)
   end
 
   for _, anchor in ipairs(managed_lines.anchors) do
-    if anchor.position then
+    if anchor.position and anchor.flow == "ingress" then
       leave_trailing_ingress_stub(surface, anchor)
     end
   end
@@ -189,12 +189,6 @@ function planet_square.apply_square_expansion(planet_name, options)
   local newly_unlocked_tiles = defs.get_next_expansion_tile_reward(previous_square_size)
   local managed_lines = planet:get_managed_lines()
 
-  if planet_name == "nauvis" then
-    leave_trailing_stubs_for_expansion(surface, managed_lines)
-  end
-
-  move_managed_lines_outward(managed_lines)
-
   planet:set_square_size(next_square_size)
   planet:set_completed_square_expansion_levels(next_expansion_level)
   planet:add_expansion_points(newly_unlocked_tiles)
@@ -203,6 +197,8 @@ function planet_square.apply_square_expansion(planet_name, options)
   bootstrap.expansions_completed = next_expansion_level
 
   apply_square_resize(surface, previous_square_size, previous_surface_size, next_square_size, next_surface_size, planet:get_floor_tile_name())
+  leave_trailing_stubs_for_expansion(surface, managed_lines)
+  move_managed_lines_outward(managed_lines)
   planet_square.chart_play_area(game.forces.player, surface, next_surface_size)
 
   if options.anchor_runtime then

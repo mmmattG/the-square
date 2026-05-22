@@ -59,7 +59,17 @@ local function ensure_planet_defaults(planet_name, state)
 
   state.name = planet_name
   state.surface_name = state.surface_name or config.surface_name
-  state.square_size = state.square_size or config.square_size
+
+  if state.square_size == nil
+    or (
+      state.square_size == defs.get_square_size()
+      and (state.expansion_research_levels or 0) == 0
+      and (state.expansions_completed or 0) == 0
+    )
+  then
+    state.square_size = config.square_size
+  end
+
   state.surface_size = defs.get_surface_size(state.square_size)
   state.floor_tile_name = state.floor_tile_name or config.floor_tile_name
   state.expansion_points = state.expansion_points or 0
@@ -90,6 +100,8 @@ function planet_instance.from_bootstrap(bootstrap)
 end
 
 function planet_instance.ensure(planet_name)
+  planet_name = planet_name or "nauvis"
+
   if planet_name == "nauvis" then
     if storage.bootstrap then
       return planet_instance.ensure_nauvis()

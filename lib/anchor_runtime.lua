@@ -72,9 +72,11 @@ local function get_required_underground_belt_type(anchor)
 end
 
 local function is_ingress_entity_name(entity_name)
-  for _, definition in ipairs(defs.INPUT_DEFINITIONS) do
-    if defs.is_ingress_entity_name_for_resource(definition.resource, entity_name) then
-      return true
+  for _, planet_name in ipairs(planet_config.SUPPORTED_PLANETS) do
+    for _, definition in ipairs(defs.get_input_definitions(planet_name)) do
+      if defs.is_ingress_entity_name_for_resource(definition.resource, entity_name) then
+        return true
+      end
     end
   end
 
@@ -82,13 +84,53 @@ local function is_ingress_entity_name(entity_name)
 end
 
 local function is_egress_entity_name(entity_name)
-  for _, definition in ipairs(defs.OUTPUT_DEFINITIONS) do
-    if defs.is_egress_entity_name_for_resource(definition.resource, entity_name) then
-      return true
+  for _, planet_name in ipairs(planet_config.SUPPORTED_PLANETS) do
+    for _, definition in ipairs(defs.get_output_definitions(planet_name)) do
+      if defs.is_egress_entity_name_for_resource(definition.resource, entity_name) then
+        return true
+      end
     end
   end
 
   return false
+end
+
+local function get_planet_name_for_surface_name(surface_name)
+  if surface_name == (storage.bootstrap and storage.bootstrap.surface_name)
+    or surface_name == defs.LEGACY_SURFACE_NAME
+  then
+    return "nauvis"
+  end
+
+  if storage.planets then
+    for planet_name, planet_state in pairs(storage.planets) do
+      if planet_state.surface_name == surface_name then
+        return planet_name
+      end
+    end
+  end
+
+  if planet_config.is_supported_planet(surface_name) then
+    return surface_name
+  end
+
+  return nil
+end
+
+local function get_anchor_state_for_surface(surface)
+  local planet_name = surface and get_planet_name_for_surface_name(surface.name) or nil
+
+  if not planet_name then
+    return nil, nil, nil
+  end
+
+  local planet = planet_instance.ensure(planet_name)
+
+  if not planet then
+    return nil, nil, nil
+  end
+
+  return managed_line_state.ensure(planet_name), planet, planet_name
 end
 
 function anchor_runtime.is_managed_anchor_entity_name(entity_name)
@@ -109,8 +151,10 @@ local function does_anchor_match_entity_name(anchor, entity_name)
   return defs.is_ingress_entity_name_for_resource(anchor.resource, entity_name)
 end
 
-local function find_matching_stashed_anchor(item_or_entity_name)
-  local starter_anchors = storage.starter_anchors
+local function find_matching_stashed_anchor(item_or_entity_name, starter_anchors)
+  if not starter_anchors then
+    starter_anchors = storage.starter_anchors
+  end
 
   if not starter_anchors then
     return nil
@@ -128,8 +172,10 @@ local function find_matching_stashed_anchor(item_or_entity_name)
   return nil
 end
 
-local function find_anchor_by_entity(entity)
-  local starter_anchors = storage.starter_anchors
+local function find_anchor_by_entity(entity, starter_anchors)
+  if not starter_anchors then
+    starter_anchors = storage.starter_anchors
+  end
 
   if not starter_anchors or not (entity and entity.valid) then
     return nil
@@ -144,8 +190,10 @@ local function find_anchor_by_entity(entity)
   return nil
 end
 
-local function find_anchor_by_entity_name_and_position(entity_name, position)
-  local starter_anchors = storage.starter_anchors
+local function find_anchor_by_entity_name_and_position(entity_name, position, starter_anchors)
+  if not starter_anchors then
+    starter_anchors = storage.starter_anchors
+  end
 
   if not starter_anchors or not position then
     return nil
@@ -282,8 +330,10 @@ local function try_unlock_uranium_processing(anchor, force, debug_recipient)
   try_unlock_ingress_technology(anchor, force, debug_recipient, "uranium-ore", "uranium-processing", "uranium ore")
 end
 
-local function is_fluid_anchor_too_close(anchor, position, side)
-  local starter_anchors = storage.starter_anchors
+local function is_fluid_anchor_too_close(anchor, position, side, starter_anchors)
+  if not starter_anchors then
+    starter_anchors = storage.starter_anchors
+  end
 
   if not starter_anchors or not anchor or anchor.kind ~= "fluid" then
     return false
@@ -665,14 +715,13 @@ local function reject_reserved_ring_placement(entity, actor, message)
   entity.destroy({raise_destroy = false})
 end
 
-local function get_cursor_managed_anchor(player)
+local function get_cursor_managed_anchor(player, starter_anchors)
   if not (player and player.valid and player.cursor_stack and player.cursor_stack.valid_for_read) then
     return nil, nil
   end
 
   local item_name = player.cursor_stack.name
-  local anchor = find_matching_stashed_anchor(item_name)
-
+  local anchor = find_matching_stashed_anchor(item_name, starter_anchors)
   if not anchor then
     return nil, nil
   end
@@ -733,23 +782,23 @@ function anchor_runtime.update_player_anchor_preview(player)
 
   destroy_player_anchor_preview(player.index)
 
-  local bootstrap = storage.bootstrap
+  local starter_anchors, planet = get_anchor_state_for_surface(player.surface)
 
-  if not (bootstrap and player.surface and player.surface.name == bootstrap.surface_name) then
+  if not (starter_anchors and planet) then
     return
   end
 
   local proxy = get_selected_anchor_slot_proxy(player)
-  local anchor = get_cursor_managed_anchor(player)
+  local anchor = get_cursor_managed_anchor(player, starter_anchors)
 
   if not (proxy and anchor) then
     return
   end
 
   local tile_position = defs.snap_entity_position_to_tile(proxy.position)
-  local side = defs.get_anchor_side_for_position(bootstrap.square_size, tile_position)
+  local side = defs.get_anchor_side_for_position(planet:get_square_size(), tile_position)
 
-  if not side or is_fluid_anchor_too_close(anchor, tile_position, side) then
+  if not side or is_fluid_anchor_too_close(anchor, tile_position, side, starter_anchors) then
     return
   end
 
@@ -941,23 +990,19 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
     return
   end
 
-  local bootstrap = storage.bootstrap
+  local starter_anchors, planet, planet_name = get_anchor_state_for_surface(entity.surface)
 
-  if not bootstrap then
-    return
-  end
-
-  if entity.surface.name ~= bootstrap.surface_name then
+  if not (starter_anchors and planet) then
     reject_anchor_placement(entity, actor, {"message.the-square-managed-line-invalid-surface"})
     return
   end
 
   if actor and actor.valid and actor.object_name == "LuaPlayer" and gui_runtime then
-    gui_runtime.print_ingress_placement_debug(actor, bootstrap.square_size, entity.position)
+    gui_runtime.print_ingress_placement_debug(actor, planet:get_square_size(), entity.position)
   end
 
   local tile_position = defs.snap_entity_position_to_tile(entity.position)
-  local side = defs.get_anchor_side_for_position(bootstrap.square_size, tile_position)
+  local side = defs.get_anchor_side_for_position(planet:get_square_size(), tile_position)
   local anchor_position = tile_position
 
   if not side then
@@ -965,14 +1010,14 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
     return
   end
 
-  local anchor = find_matching_stashed_anchor(entity.name)
+  local anchor = find_matching_stashed_anchor(entity.name, starter_anchors)
 
   if not anchor then
     reject_anchor_placement(entity, actor, {"message.the-square-managed-line-unowned"})
     return
   end
 
-  if is_fluid_anchor_too_close(anchor, anchor_position, side) then
+  if is_fluid_anchor_too_close(anchor, anchor_position, side, starter_anchors) then
     reject_anchor_placement(entity, actor, {"message.the-square-managed-line-fluid-gap-required"})
     return
   end
@@ -992,13 +1037,21 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
     try_unlock_uranium_processing(anchor, entity.force, actor)
   end
 
-  anchor_runtime.ensure_starter_anchors()
+  if planet_name == "nauvis" then
+    anchor_runtime.ensure_starter_anchors()
+  else
+    anchor_runtime.ensure_planet_starter_anchors(planet_name)
+  end
 end
 
 function anchor_runtime.handle_managed_anchor_slot_click(player)
-  local bootstrap = storage.bootstrap
+  if not (player and player.valid) then
+    return
+  end
 
-  if not (player and player.valid and bootstrap) then
+  local starter_anchors, planet, planet_name = get_anchor_state_for_surface(player.surface)
+
+  if not (starter_anchors and planet) then
     return
   end
 
@@ -1008,21 +1061,21 @@ function anchor_runtime.handle_managed_anchor_slot_click(player)
     return
   end
 
-  local anchor, item_name = get_cursor_managed_anchor(player)
+  local anchor, item_name = get_cursor_managed_anchor(player, starter_anchors)
 
   if not (anchor and item_name) then
     return
   end
 
   local tile_position = defs.snap_entity_position_to_tile(proxy.position)
-  local side = defs.get_anchor_side_for_position(bootstrap.square_size, tile_position)
+  local side = defs.get_anchor_side_for_position(planet:get_square_size(), tile_position)
 
   if not side then
     player.print({"message.the-square-managed-line-invalid-edge"})
     return
   end
 
-  if is_fluid_anchor_too_close(anchor, tile_position, side) then
+  if is_fluid_anchor_too_close(anchor, tile_position, side, starter_anchors) then
     player.print({"message.the-square-managed-line-fluid-gap-required"})
     return
   end
@@ -1044,7 +1097,11 @@ function anchor_runtime.handle_managed_anchor_slot_click(player)
     try_unlock_uranium_processing(anchor, player.force, player)
   end
 
-  anchor_runtime.ensure_starter_anchors()
+  if planet_name == "nauvis" then
+    anchor_runtime.ensure_starter_anchors()
+  else
+    anchor_runtime.ensure_planet_starter_anchors(planet_name)
+  end
   anchor_runtime.update_player_anchor_preview(player)
 end
 
@@ -1053,11 +1110,18 @@ function anchor_runtime.handle_anchor_mined(entity)
     return
   end
 
-  local anchor = find_anchor_by_entity(entity) or find_anchor_by_entity_name_and_position(entity.name, entity.position)
+  local starter_anchors, _, planet_name = get_anchor_state_for_surface(entity.surface)
+  local anchor = find_anchor_by_entity(entity, starter_anchors)
+    or find_anchor_by_entity_name_and_position(entity.name, entity.position, starter_anchors)
 
   if anchor then
     stash_anchor(anchor)
-    anchor_runtime.ensure_starter_anchors()
+
+    if planet_name == "nauvis" then
+      anchor_runtime.ensure_starter_anchors()
+    else
+      anchor_runtime.ensure_planet_starter_anchors(planet_name)
+    end
   end
 end
 

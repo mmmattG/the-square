@@ -98,13 +98,25 @@ run_test("Planet Square expands Nauvis through one interface and preserves Ancho
   assert_equal(surface.map_gen_settings.width, 11, "surface dimensions should be resized")
 end)
 
-run_test("Planet Square expands a non-Nauvis Planet without touching Nauvis points", function()
+run_test("Planet Square expands a non-Nauvis Planet with the same Anchor Shift stubs", function()
   local vulcanus = make_surface("vulcanus")
   install_game({vulcanus = vulcanus})
   storage = {
     bootstrap = {square_size = 7, surface_size = 9, surface_name = "nauvis", expansion_points = 5},
     planets = {
-      vulcanus = {square_size = 5, surface_size = 7, surface_name = "vulcanus", floor_tile_name = "volcanic-ash-soil", expansion_points = 1}
+      vulcanus = {
+        square_size = 5,
+        surface_size = 7,
+        surface_name = "vulcanus",
+        floor_tile_name = "volcanic-ash-soil",
+        expansion_points = 1,
+        starter_anchors = {
+          anchors = {
+            {kind = "item", flow = "ingress", side = "north", position = {x = 0, y = -3}, entity_name = "the-square-coal-ingress-anchor"},
+            {kind = "fluid", flow = "ingress", side = "west", position = {x = -3, y = 0}, entity_name = "the-square-lava-ingress-anchor"}
+          }
+        }
+      }
     }
   }
 
@@ -113,7 +125,9 @@ run_test("Planet Square expands a non-Nauvis Planet without touching Nauvis poin
   assert_equal(result.square_size, 7, "Planet-local square should grow by one Ring")
   assert_equal(storage.planets.vulcanus.expansion_points, 25, "Planet should receive only its local Ring reward")
   assert_equal(storage.bootstrap.expansion_points, 5, "Nauvis points should be unchanged")
-  assert_equal(vulcanus.created_entities[1], nil, "non-Nauvis expansion should not use Nauvis trailing stubs")
+  assert_equal(storage.planets.vulcanus.starter_anchors.anchors[1].position.y, -4, "Planet Managed Lines should shift outward")
+  assert_equal(vulcanus.created_entities[1].name, "transport-belt", "item ingress should leave a normal belt stub")
+  assert_equal(vulcanus.created_entities[2].name, "pipe", "fluid ingress should leave a pipe stub")
 end)
 
 run_test("Square Expansion research routes to the researched Planet", function()
