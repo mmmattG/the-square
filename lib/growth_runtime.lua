@@ -1,4 +1,5 @@
 local defs = require("lib.runtime_defs")
+local planet_instance = require("lib.planet_instance")
 
 local growth_runtime = {}
 
@@ -7,29 +8,22 @@ function growth_runtime.handle_expansion_research_finished(research, bootstrap_r
     return false
   end
 
-  local planet_name = defs.get_expansion_research_planet_name(research.name)
+  local planet_name = defs.get_expansion_research_planet_name(research.name) or "nauvis"
 
-  if planet_name then
-    bootstrap_runtime.expand_planet_square(planet_name, game.players[1], gui_runtime)
-
-    local planet = storage.planets and storage.planets[planet_name]
-    research.force.print({
-      "message.the-square-expansion-research-completed",
-      planet and planet.expansion_research_levels or 0,
-      planet and planet.square_size or 0
-    })
-  else
+  if planet_name == "nauvis" then
     storage.bootstrap = storage.bootstrap or {}
     bootstrap_runtime.ensure_bootstrap_state_defaults()
-    storage.bootstrap.expansion_research_levels = defs.get_completed_expansion_research_levels() + 1
-    bootstrap_runtime.expand_square(game.players[1], gui_runtime, anchor_runtime)
-
-    research.force.print({
-      "message.the-square-expansion-research-completed",
-      storage.bootstrap.expansion_research_levels,
-      storage.bootstrap.square_size
-    })
   end
+
+  bootstrap_runtime.expand_planet_square(planet_name, game.players[1], gui_runtime, anchor_runtime)
+
+  local planet = planet_instance.ensure(planet_name)
+
+  research.force.print({
+    "message.the-square-expansion-research-completed",
+    planet and planet:get_completed_square_expansion_levels() or 0,
+    planet and planet:get_square_size() or 0
+  })
 
   if gui_runtime then
     gui_runtime.refresh_all_debug_guis()

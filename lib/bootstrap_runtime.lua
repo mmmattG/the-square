@@ -1,6 +1,7 @@
 local defs = require("lib.runtime_defs")
 local planet_config = require("lib.planet_config")
 local planet_instance = require("lib.planet_instance")
+local planet_square = require("lib.planet_square")
 
 local bootstrap_runtime = {}
 local ensure_surface_dimensions
@@ -240,33 +241,6 @@ function bootstrap_runtime.refresh_generated_chunk_for_planet_surface(surface, a
   return true
 end
 
-local function build_resize_tile_updates(old_square_size, old_surface_size, new_square_size, new_surface_size, floor_tile_name)
-  local tiles = {}
-  local old_bounds = defs.get_square_bounds(old_surface_size)
-  local new_bounds = defs.get_square_bounds(new_surface_size)
-  local min_x = math.min(old_bounds.left_top.x, new_bounds.left_top.x)
-  local min_y = math.min(old_bounds.left_top.y, new_bounds.left_top.y)
-  local max_x = math.max(old_bounds.right_bottom.x - 1, new_bounds.right_bottom.x - 1)
-  local max_y = math.max(old_bounds.right_bottom.y - 1, new_bounds.right_bottom.y - 1)
-
-  for y = min_y, max_y do
-    for x = min_x, max_x do
-      local position = {x = x, y = y}
-      local previous_tile_name = defs.get_managed_tile_name(old_square_size, old_surface_size, position, floor_tile_name)
-      local next_tile_name = defs.get_managed_tile_name(new_square_size, new_surface_size, position, floor_tile_name)
-
-      if next_tile_name and next_tile_name ~= previous_tile_name then
-        tiles[#tiles + 1] = {
-          name = next_tile_name,
-          position = position
-        }
-      end
-    end
-  end
-
-  return tiles
-end
-
 local function destroy_noise_entities(surface)
   for _, entity in ipairs(surface.find_entities()) do
     if entity.valid and entity.type ~= "character" then
@@ -352,18 +326,7 @@ function bootstrap_runtime.clear_surface_chart(surface)
 end
 
 function bootstrap_runtime.chart_play_area(force, surface, surface_size)
-  local chart_bounds = defs.get_square_bounds(surface_size)
-
-  force.chart(surface, {
-    {
-      chart_bounds.left_top.x - defs.CHART_MARGIN,
-      chart_bounds.left_top.y - defs.CHART_MARGIN
-    },
-    {
-      chart_bounds.right_bottom.x + defs.CHART_MARGIN,
-      chart_bounds.right_bottom.y + defs.CHART_MARGIN
-    }
-  })
+  planet_square.chart_play_area(force, surface, surface_size)
 end
 
 function bootstrap_runtime.teleport_player_to_square(player)
@@ -395,215 +358,42 @@ function bootstrap_runtime.add_expansion_points(amount)
   nauvis:add_expansion_points(amount)
 end
 
-local function move_starter_anchors_outward()
-  local starter_anchors = storage.starter_anchors
-
-  if not starter_anchors then
-    return
-  end
-
-  for _, anchor in ipairs(starter_anchors.anchors) do
-    if anchor.position and anchor.side then
-      anchor.position = defs.move_position(anchor.position, anchor.side, 1)
-      anchor.direction = defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side)
-      anchor.entity = nil
-    end
-  end
-end
-
-local function get_trailing_entity_name(anchor)
-  if not anchor then
-    return nil
-  end
-
-  if anchor.kind == "fluid" then
-    return "pipe"
-  end
-
-  local belt_tier_key = defs.ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER[defs.get_current_ingress_tier_level()] or "yellow"
-
-  if belt_tier_key == "red" then
-    return "fast-transport-belt"
-  end
-
-  if belt_tier_key == "blue" then
-    return "express-transport-belt"
-  end
-
-  return "transport-belt"
-end
-
-local function find_entity_at_position(surface, prototype_name, position)
-  local entities = surface.find_entities_filtered({
-    name = prototype_name,
-    position = position
-  })
-
-  return entities[1]
-end
-
-local function leave_trailing_ingress_stub(surface, anchor)
-  if not (surface and anchor and anchor.position) then
-    return
-  end
-
-  local trailing_entity_name = get_trailing_entity_name(anchor)
-  local existing_anchor = anchor.entity
-
-  if existing_anchor and existing_anchor.valid then
-    existing_anchor.destroy({raise_destroy = false})
-  else
-    existing_anchor = find_entity_at_position(surface, anchor.entity_name, anchor.position)
-
-    if existing_anchor and existing_anchor.valid then
-      existing_anchor.destroy({raise_destroy = false})
-    end
-  end
-
-  if find_entity_at_position(surface, trailing_entity_name, anchor.position) then
-    return
-  end
-
-  surface.create_entity({
-    name = trailing_entity_name,
-    position = anchor.position,
-    direction = anchor.kind == "item" and defs.DIRECTION_BY_SIDE[anchor.side] or anchor.direction,
-    force = game.forces.player
-  })
-end
-
-local function leave_trailing_stubs_for_expansion(surface)
-  local starter_anchors = storage.starter_anchors
-
-  if not starter_anchors then
-    return
-  end
-
-  for _, anchor in ipairs(starter_anchors.anchors) do
-    if anchor.position then
-      leave_trailing_ingress_stub(surface, anchor)
-    end
-  end
-end
-
-local function apply_square_resize(surface, old_square_size, old_surface_size, new_square_size, new_surface_size, floor_tile_name)
-  ensure_surface_dimensions(surface, new_surface_size)
-
-  local tile_updates = build_resize_tile_updates(
-    old_square_size,
-    old_surface_size,
-    new_square_size,
-    new_surface_size,
-    floor_tile_name
-  )
-
-  if #tile_updates > 0 then
-    -- Expansion only paints the changed ring, so correction must stay on here as well
-    -- to refresh the softened border around the updated out-of-map tiles.
-    surface.set_tiles(tile_updates, true, true, true, false)
-  end
-end
-
-function bootstrap_runtime.expand_planet_square(planet_name, player, gui_runtime)
-  local planet = planet_instance.ensure(planet_name)
-
-  if not planet then
-    return false
-  end
-
-  local surface = game.surfaces[planet:get_surface_name()]
-
-  if not surface then
-    return false
-  end
-
-  local previous_square_size = planet:get_square_size()
-  local previous_surface_size = planet:get_surface_size()
-  local next_square_size = previous_square_size + 2
-  local next_surface_size = get_target_surface_size(next_square_size, planet:get_completed_square_expansion_levels() + 1)
-  local newly_unlocked_tiles = defs.get_next_expansion_tile_reward(previous_square_size)
-
-  planet:set_square_size(next_square_size)
-  planet:set_completed_square_expansion_levels(planet:get_completed_square_expansion_levels() + 1)
-  planet:add_expansion_points(newly_unlocked_tiles)
-
-  apply_square_resize(surface, previous_square_size, previous_surface_size, next_square_size, next_surface_size, planet:get_floor_tile_name())
-  bootstrap_runtime.chart_play_area(game.forces.player, surface, next_surface_size)
-
-  if player and player.valid then
-    player.play_sound({path = "utility/new_objective"})
-  end
-
-  if gui_runtime then
-    gui_runtime.refresh_all_debug_guis()
-  end
-
-  return true
+function bootstrap_runtime.expand_planet_square(planet_name, player, gui_runtime, anchor_runtime)
+  return planet_square.apply_square_expansion(planet_name, {
+    player = player,
+    gui_runtime = gui_runtime,
+    anchor_runtime = anchor_runtime
+  }) ~= nil
 end
 
 function bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
-  local bootstrap = storage.bootstrap
+  local result = planet_square.apply_square_expansion("nauvis", {
+    player = player,
+    gui_runtime = gui_runtime,
+    anchor_runtime = anchor_runtime
+  })
 
-  if not bootstrap then
+  if not result then
     return
-  end
-
-  local surface = game.surfaces[bootstrap.surface_name]
-
-  if not surface then
-    return
-  end
-
-  local previous_square_size = bootstrap.square_size
-  local previous_surface_size = bootstrap.surface_size or get_target_surface_size(
-    previous_square_size,
-    bootstrap.expansions_completed or 0
-  )
-  local next_square_size = previous_square_size + 2
-  local next_expansions_completed = (bootstrap.expansions_completed or 0) + 1
-  local next_surface_size = get_target_surface_size(next_square_size, next_expansions_completed)
-  local newly_unlocked_tiles = defs.get_next_expansion_tile_reward(previous_square_size)
-
-  leave_trailing_stubs_for_expansion(surface)
-  move_starter_anchors_outward()
-
-  bootstrap.square_size = next_square_size
-  bootstrap.surface_size = next_surface_size
-  bootstrap.expansions_completed = next_expansions_completed
-  bootstrap_runtime.add_expansion_points(newly_unlocked_tiles)
-
-  apply_square_resize(surface, previous_square_size, previous_surface_size, next_square_size, next_surface_size)
-  bootstrap_runtime.chart_play_area(game.forces.player, surface, next_surface_size)
-
-  if anchor_runtime then
-    anchor_runtime.ensure_starter_anchors()
   end
 
   game.print(
     {"",
       "[the-square] Square expanded from ",
-      previous_square_size,
+      result.previous_square_size,
       "x",
-      previous_square_size,
+      result.previous_square_size,
       " to ",
-      next_square_size,
+      result.square_size,
       "x",
-      next_square_size,
+      result.square_size,
       ". Awarded ",
-      newly_unlocked_tiles,
+      result.awarded_expansion_points,
       " expansion points (total: ",
-      bootstrap.expansion_points,
+      result.expansion_points,
       ")."
     }
   )
-
-  if player and player.valid then
-    player.play_sound({path = "utility/new_objective"})
-  end
-
-  if gui_runtime then
-    gui_runtime.refresh_all_debug_guis()
-  end
 end
 
 function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
