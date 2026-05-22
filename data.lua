@@ -1,4 +1,5 @@
 local expansion_research = require("lib.expansion_research")
+local planet_config = require("lib.planet_config")
 
 local ingress_resources = {
   {resource = "iron-ore", kind = "item", icon = "__base__/graphics/icons/iron-ore.png", order = "a[ingress]-a[iron-ore]"},
@@ -76,6 +77,33 @@ local square_expansion_research_bands = {
       {"utility-science-pack", 1},
       {"space-science-pack", 1}
     }
+  }
+}
+
+local planet_expansion_research_definitions = {
+  vulcanus = {
+    science_pack = "metallurgic-science-pack",
+    icon = "__space-age__/graphics/icons/metallurgic-science-pack.png",
+    prerequisite = "metallurgic-science-pack",
+    order = "c-a[planet-square-expansion]-a[vulcanus]"
+  },
+  fulgora = {
+    science_pack = "electromagnetic-science-pack",
+    icon = "__space-age__/graphics/icons/electromagnetic-science-pack.png",
+    prerequisite = "electromagnetic-science-pack",
+    order = "c-a[planet-square-expansion]-b[fulgora]"
+  },
+  gleba = {
+    science_pack = "agricultural-science-pack",
+    icon = "__space-age__/graphics/icons/agricultural-science-pack.png",
+    prerequisite = "agricultural-science-pack",
+    order = "c-a[planet-square-expansion]-c[gleba]"
+  },
+  aquilo = {
+    science_pack = "cryogenic-science-pack",
+    icon = "__space-age__/graphics/icons/cryogenic-science-pack.png",
+    prerequisite = "cryogenic-science-pack",
+    order = "c-a[planet-square-expansion]-d[aquilo]"
   }
 }
 
@@ -335,9 +363,9 @@ local function build_square_expansion_technology(definition)
   return {
     type = "technology",
     name = definition.name,
-    localised_name = {"technology-name.the-square-square-expansion"},
-    localised_description = {"technology-description.the-square-square-expansion"},
-    icon = "__base__/graphics/icons/landfill.png",
+    localised_name = definition.localised_name or {"technology-name.the-square-square-expansion"},
+    localised_description = definition.localised_description or {"technology-description.the-square-square-expansion"},
+    icon = definition.icon or "__base__/graphics/icons/landfill.png",
     icon_size = 64,
     order = definition.order,
     upgrade = true,
@@ -361,6 +389,34 @@ local function copy_technology_unit(technology_name)
   end
 
   return table.deepcopy(technology.unit)
+end
+
+local function round_to_nearest_50(value)
+  return math.max(50, math.floor((value + 25) / 50) * 50)
+end
+
+local function build_planet_expansion_technology(planet_name, definition)
+  if not (data.raw.tool and data.raw.tool[definition.science_pack]) then
+    return nil
+  end
+
+  local config = planet_config.get(planet_name)
+  local starting_square_size = config.square_size
+  local first_ring_tiles = expansion_research.get_tiles_unlocked_for_level(starting_square_size, 1)
+  local approximate_first_cost = round_to_nearest_50(first_ring_tiles * 10)
+  local formula_multiplier = math.max(1, math.floor((approximate_first_cost / first_ring_tiles) + 0.5))
+
+  return build_square_expansion_technology({
+    name = expansion_research.get_planet_technology_name(planet_name),
+    localised_name = {"technology-name.the-square-planet-square-expansion", config.label},
+    localised_description = {"technology-description.the-square-planet-square-expansion", config.label},
+    icon = definition.icon,
+    order = definition.order,
+    prerequisites = data.raw.technology[definition.prerequisite] and {definition.prerequisite} or nil,
+    ingredients = {{definition.science_pack, 1}},
+    count_formula = expansion_research.get_infinite_research_unit_formula(starting_square_size, 1 / formula_multiplier),
+    max_level = "infinite"
+  })
 end
 
 local function build_ingress_research_technology(definition)
@@ -475,6 +531,18 @@ prototypes[#prototypes + 1] = build_square_expansion_technology({
   count_formula = expansion_research.get_infinite_research_unit_formula(starting_square_size, tiles_per_research),
   max_level = "infinite"
 })
+
+for _, planet_name in ipairs(planet_config.SUPPORTED_PLANETS) do
+  local definition = planet_expansion_research_definitions[planet_name]
+
+  if definition then
+    local technology = build_planet_expansion_technology(planet_name, definition)
+
+    if technology then
+      prototypes[#prototypes + 1] = technology
+    end
+  end
+end
 
 for _, definition in ipairs(ingress_research_definitions) do
   prototypes[#prototypes + 1] = build_ingress_research_technology(definition)

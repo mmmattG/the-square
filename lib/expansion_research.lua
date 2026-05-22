@@ -33,6 +33,14 @@ function expansion_research.get_technology_name(level)
   return string.format("the-square-square-expansion-%04d", level)
 end
 
+function expansion_research.get_planet_technology_name(planet_name)
+  return "the-square-" .. planet_name .. "-square-expansion"
+end
+
+function expansion_research.get_planet_from_technology_name(technology_name)
+  return string.match(technology_name or "", "^the%-square%-(%a+)%-square%-expansion$")
+end
+
 function expansion_research.get_level_from_technology_name(technology_name)
   return tonumber(string.match(technology_name or "", "^the%-square%-square%-expansion%-(%d%d%d%d)$"))
     or tonumber(string.match(technology_name or "", "^fes%-square%-expansion%-(%d%d%d%d)$"))
@@ -40,6 +48,7 @@ end
 
 function expansion_research.is_expansion_technology_name(technology_name)
   return expansion_research.get_level_from_technology_name(technology_name) ~= nil
+    or expansion_research.get_planet_from_technology_name(technology_name) ~= nil
 end
 
 function expansion_research.get_infinite_research_unit_formula(starting_square_size, tiles_per_research)
@@ -47,7 +56,7 @@ function expansion_research.get_infinite_research_unit_formula(starting_square_s
   local numerator_constant = (4 * starting_square_size) - 4
 
   return string.format(
-    "max(1, ((8 * L) + %d) / %d)",
+    "max(1, ((8 * L) + %d) / %.10g)",
     numerator_constant,
     safe_tiles_per_research
   )

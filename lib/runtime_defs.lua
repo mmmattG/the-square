@@ -508,6 +508,10 @@ function runtime_defs.get_expansion_research_band_for_level(level)
   return band
 end
 
+function runtime_defs.get_expansion_research_planet_name(research_name)
+  return expansion_research.get_planet_from_technology_name(research_name)
+end
+
 function runtime_defs.is_expansion_research_name(research_name)
   return expansion_research.is_expansion_technology_name(research_name)
 end

@@ -41,6 +41,12 @@ run_test("expansion technology names can be parsed back into levels", function()
   assert_equal(expansion_research.get_level_from_technology_name("automation"), nil, "non-expansion research should not parse")
 end)
 
+run_test("planet expansion technology names can be parsed", function()
+  assert_equal(expansion_research.get_planet_technology_name("vulcanus"), "the-square-vulcanus-square-expansion", "planet technology name should include planet")
+  assert_equal(expansion_research.get_planet_from_technology_name("the-square-vulcanus-square-expansion"), "vulcanus", "planet should parse")
+  assert_equal(expansion_research.is_expansion_technology_name("the-square-vulcanus-square-expansion"), true, "planet expansion should count as expansion research")
+end)
+
 run_test("infinite research formula keeps the same linear scaling", function()
   assert_equal(
     expansion_research.get_infinite_research_unit_formula(7, 7),

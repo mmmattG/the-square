@@ -240,7 +240,7 @@ function bootstrap_runtime.refresh_generated_chunk_for_planet_surface(surface, a
   return true
 end
 
-local function build_resize_tile_updates(old_square_size, old_surface_size, new_square_size, new_surface_size)
+local function build_resize_tile_updates(old_square_size, old_surface_size, new_square_size, new_surface_size, floor_tile_name)
   local tiles = {}
   local old_bounds = defs.get_square_bounds(old_surface_size)
   local new_bounds = defs.get_square_bounds(new_surface_size)
@@ -252,8 +252,8 @@ local function build_resize_tile_updates(old_square_size, old_surface_size, new_
   for y = min_y, max_y do
     for x = min_x, max_x do
       local position = {x = x, y = y}
-      local previous_tile_name = defs.get_managed_tile_name(old_square_size, old_surface_size, position)
-      local next_tile_name = defs.get_managed_tile_name(new_square_size, new_surface_size, position)
+      local previous_tile_name = defs.get_managed_tile_name(old_square_size, old_surface_size, position, floor_tile_name)
+      local next_tile_name = defs.get_managed_tile_name(new_square_size, new_surface_size, position, floor_tile_name)
 
       if next_tile_name and next_tile_name ~= previous_tile_name then
         tiles[#tiles + 1] = {
@@ -486,14 +486,15 @@ local function leave_trailing_stubs_for_expansion(surface)
   end
 end
 
-local function apply_square_resize(surface, old_square_size, old_surface_size, new_square_size, new_surface_size)
+local function apply_square_resize(surface, old_square_size, old_surface_size, new_square_size, new_surface_size, floor_tile_name)
   ensure_surface_dimensions(surface, new_surface_size)
 
   local tile_updates = build_resize_tile_updates(
     old_square_size,
     old_surface_size,
     new_square_size,
-    new_surface_size
+    new_surface_size,
+    floor_tile_name
   )
 
   if #tile_updates > 0 then
@@ -501,6 +502,43 @@ local function apply_square_resize(surface, old_square_size, old_surface_size, n
     -- to refresh the softened border around the updated out-of-map tiles.
     surface.set_tiles(tile_updates, true, true, true, false)
   end
+end
+
+function bootstrap_runtime.expand_planet_square(planet_name, player, gui_runtime)
+  local planet = planet_instance.ensure(planet_name)
+
+  if not planet then
+    return false
+  end
+
+  local surface = game.surfaces[planet:get_surface_name()]
+
+  if not surface then
+    return false
+  end
+
+  local previous_square_size = planet:get_square_size()
+  local previous_surface_size = planet:get_surface_size()
+  local next_square_size = previous_square_size + 2
+  local next_surface_size = get_target_surface_size(next_square_size, planet:get_completed_square_expansion_levels() + 1)
+  local newly_unlocked_tiles = defs.get_next_expansion_tile_reward(previous_square_size)
+
+  planet:set_square_size(next_square_size)
+  planet:set_completed_square_expansion_levels(planet:get_completed_square_expansion_levels() + 1)
+  planet:add_expansion_points(newly_unlocked_tiles)
+
+  apply_square_resize(surface, previous_square_size, previous_surface_size, next_square_size, next_surface_size, planet:get_floor_tile_name())
+  bootstrap_runtime.chart_play_area(game.forces.player, surface, next_surface_size)
+
+  if player and player.valid then
+    player.play_sound({path = "utility/new_objective"})
+  end
+
+  if gui_runtime then
+    gui_runtime.refresh_all_debug_guis()
+  end
+
+  return true
 end
 
 function bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
