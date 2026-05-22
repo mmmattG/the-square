@@ -46,7 +46,7 @@ function screenshot_runtime.take_base_screenshot(player)
   })
 
   player.print({
-    "message.fes-screenshot-saved",
+    "message.the-square-screenshot-saved",
     path,
     bootstrap.square_size,
     defs.BASE_SCREENSHOT_MARGIN_TILES,

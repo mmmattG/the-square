@@ -11,10 +11,10 @@ defines = {
 
 settings = {
   global = {
-    ["fes-background-tile"] = {
+    ["the-square-background-tile"] = {
       value = "grass-1"
     },
-    ["fes-line-purchase-cost"] = {
+    ["the-square-line-purchase-cost"] = {
       value = 1000
     }
   }

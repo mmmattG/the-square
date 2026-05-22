@@ -3,6 +3,55 @@ local debug_platform_runtime = require("lib.debug_platform_runtime")
 
 local gui_runtime = {}
 
+local LEGACY_TOP_GUI_NAMES = {
+  "fes_shop_button",
+  "fes_screenshot_button",
+  "fes_dev_expand_button"
+}
+
+local LEGACY_LEFT_GUI_NAMES = {
+  "fes_shop_frame",
+  "fes_debug_frame"
+}
+
+local function destroy_child(parent, name)
+  local child = parent and parent[name]
+
+  if child and child.valid then
+    child.destroy()
+  end
+end
+
+function gui_runtime.destroy_legacy_guis(player)
+  local removed = {
+    shop_frame = false,
+    debug_frame = false
+  }
+
+  if not (player and player.valid and player.gui) then
+    return removed
+  end
+
+  removed.shop_frame = player.gui.left and player.gui.left.fes_shop_frame ~= nil
+  removed.debug_frame = player.gui.left and player.gui.left.fes_debug_frame ~= nil
+
+  for _, name in ipairs(LEGACY_TOP_GUI_NAMES) do
+    destroy_child(player.gui.top, name)
+  end
+
+  for _, name in ipairs(LEGACY_LEFT_GUI_NAMES) do
+    destroy_child(player.gui.left, name)
+  end
+
+  return removed
+end
+
+function gui_runtime.destroy_all_legacy_guis()
+  for _, player in pairs(game.players) do
+    gui_runtime.destroy_legacy_guis(player)
+  end
+end
+
 local function build_ingress_edge_check_debug(square_size, position)
   local tile_position = defs.snap_entity_position_to_tile(position)
   local bounds = defs.get_anchor_bounds(square_size)
@@ -62,7 +111,7 @@ local function ensure_debug_frame(player)
     type = "frame",
     name = defs.DEBUG_FRAME_NAME,
     direction = "vertical",
-    caption = {"gui.fes-debug-title"}
+    caption = {"gui.the-square-debug-title"}
   })
 end
 
@@ -135,14 +184,14 @@ function gui_runtime.refresh_debug_gui(player)
   if debug_platform_runtime.is_space_age_active() then
     frame.add({
       type = "label",
-      caption = {"gui.fes-dev-orbit-teleport-title"}
+      caption = {"gui.the-square-dev-orbit-teleport-title"}
     })
 
     for _, planet in ipairs(defs.DEBUG_SPACE_AGE_PLANETS) do
       frame.add({
         type = "button",
         name = defs.DEV_ORBIT_TELEPORT_BUTTON_PREFIX .. planet.name,
-        caption = {"gui.fes-dev-orbit-teleport-button", planet.label}
+        caption = {"gui.the-square-dev-orbit-teleport-button", planet.label}
       })
     end
   end
@@ -164,7 +213,7 @@ local function ensure_shop_button(player)
   return player.gui.top.add({
     type = "button",
     name = defs.SHOP_BUTTON_NAME,
-    caption = {"gui.fes-shop-button"}
+    caption = {"gui.the-square-shop-button"}
   })
 end
 
@@ -178,8 +227,8 @@ local function ensure_screenshot_button(player)
   return player.gui.top.add({
     type = "button",
     name = defs.SCREENSHOT_BUTTON_NAME,
-    caption = {"gui.fes-screenshot-button"},
-    tooltip = {"gui.fes-screenshot-button-tooltip", defs.BASE_SCREENSHOT_DIRECTORY}
+    caption = {"gui.the-square-screenshot-button"},
+    tooltip = {"gui.the-square-screenshot-button-tooltip", defs.BASE_SCREENSHOT_DIRECTORY}
   })
 end
 
@@ -213,7 +262,7 @@ local function ensure_shop_frame(player)
     type = "frame",
     name = defs.SHOP_FRAME_NAME,
     direction = "vertical",
-    caption = {"gui.fes-shop-title"}
+    caption = {"gui.the-square-shop-title"}
   })
 end
 
@@ -232,19 +281,19 @@ function gui_runtime.refresh_shop_gui(player, anchor_runtime)
   frame.clear()
   frame.add({
     type = "label",
-    caption = {"gui.fes-shop-points", bootstrap.expansion_points or 0}
+    caption = {"gui.the-square-shop-points", bootstrap.expansion_points or 0}
   })
   frame.add({
     type = "label",
     caption = {
-      "gui.fes-shop-ingress-rate",
+      "gui.the-square-shop-ingress-rate",
       defs.get_current_ingress_tier().label,
       defs.format_decimal(defs.get_ingress_item_rate_per_second())
     }
   })
   frame.add({
     type = "label",
-    caption = {"gui.fes-shop-line-cost", defs.get_line_purchase_cost()}
+    caption = {"gui.the-square-shop-line-cost", defs.get_line_purchase_cost()}
   })
 
   for _, definition in ipairs(defs.INPUT_DEFINITIONS) do
@@ -255,8 +304,8 @@ function gui_runtime.refresh_shop_gui(player, anchor_runtime)
     local can_purchase = anchor_runtime.can_purchase_line(definition.resource)
     local button = flow.add({
       type = "button",
-      name = "fes_shop_buy__" .. definition.resource,
-      caption = {"gui.fes-shop-buy", {"item-name." .. defs.get_ingress_item_name(definition.resource)}}
+      name = "the_square_shop_buy__" .. definition.resource,
+      caption = {"gui.the-square-shop-buy", {"item-name." .. defs.get_ingress_item_name(definition.resource)}}
     })
 
     button.enabled = can_purchase and (bootstrap.expansion_points or 0) >= defs.get_line_purchase_cost()
@@ -275,8 +324,8 @@ function gui_runtime.refresh_shop_gui(player, anchor_runtime)
     local can_purchase = anchor_runtime.can_purchase_line(definition.resource)
     local button = flow.add({
       type = "button",
-      name = "fes_shop_buy__" .. definition.resource,
-      caption = {"gui.fes-shop-buy", {"item-name." .. defs.get_egress_item_name(definition.resource)}}
+      name = "the_square_shop_buy__" .. definition.resource,
+      caption = {"gui.the-square-shop-buy", {"item-name." .. defs.get_egress_item_name(definition.resource)}}
     })
 
     button.enabled = can_purchase and (bootstrap.expansion_points or 0) >= defs.get_line_purchase_cost()
@@ -309,7 +358,13 @@ function gui_runtime.sync_shop_gui(player, anchor_runtime)
     return
   end
 
+  local removed_legacy = gui_runtime.destroy_legacy_guis(player)
   ensure_shop_button(player)
+
+  if removed_legacy.shop_frame and not player.gui.left[defs.SHOP_FRAME_NAME] then
+    ensure_shop_frame(player)
+  end
+
   gui_runtime.refresh_shop_gui(player, anchor_runtime)
 end
 
@@ -318,6 +373,7 @@ function gui_runtime.sync_screenshot_gui(player)
     return
   end
 
+  gui_runtime.destroy_legacy_guis(player)
   ensure_screenshot_button(player)
 end
 
@@ -338,6 +394,7 @@ function gui_runtime.sync_dev_gui(player)
     return
   end
 
+  local removed_legacy = gui_runtime.destroy_legacy_guis(player)
   local button = player.gui.top[defs.DEV_EXPAND_BUTTON_NAME]
   local frame = player.gui.left[defs.DEBUG_FRAME_NAME]
 
@@ -346,12 +403,12 @@ function gui_runtime.sync_dev_gui(player)
       player.gui.top.add({
         type = "button",
         name = defs.DEV_EXPAND_BUTTON_NAME,
-        caption = {"gui.fes-dev-expand-button"}
+        caption = {"gui.the-square-dev-expand-button"}
       })
     end
 
     if not frame then
-      ensure_debug_frame(player)
+      frame = ensure_debug_frame(player)
     end
 
     gui_runtime.refresh_debug_gui(player)

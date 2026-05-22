@@ -17,7 +17,7 @@ function growth_runtime.handle_expansion_research_finished(research, bootstrap_r
   end
 
   research.force.print({
-    "message.fes-expansion-research-completed",
+    "message.the-square-expansion-research-completed",
     storage.bootstrap.expansion_research_levels,
     storage.bootstrap.square_size
   })

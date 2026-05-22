@@ -11,9 +11,9 @@ defines = {
 
 settings = {
   global = {
-    ["fes-starting-square-size"] = {value = 9},
-    ["fes-expansion-tiles-per-research"] = {value = 2},
-    ["fes-background-tile"] = {value = "grass-1"}
+    ["the-square-starting-square-size"] = {value = 9},
+    ["the-square-expansion-tiles-per-research"] = {value = 2},
+    ["the-square-background-tile"] = {value = "grass-1"}
   }
 }
 

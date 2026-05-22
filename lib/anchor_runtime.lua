@@ -244,19 +244,19 @@ local function try_unlock_ingress_technology(anchor, force, debug_recipient, res
   local technology = force.technologies[technology_name]
 
   if not technology then
-    print_anchor_debug_message(debug_recipient, "FES debug: " .. technology_name .. " technology not found")
+    print_anchor_debug_message(debug_recipient, "the-square debug: " .. technology_name .. " technology not found")
     return
   end
 
   if technology.researched then
-    print_anchor_debug_message(debug_recipient, "FES debug: " .. technology_name .. " already researched")
+    print_anchor_debug_message(debug_recipient, "the-square debug: " .. technology_name .. " already researched")
     return
   end
 
   if not are_all_prerequisites_researched(technology) then
     print_anchor_debug_message(
       debug_recipient,
-      "FES debug: " .. resource_label .. " ingress placed but " .. technology_name .. " prerequisites are not researched"
+      "the-square debug: " .. resource_label .. " ingress placed but " .. technology_name .. " prerequisites are not researched"
     )
     return
   end
@@ -267,7 +267,7 @@ local function try_unlock_ingress_technology(anchor, force, debug_recipient, res
   end
   print_anchor_debug_message(
     debug_recipient,
-    "FES debug: unlocked " .. technology_name .. " from " .. resource_label .. " ingress placement"
+    "the-square debug: unlocked " .. technology_name .. " from " .. resource_label .. " ingress placement"
   )
 end
 
@@ -833,7 +833,7 @@ function anchor_runtime.can_purchase_line(resource)
   local definition = defs.get_input_definition(resource) or defs.get_output_definition(resource)
 
   if not definition then
-    return false, "message.fes-shop-resource-unknown", nil
+    return false, "message.the-square-shop-resource-unknown", nil
   end
 
   if anchor_runtime.is_resource_unlocked(resource) or definition.starter_side then
@@ -841,7 +841,7 @@ function anchor_runtime.can_purchase_line(resource)
   end
 
   if definition.prerequisite_resource and not anchor_runtime.is_resource_unlocked(definition.prerequisite_resource) then
-    return false, "message.fes-shop-prerequisite", definition.prerequisite_resource
+    return false, "message.the-square-shop-prerequisite", definition.prerequisite_resource
   end
 
   return true, nil, nil
@@ -941,14 +941,14 @@ function anchor_runtime.purchase_managed_line_for_resource(player, resource)
 
   if not spend_expansion_points(line_purchase_cost) then
     if player and player.valid then
-      player.print({"message.fes-shop-not-enough-points", line_purchase_cost})
+      player.print({"message.the-square-shop-not-enough-points", line_purchase_cost})
     end
 
     return
   end
 
   grant_managed_line(player, bootstrap, definition, flow, item_name, {
-    "message.fes-shop-purchased-line",
+    "message.the-square-shop-purchased-line",
     {"item-name." .. item_name},
     line_purchase_cost,
     bootstrap.expansion_points
@@ -974,7 +974,7 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
   end
 
   if entity.surface.name ~= bootstrap.surface_name then
-    reject_anchor_placement(entity, actor, {"message.fes-managed-line-invalid-surface"})
+    reject_anchor_placement(entity, actor, {"message.the-square-managed-line-invalid-surface"})
     return
   end
 
@@ -987,19 +987,19 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
   local anchor_position = tile_position
 
   if not side then
-    reject_anchor_placement(entity, actor, {"message.fes-managed-line-invalid-edge"})
+    reject_anchor_placement(entity, actor, {"message.the-square-managed-line-invalid-edge"})
     return
   end
 
   local anchor = find_matching_stashed_anchor(entity.name)
 
   if not anchor then
-    reject_anchor_placement(entity, actor, {"message.fes-managed-line-unowned"})
+    reject_anchor_placement(entity, actor, {"message.the-square-managed-line-unowned"})
     return
   end
 
   if is_fluid_anchor_too_close(anchor, anchor_position, side) then
-    reject_anchor_placement(entity, actor, {"message.fes-managed-line-fluid-gap-required"})
+    reject_anchor_placement(entity, actor, {"message.the-square-managed-line-fluid-gap-required"})
     return
   end
 
@@ -1007,11 +1007,11 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
 
   if assign_anchor_position(anchor, side, anchor_position) then
     if anchor.flow == "ingress" and anchor.resource == "crude-oil" then
-      print_anchor_debug_message(actor, "FES debug: placed crude oil ingress via build event")
+      print_anchor_debug_message(actor, "the-square debug: placed crude oil ingress via build event")
     end
 
     if anchor.flow == "ingress" and anchor.resource == "uranium-ore" then
-      print_anchor_debug_message(actor, "FES debug: placed uranium ore ingress via build event")
+      print_anchor_debug_message(actor, "the-square debug: placed uranium ore ingress via build event")
     end
 
     try_unlock_oil_processing(anchor, entity.force, actor)
@@ -1044,12 +1044,12 @@ function anchor_runtime.handle_managed_anchor_slot_click(player)
   local side = defs.get_anchor_side_for_position(bootstrap.square_size, tile_position)
 
   if not side then
-    player.print({"message.fes-managed-line-invalid-edge"})
+    player.print({"message.the-square-managed-line-invalid-edge"})
     return
   end
 
   if is_fluid_anchor_too_close(anchor, tile_position, side) then
-    player.print({"message.fes-managed-line-fluid-gap-required"})
+    player.print({"message.the-square-managed-line-fluid-gap-required"})
     return
   end
 
@@ -1059,11 +1059,11 @@ function anchor_runtime.handle_managed_anchor_slot_click(player)
 
   if assign_anchor_position(anchor, side, tile_position) then
     if anchor.flow == "ingress" and anchor.resource == "crude-oil" then
-      print_anchor_debug_message(player, "FES debug: placed crude oil ingress via anchor slot")
+      print_anchor_debug_message(player, "the-square debug: placed crude oil ingress via anchor slot")
     end
 
     if anchor.flow == "ingress" and anchor.resource == "uranium-ore" then
-      print_anchor_debug_message(player, "FES debug: placed uranium ore ingress via anchor slot")
+      print_anchor_debug_message(player, "the-square debug: placed uranium ore ingress via anchor slot")
     end
 
     try_unlock_oil_processing(anchor, player.force, player)
@@ -1104,7 +1104,7 @@ function anchor_runtime.handle_entity_built(event, gui_runtime)
     and not anchor_runtime.is_managed_anchor_entity_name(entity.name)
     and entity_overlaps_anchor_ring(bootstrap.square_size, entity)
   then
-    reject_reserved_ring_placement(entity, actor, {"message.fes-edge-reserved"})
+    reject_reserved_ring_placement(entity, actor, {"message.the-square-edge-reserved"})
     return
   end
 
@@ -1112,7 +1112,7 @@ function anchor_runtime.handle_entity_built(event, gui_runtime)
     reject_reserved_ring_placement(
       entity,
       actor,
-      {"message.fes-logistic-network-disabled", {"entity-name." .. entity.name}}
+      {"message.the-square-logistic-network-disabled", {"entity-name." .. entity.name}}
     )
     return
   end

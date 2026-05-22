@@ -8,15 +8,26 @@ runtime_defs.SURFACE_NAME = "nauvis"
 runtime_defs.LEGACY_SURFACE_NAME = "fes-bootstrap"
 runtime_defs.BASE_SCREENSHOT_MARGIN_TILES = 2
 runtime_defs.BASE_SCREENSHOT_DIRECTORY = "the-square"
-runtime_defs.SETTING_STARTING_SQUARE_SIZE = "fes-starting-square-size"
-runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH = "fes-expansion-tiles-per-research"
-runtime_defs.SETTING_LINE_PURCHASE_COST = "fes-line-purchase-cost"
-runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "fes-enable-logistic-network-automation"
-runtime_defs.SETTING_BACKGROUND_TILE = "fes-background-tile"
-runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE = "fes-screenshot-pixels-per-tile"
-runtime_defs.SETTING_SCREENSHOT_ALT_MODE = "fes-screenshot-alt-mode"
-runtime_defs.SETTING_DEV_MODE = "fes-dev-mode"
-runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG = "fes-ingress-placement-debug"
+runtime_defs.SETTING_STARTING_SQUARE_SIZE = "the-square-starting-square-size"
+runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH = "the-square-expansion-tiles-per-research"
+runtime_defs.SETTING_LINE_PURCHASE_COST = "the-square-line-purchase-cost"
+runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "the-square-enable-logistic-network-automation"
+runtime_defs.SETTING_BACKGROUND_TILE = "the-square-background-tile"
+runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE = "the-square-screenshot-pixels-per-tile"
+runtime_defs.SETTING_SCREENSHOT_ALT_MODE = "the-square-screenshot-alt-mode"
+runtime_defs.SETTING_DEV_MODE = "the-square-dev-mode"
+runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG = "the-square-ingress-placement-debug"
+runtime_defs.LEGACY_SETTING_NAMES = {
+  [runtime_defs.SETTING_STARTING_SQUARE_SIZE] = "fes-starting-square-size",
+  [runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH] = "fes-expansion-tiles-per-research",
+  [runtime_defs.SETTING_LINE_PURCHASE_COST] = "fes-line-purchase-cost",
+  [runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION] = "fes-enable-logistic-network-automation",
+  [runtime_defs.SETTING_BACKGROUND_TILE] = "fes-background-tile",
+  [runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE] = "fes-screenshot-pixels-per-tile",
+  [runtime_defs.SETTING_SCREENSHOT_ALT_MODE] = "fes-screenshot-alt-mode",
+  [runtime_defs.SETTING_DEV_MODE] = "fes-dev-mode",
+  [runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG] = "fes-ingress-placement-debug"
+}
 runtime_defs.FLOOR_TILE_NAME = "grass-1"
 runtime_defs.VOID_TILE_NAME = "out-of-map"
 runtime_defs.DEFAULT_BACKGROUND_TILE_NAME = "grass-1"
@@ -27,16 +38,16 @@ runtime_defs.CHECKERBOARD_TILE_NAMES = {
 }
 runtime_defs.CHART_MARGIN = 1
 runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS = 8
-runtime_defs.ANCHOR_SLOT_PROXY_NAME = "fes-anchor-slot-proxy"
-runtime_defs.PLACE_MANAGED_ANCHOR_INPUT_NAME = "fes-place-managed-anchor"
+runtime_defs.ANCHOR_SLOT_PROXY_NAME = "the-square-anchor-slot-proxy"
+runtime_defs.PLACE_MANAGED_ANCHOR_INPUT_NAME = "the-square-place-managed-anchor"
 runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH = 1
 runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION = 12
-runtime_defs.DEV_EXPAND_BUTTON_NAME = "fes_dev_expand_button"
-runtime_defs.DEV_ORBIT_TELEPORT_BUTTON_PREFIX = "fes_dev_orbit_teleport__"
-runtime_defs.DEBUG_FRAME_NAME = "fes_debug_frame"
-runtime_defs.SHOP_BUTTON_NAME = "fes_shop_button"
-runtime_defs.SCREENSHOT_BUTTON_NAME = "fes_screenshot_button"
-runtime_defs.SHOP_FRAME_NAME = "fes_shop_frame"
+runtime_defs.DEV_EXPAND_BUTTON_NAME = "the_square_dev_expand_button"
+runtime_defs.DEV_ORBIT_TELEPORT_BUTTON_PREFIX = "the_square_dev_orbit_teleport__"
+runtime_defs.DEBUG_FRAME_NAME = "the_square_debug_frame"
+runtime_defs.SHOP_BUTTON_NAME = "the_square_shop_button"
+runtime_defs.SCREENSHOT_BUTTON_NAME = "the_square_screenshot_button"
+runtime_defs.SHOP_FRAME_NAME = "the_square_shop_frame"
 runtime_defs.MAX_INGRESS_TIER = 4
 runtime_defs.DEBUG_SPACE_AGE_PLANETS = {
   {name = "nauvis", label = "Nauvis"},
@@ -47,17 +58,17 @@ runtime_defs.DEBUG_SPACE_AGE_PLANETS = {
 }
 runtime_defs.INGRESS_RESEARCH_DEFINITIONS = {
   {
-    technology_name = "fes-ingress-dual-lane",
+    technology_name = "the-square-ingress-dual-lane",
     prerequisite_technology_name = "logistics",
     tier_level = 2
   },
   {
-    technology_name = "fes-ingress-red",
+    technology_name = "the-square-ingress-red",
     prerequisite_technology_name = "logistics-2",
     tier_level = 3
   },
   {
-    technology_name = "fes-ingress-blue",
+    technology_name = "the-square-ingress-blue",
     prerequisite_technology_name = "logistics-3",
     tier_level = 4
   }
@@ -177,7 +188,7 @@ runtime_defs.INGRESS_TIER_DEFINITIONS = {
 }
 
 function runtime_defs.get_ingress_item_name(resource)
-  return "fes-" .. resource .. "-ingress"
+  return "the-square-" .. resource .. "-ingress"
 end
 
 function runtime_defs.get_ingress_entity_name(resource, ingress_tier_level)
@@ -191,16 +202,16 @@ function runtime_defs.get_ingress_entity_name(resource, ingress_tier_level)
   end
 
   if not definition or definition.kind ~= "item" then
-    return "fes-" .. resource .. "-ingress-anchor"
+    return "the-square-" .. resource .. "-ingress-anchor"
   end
 
   local belt_tier_key = runtime_defs.ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER[ingress_tier_level or 1] or "yellow"
 
   if belt_tier_key == "yellow" then
-    return "fes-" .. resource .. "-ingress-anchor"
+    return "the-square-" .. resource .. "-ingress-anchor"
   end
 
-  return "fes-" .. resource .. "-ingress-anchor-" .. belt_tier_key
+  return "the-square-" .. resource .. "-ingress-anchor-" .. belt_tier_key
 end
 
 function runtime_defs.is_ingress_entity_name_for_resource(resource, entity_name)
@@ -254,11 +265,11 @@ function runtime_defs.get_line_definition(resource)
 end
 
 function runtime_defs.get_egress_item_name(resource)
-  return "fes-" .. resource .. "-egress"
+  return "the-square-" .. resource .. "-egress"
 end
 
 function runtime_defs.get_egress_entity_name(resource)
-  return "fes-" .. resource .. "-egress-anchor"
+  return "the-square-" .. resource .. "-egress-anchor"
 end
 
 function runtime_defs.is_egress_entity_name_for_resource(resource, entity_name)
@@ -299,20 +310,36 @@ function runtime_defs.get_anchor_direction_for_side(flow, kind, side)
   return runtime_defs.DIRECTION_BY_SIDE[side]
 end
 
+local function get_setting_value(scope, setting_name, default_value)
+  local setting = scope and scope[setting_name]
+  local legacy_setting_name = runtime_defs.LEGACY_SETTING_NAMES[setting_name]
+  local legacy_setting = legacy_setting_name and scope and scope[legacy_setting_name]
+
+  if setting and setting.value ~= nil then
+    return setting.value
+  end
+
+  if legacy_setting and legacy_setting.value ~= nil then
+    return legacy_setting.value
+  end
+
+  return default_value
+end
+
 function runtime_defs.get_square_size()
-  return settings.global[runtime_defs.SETTING_STARTING_SQUARE_SIZE].value
+  return get_setting_value(settings.global, runtime_defs.SETTING_STARTING_SQUARE_SIZE, 7)
 end
 
 function runtime_defs.get_expansion_tiles_per_research()
-  return settings.startup[runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH].value
+  return get_setting_value(settings.startup, runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH, 7)
 end
 
 function runtime_defs.get_line_purchase_cost()
-  return settings.global[runtime_defs.SETTING_LINE_PURCHASE_COST].value
+  return get_setting_value(settings.global, runtime_defs.SETTING_LINE_PURCHASE_COST, 1000)
 end
 
 function runtime_defs.is_logistic_network_automation_enabled()
-  return settings.global[runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION].value
+  return get_setting_value(settings.global, runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION, false)
 end
 
 function runtime_defs.get_square_bounds(size)
@@ -324,33 +351,15 @@ function runtime_defs.get_surface_size(square_size)
 end
 
 function runtime_defs.get_background_tile_name()
-  local background_tile_setting = settings.global[runtime_defs.SETTING_BACKGROUND_TILE]
-
-  if background_tile_setting and background_tile_setting.value then
-    return background_tile_setting.value
-  end
-
-  return runtime_defs.DEFAULT_BACKGROUND_TILE_NAME
+  return get_setting_value(settings.global, runtime_defs.SETTING_BACKGROUND_TILE, runtime_defs.DEFAULT_BACKGROUND_TILE_NAME)
 end
 
 function runtime_defs.get_screenshot_pixels_per_tile()
-  local screenshot_pixels_per_tile_setting = settings.global[runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE]
-
-  if screenshot_pixels_per_tile_setting and screenshot_pixels_per_tile_setting.value then
-    return screenshot_pixels_per_tile_setting.value
-  end
-
-  return 32
+  return get_setting_value(settings.global, runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE, 32)
 end
 
 function runtime_defs.is_screenshot_alt_mode_enabled()
-  local screenshot_alt_mode_setting = settings.global[runtime_defs.SETTING_SCREENSHOT_ALT_MODE]
-
-  if screenshot_alt_mode_setting == nil or screenshot_alt_mode_setting.value == nil then
-    return true
-  end
-
-  return screenshot_alt_mode_setting.value
+  return get_setting_value(settings.global, runtime_defs.SETTING_SCREENSHOT_ALT_MODE, true)
 end
 
 function runtime_defs.get_anchor_bounds(square_size)

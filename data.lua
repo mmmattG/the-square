@@ -68,118 +68,118 @@ local square_expansion_research_bands = {
 
 local ingress_research_definitions = {
   {
-    name = "fes-ingress-dual-lane",
+    name = "the-square-ingress-dual-lane",
     icon = "__base__/graphics/icons/transport-belt.png",
     prerequisite_technology_name = "logistics",
     previous_ingress_technology_name = nil,
-    localised_name = {"technology-name.fes-ingress-dual-lane"},
-    localised_description = {"technology-description.fes-ingress-dual-lane"},
-    effect_description = {"technology-effect.fes-ingress-dual-lane"}
+    localised_name = {"technology-name.the-square-ingress-dual-lane"},
+    localised_description = {"technology-description.the-square-ingress-dual-lane"},
+    effect_description = {"technology-effect.the-square-ingress-dual-lane"}
   },
   {
-    name = "fes-ingress-red",
+    name = "the-square-ingress-red",
     icon = "__base__/graphics/icons/fast-transport-belt.png",
     prerequisite_technology_name = "logistics-2",
-    previous_ingress_technology_name = "fes-ingress-dual-lane",
-    localised_name = {"technology-name.fes-ingress-red"},
-    localised_description = {"technology-description.fes-ingress-red"},
-    effect_description = {"technology-effect.fes-ingress-red"}
+    previous_ingress_technology_name = "the-square-ingress-dual-lane",
+    localised_name = {"technology-name.the-square-ingress-red"},
+    localised_description = {"technology-description.the-square-ingress-red"},
+    effect_description = {"technology-effect.the-square-ingress-red"}
   },
   {
-    name = "fes-ingress-blue",
+    name = "the-square-ingress-blue",
     icon = "__base__/graphics/icons/express-transport-belt.png",
     prerequisite_technology_name = "logistics-3",
-    previous_ingress_technology_name = "fes-ingress-red",
-    localised_name = {"technology-name.fes-ingress-blue"},
-    localised_description = {"technology-description.fes-ingress-blue"},
-    effect_description = {"technology-effect.fes-ingress-blue"}
+    previous_ingress_technology_name = "the-square-ingress-red",
+    localised_name = {"technology-name.the-square-ingress-blue"},
+    localised_description = {"technology-description.the-square-ingress-blue"},
+    effect_description = {"technology-effect.the-square-ingress-blue"}
   }
 }
 
 local tips_and_tricks_items = {
   {
-    name = "fes-mod",
+    name = "the-square-mod",
     order = "a[mod]",
-    category = "fes-rules",
+    category = "the-square-rules",
     icon = "__base__/graphics/icons/landfill.png",
     is_title = true
   },
   {
-    name = "fes-overview",
+    name = "the-square-overview",
     order = "b[overview]",
-    category = "fes-rules",
+    category = "the-square-rules",
     icon = "__base__/graphics/icons/info.png",
     indent = 1
   },
   {
-    name = "fes-expansion-research",
+    name = "the-square-expansion-research",
     order = "c[expansion-research]",
-    category = "fes-rules",
+    category = "the-square-rules",
     icon = "__base__/graphics/icons/landfill.png",
     indent = 1
   },
   {
-    name = "fes-ingress-lines",
+    name = "the-square-ingress-lines",
     order = "d[ingress-lines]",
-    category = "fes-rules",
+    category = "the-square-rules",
     icon = "__base__/graphics/icons/transport-belt.png",
     indent = 1
   },
   {
-    name = "fes-uranium-egress",
+    name = "the-square-uranium-egress",
     order = "e[uranium-egress]",
-    category = "fes-rules",
+    category = "the-square-rules",
     icon = "__base__/graphics/icons/fluid/sulfuric-acid.png",
     indent = 1
   },
   {
-    name = "fes-research-and-rewards",
+    name = "the-square-research-and-rewards",
     order = "f[research-and-rewards]",
-    category = "fes-rules",
+    category = "the-square-rules",
     icon = "__base__/graphics/icons/utility-science-pack.png",
     indent = 1
   },
   {
-    name = "fes-anchor-upgrades",
+    name = "the-square-anchor-upgrades",
     order = "g[anchor-upgrades]",
-    category = "fes-rules",
+    category = "the-square-rules",
     icon = "__base__/graphics/icons/fast-transport-belt.png",
     indent = 1
   },
   {
-    name = "fes-logistics-rule",
+    name = "the-square-logistics-rule",
     order = "h[logistics-rule]",
-    category = "fes-rules",
+    category = "the-square-rules",
     icon = "__base__/graphics/icons/logistic-robot.png",
     indent = 1
   }
 }
 
 local function ingress_item_name(resource)
-  return "fes-" .. resource .. "-ingress"
+  return "the-square-" .. resource .. "-ingress"
 end
 
 local function egress_item_name(resource)
-  return "fes-" .. resource .. "-egress"
+  return "the-square-" .. resource .. "-egress"
 end
 
 local function ingress_entity_name(resource, belt_tier_key)
   if not belt_tier_key or belt_tier_key == "yellow" then
-    return "fes-" .. resource .. "-ingress-anchor"
+    return "the-square-" .. resource .. "-ingress-anchor"
   end
 
-  return "fes-" .. resource .. "-ingress-anchor-" .. belt_tier_key
+  return "the-square-" .. resource .. "-ingress-anchor-" .. belt_tier_key
 end
 
 local function egress_entity_name(resource)
-  return "fes-" .. resource .. "-egress-anchor"
+  return "the-square-" .. resource .. "-egress-anchor"
 end
 
 local function build_ingress_item(definition)
   return {
     type = "item",
     name = ingress_item_name(definition.resource),
-    localised_description = {"item-description.fes-ingress-item"},
+    localised_description = {"item-description.the-square-ingress-item"},
     icon = definition.icon,
     icon_size = 64,
     subgroup = definition.kind == "fluid" and "energy-pipe-distribution" or "belt",
@@ -227,7 +227,7 @@ local function build_ingress_entity(definition, belt_tier_key, belt_prototype_na
   local item_name = ingress_item_name(definition.resource)
 
   source.name = ingress_entity_name(definition.resource, belt_tier_key)
-  source.localised_description = {"entity-description.fes-ingress-anchor"}
+  source.localised_description = {"entity-description.the-square-ingress-anchor"}
   source.icon = definition.icon
   source.icon_size = 64
   source.minable = {mining_time = 0.1, result = item_name}
@@ -242,7 +242,7 @@ local function build_egress_item(definition)
   return {
     type = "item",
     name = egress_item_name(definition.resource),
-    localised_description = {"item-description.fes-egress-item"},
+    localised_description = {"item-description.the-square-egress-item"},
     icon = definition.icon,
     icon_size = 64,
     subgroup = "energy-pipe-distribution",
@@ -254,7 +254,7 @@ end
 local function build_anchor_slot_proxy()
   return {
     type = "simple-entity-with-owner",
-    name = "fes-anchor-slot-proxy",
+    name = "the-square-anchor-slot-proxy",
     icon = "__base__/graphics/icons/info.png",
     icon_size = 64,
     flags = {
@@ -281,7 +281,7 @@ end
 local function build_anchor_place_input()
   return {
     type = "custom-input",
-    name = "fes-place-managed-anchor",
+    name = "the-square-place-managed-anchor",
     key_sequence = "",
     linked_game_control = "build",
     consuming = "none",
@@ -294,7 +294,7 @@ local function build_egress_entity(definition)
   local item_name = egress_item_name(definition.resource)
 
   source.name = egress_entity_name(definition.resource)
-  source.localised_description = {"entity-description.fes-egress-anchor"}
+  source.localised_description = {"entity-description.the-square-egress-anchor"}
   source.icon = definition.icon
   source.icon_size = 64
   source.minable = {mining_time = 0.1, result = item_name}
@@ -320,8 +320,8 @@ local function build_square_expansion_technology(definition)
   return {
     type = "technology",
     name = definition.name,
-    localised_name = {"technology-name.fes-square-expansion"},
-    localised_description = {"technology-description.fes-square-expansion"},
+    localised_name = {"technology-name.the-square-square-expansion"},
+    localised_description = {"technology-description.the-square-square-expansion"},
     icon = "__base__/graphics/icons/landfill.png",
     icon_size = 64,
     order = definition.order,
@@ -332,7 +332,7 @@ local function build_square_expansion_technology(definition)
     effects = {
       {
         type = "nothing",
-        effect_description = {"technology-effect.fes-square-expansion"}
+        effect_description = {"technology-effect.the-square-square-expansion"}
       }
     }
   }
@@ -409,7 +409,7 @@ local prototypes = {}
 
 prototypes[#prototypes + 1] = {
   type = "tips-and-tricks-item-category",
-  name = "fes-rules",
+  name = "the-square-rules",
   order = "o[the-square]"
 }
 
@@ -438,7 +438,7 @@ for _, definition in ipairs(egress_resources) do
 end
 
 local starting_square_size = expansion_research.DEFAULT_STARTING_SQUARE_SIZE
-local tiles_per_research = settings.startup["fes-expansion-tiles-per-research"].value
+local tiles_per_research = settings.startup["the-square-expansion-tiles-per-research"].value
 
 for level = 1, expansion_research.FINAL_FINITE_LEVEL do
   local band = get_expansion_research_band(level)

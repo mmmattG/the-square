@@ -191,6 +191,19 @@ function bootstrap_runtime.refresh_generated_chunk_tiles(surface, square_size, s
   end
 end
 
+function bootstrap_runtime.refresh_all_generated_chunk_tiles(surface, square_size, surface_size)
+  if not surface then
+    return
+  end
+
+  for chunk in surface.get_chunks() do
+    bootstrap_runtime.refresh_generated_chunk_tiles(surface, square_size, surface_size, {
+      left_top = {x = chunk.x * 32, y = chunk.y * 32},
+      right_bottom = {x = (chunk.x + 1) * 32, y = (chunk.y + 1) * 32}
+    })
+  end
+end
+
 local function build_resize_tile_updates(old_square_size, old_surface_size, new_square_size, new_surface_size)
   local tiles = {}
   local old_bounds = defs.get_square_bounds(old_surface_size)
@@ -287,6 +300,18 @@ function bootstrap_runtime.ensure_bootstrap_surface(anchor_runtime)
   bootstrap_runtime.ensure_bootstrap_state_defaults()
 
   return surface
+end
+
+function bootstrap_runtime.clear_surface_chart(surface)
+  if not surface then
+    return
+  end
+
+  for _, force in pairs(game.forces) do
+    if force.valid and force.clear_chart then
+      force.clear_chart(surface)
+    end
+  end
 end
 
 function bootstrap_runtime.chart_play_area(force, surface, surface_size)
@@ -570,7 +595,7 @@ function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
 end
 
 function bootstrap_runtime.notify_square_size_change_applies_to_new_saves()
-  local requested_size = settings.global[defs.SETTING_STARTING_SQUARE_SIZE].value
+  local requested_size = defs.get_square_size()
 
   if storage.bootstrap and storage.bootstrap.square_size == requested_size then
     return

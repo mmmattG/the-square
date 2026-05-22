@@ -44,7 +44,8 @@ script.on_configuration_changed(function()
     local surface = game.surfaces[storage.bootstrap.surface_name]
 
     if surface then
-      bootstrap_runtime.refresh_managed_surface_tiles(surface, storage.bootstrap.square_size, storage.bootstrap.surface_size)
+      bootstrap_runtime.refresh_all_generated_chunk_tiles(surface, storage.bootstrap.square_size, storage.bootstrap.surface_size)
+      bootstrap_runtime.clear_surface_chart(surface)
     end
 
     gui_runtime.sync_all_dev_guis()
@@ -142,7 +143,7 @@ script.on_event(defines.events.on_gui_click, function(event)
     return
   end
 
-  local resource = string.match(event.element.name, "^fes_shop_buy__(.+)$")
+  local resource = string.match(event.element.name, "^the_square_shop_buy__(.+)$")
 
   if resource and player then
     anchor_runtime.purchase_managed_line(player, resource)
@@ -184,7 +185,7 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
     local surface = storage.bootstrap and game.surfaces[storage.bootstrap.surface_name]
 
     if surface and storage.bootstrap then
-      bootstrap_runtime.refresh_managed_surface_tiles(surface, storage.bootstrap.square_size, storage.bootstrap.surface_size)
+      bootstrap_runtime.refresh_all_generated_chunk_tiles(surface, storage.bootstrap.square_size, storage.bootstrap.surface_size)
     end
 
     gui_runtime.refresh_all_debug_guis()

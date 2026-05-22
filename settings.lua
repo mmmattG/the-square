@@ -1,7 +1,7 @@
 data:extend({
   {
     type = "int-setting",
-    name = "fes-starting-square-size",
+    name = "the-square-starting-square-size",
     setting_type = "runtime-global",
     default_value = 7,
     minimum_value = 4,
@@ -10,7 +10,7 @@ data:extend({
   },
   {
     type = "int-setting",
-    name = "fes-expansion-tiles-per-research",
+    name = "the-square-expansion-tiles-per-research",
     setting_type = "startup",
     default_value = 7,
     minimum_value = 1,
@@ -19,7 +19,7 @@ data:extend({
   },
   {
     type = "int-setting",
-    name = "fes-line-purchase-cost",
+    name = "the-square-line-purchase-cost",
     setting_type = "runtime-global",
     default_value = 1000,
     minimum_value = 1,
@@ -28,14 +28,14 @@ data:extend({
   },
   {
     type = "bool-setting",
-    name = "fes-enable-logistic-network-automation",
+    name = "the-square-enable-logistic-network-automation",
     setting_type = "runtime-global",
     default_value = false,
     order = "d"
   },
   {
     type = "string-setting",
-    name = "fes-background-tile",
+    name = "the-square-background-tile",
     setting_type = "runtime-global",
     default_value = "grass-1",
     allowed_values = {
@@ -69,7 +69,7 @@ data:extend({
   },
   {
     type = "int-setting",
-    name = "fes-screenshot-pixels-per-tile",
+    name = "the-square-screenshot-pixels-per-tile",
     setting_type = "runtime-global",
     default_value = 32,
     minimum_value = 8,
@@ -78,21 +78,21 @@ data:extend({
   },
   {
     type = "bool-setting",
-    name = "fes-screenshot-alt-mode",
+    name = "the-square-screenshot-alt-mode",
     setting_type = "runtime-global",
     default_value = true,
     order = "g"
   },
   {
     type = "bool-setting",
-    name = "fes-dev-mode",
+    name = "the-square-dev-mode",
     setting_type = "runtime-per-user",
     default_value = false,
     order = "h"
   },
   {
     type = "bool-setting",
-    name = "fes-ingress-placement-debug",
+    name = "the-square-ingress-placement-debug",
     setting_type = "runtime-per-user",
     default_value = false,
     order = "i"

@@ -11,12 +11,12 @@ defines = {
 
 settings = {
   global = {
-    ["fes-background-tile"] = {
+    ["the-square-background-tile"] = {
       value = "grass-1"
     }
   },
   startup = {
-    ["fes-expansion-tiles-per-research"] = {
+    ["the-square-expansion-tiles-per-research"] = {
       value = 9
     }
   }

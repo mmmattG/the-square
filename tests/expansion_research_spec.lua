@@ -36,8 +36,8 @@ run_test("finite bands end before the infinite continuation starts", function()
 end)
 
 run_test("expansion technology names can be parsed back into levels", function()
-  assert_equal(expansion_research.get_level_from_technology_name("fes-square-expansion-0001"), 1, "level 1 should parse")
-  assert_equal(expansion_research.get_level_from_technology_name("fes-square-expansion-0041"), 41, "level 41 should parse")
+  assert_equal(expansion_research.get_level_from_technology_name("the-square-square-expansion-0001"), 1, "level 1 should parse")
+  assert_equal(expansion_research.get_level_from_technology_name("the-square-square-expansion-0041"), 41, "level 41 should parse")
   assert_equal(expansion_research.get_level_from_technology_name("automation"), nil, "non-expansion research should not parse")
 end)
 

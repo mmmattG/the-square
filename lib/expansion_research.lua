@@ -30,11 +30,12 @@ function expansion_research.get_research_unit_count(starting_square_size, tiles_
 end
 
 function expansion_research.get_technology_name(level)
-  return string.format("fes-square-expansion-%04d", level)
+  return string.format("the-square-square-expansion-%04d", level)
 end
 
 function expansion_research.get_level_from_technology_name(technology_name)
-  return tonumber(string.match(technology_name or "", "^fes%-square%-expansion%-(%d%d%d%d)$"))
+  return tonumber(string.match(technology_name or "", "^the%-square%-square%-expansion%-(%d%d%d%d)$"))
+    or tonumber(string.match(technology_name or "", "^fes%-square%-expansion%-(%d%d%d%d)$"))
 end
 
 function expansion_research.is_expansion_technology_name(technology_name)

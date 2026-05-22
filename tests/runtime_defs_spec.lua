@@ -11,13 +11,13 @@ defines = {
 
 settings = {
   global = {
-    ["fes-screenshot-alt-mode"] = {
+    ["the-square-screenshot-alt-mode"] = {
       value = true
     },
-    ["fes-screenshot-pixels-per-tile"] = {
+    ["the-square-screenshot-pixels-per-tile"] = {
       value = 48
     },
-    ["fes-background-tile"] = {
+    ["the-square-background-tile"] = {
       value = "checkerboard"
     }
   }
@@ -65,12 +65,12 @@ end)
 
 run_test("expansion research name detection accepts the finite and infinite prototype name", function()
   assert_equal(
-    runtime_defs.is_expansion_research_name("fes-square-expansion-0007"),
+    runtime_defs.is_expansion_research_name("the-square-square-expansion-0007"),
     true,
     "finite chain names should match"
   )
   assert_equal(
-    runtime_defs.is_expansion_research_name("fes-square-expansion-0041"),
+    runtime_defs.is_expansion_research_name("the-square-square-expansion-0041"),
     true,
     "the infinite prototype name should still match"
   )
