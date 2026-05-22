@@ -214,7 +214,7 @@ function planet_methods:set_completed_square_expansion_levels(levels)
 end
 
 function planet_methods:get_managed_lines()
-  return nil
+  return self.state.starter_anchors
 end
 
 function planet_methods:get_bootstrap_storage()

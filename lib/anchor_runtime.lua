@@ -2,6 +2,7 @@ local bootstrap_runtime = require("lib.bootstrap_runtime")
 local defs = require("lib.runtime_defs")
 local planet_config = require("lib.planet_config")
 local planet_instance = require("lib.planet_instance")
+local managed_line_state = require("lib.managed_line_state")
 
 local anchor_runtime = {}
 
@@ -457,67 +458,8 @@ local function ensure_anchor_slot_proxies(surface, square_size, starter_anchors)
   end
 end
 
-local function migrate_anchor_to_anchor_ring(square_size, anchor)
-  if not (anchor and anchor.position and anchor.side) then
-    return
-  end
-
-  if defs.get_anchor_side_for_position(square_size, anchor.position) then
-    return
-  end
-
-  anchor.position = defs.move_position(anchor.position, anchor.side, 1)
-  anchor.direction = defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side)
-  anchor.entity = nil
-end
-
 function anchor_runtime.ensure_starter_anchor_state()
-  local bootstrap = storage.bootstrap
-
-  if not bootstrap then
-    return nil
-  end
-
-  if storage.starter_anchors and storage.starter_anchors.layout_version ~= defs.STARTER_ANCHOR_LAYOUT_VERSION then
-    local migrated_anchors = storage.starter_anchors.anchors or {}
-
-    for _, anchor in ipairs(migrated_anchors) do
-      anchor.flow = anchor.flow or "ingress"
-      anchor.item_progress = anchor.item_progress or {0, 0}
-      anchor.direction = anchor.side and defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side) or nil
-      anchor.item_name = anchor.item_name or (
-        anchor.flow == "egress"
-          and defs.get_egress_item_name(anchor.resource)
-          or defs.get_ingress_item_name(anchor.resource)
-      )
-      anchor.entity_name = anchor.entity_name or (
-        anchor.flow == "egress"
-          and defs.get_egress_entity_name(anchor.resource)
-          or defs.get_ingress_entity_name(anchor.resource, 1)
-      )
-      anchor.entity = nil
-      migrate_anchor_to_anchor_ring(bootstrap.square_size, anchor)
-    end
-
-    storage.starter_anchors = {
-      layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
-      anchors = migrated_anchors
-    }
-  end
-
-  storage.starter_anchors = storage.starter_anchors or {
-    layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = bootstrap_runtime.build_starter_anchor_layout(bootstrap.square_size)
-  }
-
-  for _, anchor in ipairs(storage.starter_anchors.anchors) do
-    anchor.flow = anchor.flow or "ingress"
-    anchor.item_progress = anchor.item_progress or {0, 0}
-    anchor.direction = anchor.side and defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side) or nil
-    migrate_anchor_to_anchor_ring(bootstrap.square_size, anchor)
-  end
-
-  return storage.starter_anchors
+  return managed_line_state.ensure("nauvis")
 end
 
 local function ensure_anchor_set(surface, square_size, starter_anchors)
@@ -553,30 +495,7 @@ function anchor_runtime.ensure_starter_anchors()
 end
 
 function anchor_runtime.ensure_planet_starter_anchor_state(planet_name)
-  if planet_name == "nauvis" then
-    return anchor_runtime.ensure_starter_anchor_state()
-  end
-
-  local planet = planet_instance.ensure(planet_name)
-
-  if not planet then
-    return nil
-  end
-
-  local state = planet:get_bootstrap_storage()
-  state.starter_anchors = state.starter_anchors or {
-    layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = bootstrap_runtime.build_starter_anchor_layout(planet:get_square_size(), planet_name)
-  }
-
-  for _, anchor in ipairs(state.starter_anchors.anchors) do
-    anchor.flow = anchor.flow or "ingress"
-    anchor.item_progress = anchor.item_progress or {0, 0}
-    anchor.direction = anchor.side and defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side) or nil
-    migrate_anchor_to_anchor_ring(planet:get_square_size(), anchor)
-  end
-
-  return state.starter_anchors
+  return managed_line_state.ensure(planet_name)
 end
 
 function anchor_runtime.ensure_planet_starter_anchors(planet_name)
