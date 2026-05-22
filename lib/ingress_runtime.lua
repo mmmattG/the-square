@@ -187,51 +187,12 @@ local function pump_uranium_ingress_anchor(entity, requested_emission, shared_bu
   return inserted
 end
 
-local GLEBA_SEED_BY_FRUIT = {
-  yumako = "yumako-seed",
-  jellynut = "jellynut-seed"
-}
-
-local function pump_gleba_fruit_ingress(anchor, entity, ingress_tier, gleba_seed_supply)
-  local seed_resource = GLEBA_SEED_BY_FRUIT[anchor.resource]
-  local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
-  local seed_supply = gleba_seed_supply[seed_resource] or {0, 0}
-
-  for lane_index = 1, 2 do
-    local supplied_count = math.min(seed_supply[lane_index] or 0, emission.lane_emissions[lane_index] or 0)
-
-    seed_supply[lane_index] = (seed_supply[lane_index] or 0) - supplied_count
-    pump_item_anchor(entity, anchor.resource, lane_index, supplied_count)
-  end
-end
-
 local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, planet_name)
   if not starter_anchors then
     return
   end
 
   local uranium_anchor_index = 1
-  local gleba_seed_supply = {}
-
-  if planet_name == "gleba" then
-    for _, seed_anchor in ipairs(starter_anchors.anchors) do
-      local entity = seed_anchor.position and seed_anchor.entity or nil
-
-      if seed_anchor.flow == "egress"
-        and seed_anchor.kind == "item"
-        and (seed_anchor.resource == "yumako-seed" or seed_anchor.resource == "jellynut-seed")
-        and entity
-        and entity.valid
-      then
-        local emission = get_item_anchor_emissions(seed_anchor, ingress_tier, 1)
-        gleba_seed_supply[seed_anchor.resource] = gleba_seed_supply[seed_anchor.resource] or {0, 0}
-        gleba_seed_supply[seed_anchor.resource][1] = gleba_seed_supply[seed_anchor.resource][1]
-          + drain_item_anchor(entity, seed_anchor.resource, 1, emission.lane_emissions[1] or 0)
-        gleba_seed_supply[seed_anchor.resource][2] = gleba_seed_supply[seed_anchor.resource][2]
-          + drain_item_anchor(entity, seed_anchor.resource, 2, emission.lane_emissions[2] or 0)
-      end
-    end
-  end
 
   for _, anchor in ipairs(starter_anchors.anchors) do
     local entity = anchor.position and anchor.entity or nil
@@ -245,8 +206,6 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
 
             pump_uranium_ingress_anchor(entity, uranium_anchor and uranium_anchor.requested_emission, allocated_budget)
             uranium_anchor_index = uranium_anchor_index + 1
-          elseif planet_name == "gleba" and GLEBA_SEED_BY_FRUIT[anchor.resource] then
-            pump_gleba_fruit_ingress(anchor, entity, ingress_tier, gleba_seed_supply)
           else
             local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
 
@@ -261,12 +220,10 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
         end
       elseif anchor.flow == "egress" then
         if anchor.kind == "item" then
-          if not (planet_name == "gleba" and (anchor.resource == "yumako-seed" or anchor.resource == "jellynut-seed")) then
-            local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
+          local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
 
-            drain_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
-            drain_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
-          end
+          drain_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
+          drain_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
         elseif not (uranium_context and anchor.resource == "sulfuric-acid") then
           drain_fluid_anchor(entity, anchor.resource, ingress_tier.fluid_amount_per_interval)
         end

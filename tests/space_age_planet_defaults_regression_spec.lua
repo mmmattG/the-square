@@ -72,7 +72,7 @@ run_test("anchor presentation maps item and fluid ingress/egress behavior", func
   assert_equal(defs.get_anchor_presentation("egress", "fluid"), "underground-pipe")
 end)
 
-run_test("Gleba seed loop gates fruit at the normal item-ingress cadence", function()
+run_test("Gleba ingresses and egresses use normal item-anchor cadence", function()
   local inserted = {}
   local removed = {}
   local function entity()
@@ -100,8 +100,8 @@ run_test("Gleba seed loop gates fruit at the normal item-ingress cadence", funct
     ingress_runtime.pump_planet_starter_anchors()
   end
 
-  assert_equal(removed["yumako-seed"], 1, "seed egress should be consumed once per yellow interval")
-  assert_equal(inserted.yumako, 1, "matching fruit ingress should emit at the configured yellow interval")
+  assert_equal(removed["yumako-seed"], 1, "seed egress should drain once per yellow interval")
+  assert_equal(inserted.yumako, 1, "fruit ingress should emit at the configured yellow interval")
 end)
 
 run_test("void item destruction applies across supported planets", function()

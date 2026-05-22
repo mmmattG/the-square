@@ -96,7 +96,7 @@ run_test("planet starter pumping only uses planet-local anchors", function()
   assert_equal(storage.removed, "yumako-seed", "Gleba egress should drain seed items")
 end)
 
-run_test("Gleba seed egresses supply matching fruit ingresses at normal rates", function()
+run_test("Gleba fruit ingresses and seed egresses use normal anchor rates", function()
   local counts = {inserted = {}, removed = {}}
 
   local function belt_entity(kind)
@@ -148,50 +148,10 @@ run_test("Gleba seed egresses supply matching fruit ingresses at normal rates", 
     ingress_runtime.pump_planet_starter_anchors()
   end
 
-  assert_equal(counts.removed["yumako-seed"], 1, "Yumako ingress should consume one Gleba-local seed per yellow-lane interval")
+  assert_equal(counts.removed["yumako-seed"], 1, "Yumako seed egress should drain at the normal yellow single-lane rate")
   assert_equal(counts.inserted.yumako, 1, "Yumako ingress should emit at the normal yellow single-lane rate")
-  assert_equal(counts.removed["jellynut-seed"], 1, "Jellynut ingress should consume one Gleba-local seed per yellow-lane interval")
+  assert_equal(counts.removed["jellynut-seed"], 1, "Jellynut seed egress should drain at the normal yellow single-lane rate")
   assert_equal(counts.inserted.jellynut, 1, "Jellynut ingress should emit at the normal yellow single-lane rate")
-end)
-
-run_test("Gleba fruit ingresses wait for matching seed supply", function()
-  local inserted = nil
-
-  storage = {
-    bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
-    planets = {
-      gleba = {
-        square_size = 17,
-        surface_name = "gleba",
-        starter_anchors = {
-          anchors = {
-            {
-              resource = "yumako",
-              kind = "item",
-              flow = "ingress",
-              position = {x = 0, y = 9},
-              entity = {
-                valid = true,
-                get_transport_line = function()
-                  return {
-                    can_insert_at_back = function() return true end,
-                    insert_at_back = function(stack) inserted = stack.name end
-                  }
-                end
-              },
-              item_progress = {0, 0}
-            }
-          }
-        }
-      }
-    }
-  }
-
-  for _ = 1, defs.ITEM_ANCHOR_INTERVAL_TICKS do
-    ingress_runtime.pump_planet_starter_anchors()
-  end
-
-  assert_equal(inserted, nil, "Gleba fruit should not emit without its matching seed egress")
 end)
 
 run_test("entity presentation maps flow and kind to PRD visuals", function()
