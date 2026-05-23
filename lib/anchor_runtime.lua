@@ -63,14 +63,21 @@ local function configure_source_anchor_entity(entity, direction)
 
   entity.destructible = false
   entity.operable = true
+  if entity.active ~= nil then
+    entity.active = false
+  end
 end
 
 local function get_required_underground_belt_type(anchor)
-  if anchor and anchor.flow == "ingress" and anchor.kind == "item" then
-    return "output"
+  if not (anchor and anchor.flow == "ingress" and anchor.kind == "item") then
+    return nil
   end
 
-  return nil
+  if is_generic_anchor_entity_name and is_generic_anchor_entity_name(anchor.entity_name) then
+    return nil
+  end
+
+  return "output"
 end
 
 local function is_ingress_entity_name(entity_name)
@@ -424,32 +431,6 @@ local function destroy_entities_at_anchor_position(surface, anchor)
   end
 end
 
-local function ensure_anchor_config_proxy(surface, anchor)
-  if not (surface and anchor and anchor.position and anchor.resource) then
-    return
-  end
-
-  local proxy_name = defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
-  local proxy = find_entity_at_position(surface, proxy_name, anchor.position)
-
-  if not proxy then
-    proxy = surface.create_entity({
-      name = proxy_name,
-      position = anchor.position,
-      direction = anchor.direction,
-      force = game.forces.player
-    })
-  end
-
-  if proxy and proxy.valid then
-    configure_source_anchor_entity(proxy, anchor.direction)
-
-    if proxy.set_recipe then
-      proxy.set_recipe(defs.get_config_recipe_name(anchor.resource, anchor.flow))
-    end
-  end
-end
-
 local function ensure_anchor_entity(surface, anchor)
   if not (surface and anchor and anchor.position) then
     return nil
@@ -464,7 +445,6 @@ local function ensure_anchor_entity(surface, anchor)
 
     if not required_belt_type or entity.belt_to_ground_type == required_belt_type then
       configure_source_anchor_entity(entity, anchor.direction)
-      ensure_anchor_config_proxy(surface, anchor)
       return entity
     end
   end
@@ -484,7 +464,6 @@ local function ensure_anchor_entity(surface, anchor)
     if not required_belt_type or entity.belt_to_ground_type == required_belt_type then
       anchor.entity = entity
       configure_source_anchor_entity(entity, anchor.direction)
-      ensure_anchor_config_proxy(surface, anchor)
       return entity
     end
 
@@ -502,7 +481,6 @@ local function ensure_anchor_entity(surface, anchor)
   if entity then
     anchor.entity = entity
     configure_source_anchor_entity(entity, anchor.direction)
-    ensure_anchor_config_proxy(surface, anchor)
   end
 
   return entity
@@ -1313,6 +1291,9 @@ function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
   anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind, anchor.flow)
   anchor.entity_name = defs.get_anchor_entity_name_for_current_tier(anchor)
   anchor.item_progress = {0, 0}
+  if entity.active ~= nil then
+    entity.active = false
+  end
   try_unlock_oil_processing(anchor, entity.force, actor)
   try_unlock_uranium_processing(anchor, entity.force, actor)
 

@@ -284,6 +284,31 @@ end
 
 local allow_anchor_on_out_of_map
 
+local function build_generic_anchor_animation(anchor_source, kind)
+  if kind == "item" and anchor_source.structure and anchor_source.structure.direction_in then
+    local sheet = table.deepcopy(anchor_source.structure.direction_in.sheet)
+    sheet.direction_count = sheet.direction_count or 4
+    return sheet
+  end
+
+  return {
+    layers = {
+      {
+        filename = anchor_source.icon,
+        size = 64,
+        scale = 0.5,
+        shift = {0, 0}
+      },
+      {
+        filename = "__core__/graphics/icons/parametrise.png",
+        size = 64,
+        scale = 0.175,
+        shift = {0.125, 0.125}
+      }
+    }
+  }
+end
+
 local function build_generic_anchor_entity(name, item_name, kind, flow)
   local anchor_source
 
@@ -310,25 +335,10 @@ local function build_generic_anchor_entity(name, item_name, kind, flow)
   source.allowed_effects = {}
   source.module_slots = 0
   source.graphics_set = {
-    animation = {
-      layers = {
-        {
-          filename = anchor_source.icon,
-          size = 64,
-          scale = 0.5,
-          shift = {0, 0}
-        },
-        {
-          filename = "__core__/graphics/icons/parametrise.png",
-          size = 64,
-          scale = 0.175,
-          shift = {0.125, 0.125}
-        }
-      }
-    }
+    animation = build_generic_anchor_animation(anchor_source, kind)
   }
   source.collision_box = {{0, 0}, {0, 0}}
-  source.selection_box = anchor_source.selection_box
+  source.selection_box = {{-0.5, -0.5}, {0.5, 0.5}}
   source.collision_mask = {layers = {}}
   source.tile_width = nil
   source.tile_height = nil

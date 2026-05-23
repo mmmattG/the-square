@@ -554,7 +554,63 @@ run_test("placed generic anchors stay unconfigured and operable", function()
   assert_equal(anchor.entity.operable, true, "unconfigured generic anchors should stay operable so clicking opens configuration")
 end)
 
-run_test("choosing an anchor recipe configures and replaces the generic entity", function()
+run_test("existing generic item anchors do not require underground belt fields", function()
+  local player_force = {valid = true, technologies = {}}
+  local generic_entity = setmetatable({
+    valid = true,
+    name = runtime_defs.get_generic_anchor_entity_name("item", "ingress"),
+    position = {x = -6, y = -7},
+    force = player_force
+  }, {
+    __index = function(_, key)
+      if key == "belt_to_ground_type" then
+        error("Entity is not underground-belt.")
+      end
+    end
+  })
+  local surface = {
+    name = "fes-bootstrap",
+    find_entities_filtered = function(_, filter)
+      filter = filter or _
+      if filter and filter.name == generic_entity.name and filter.position then
+        return {generic_entity}
+      end
+      return {}
+    end,
+    create_entity = function(_, spec)
+      spec = spec or _
+      assert_equal(spec.name, runtime_defs.ANCHOR_SLOT_PROXY_NAME, "only anchor slot proxies should be created")
+      return {valid = true, name = spec.name, position = spec.position}
+    end
+  }
+  game = {
+    forces = {player = player_force},
+    surfaces = {["fes-bootstrap"] = surface},
+    players = {}
+  }
+  storage = {
+    bootstrap = {square_size = 12, surface_name = "fes-bootstrap", ingress_tier = 1},
+    starter_anchors = {layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION, anchors = {
+      {
+        kind = "item",
+        flow = "ingress",
+        side = "north",
+        position = {x = -6, y = -7},
+        direction = defines.direction.south,
+        entity = generic_entity,
+        entity_name = runtime_defs.get_generic_anchor_entity_name("item", "ingress"),
+        item_name = runtime_defs.get_generic_anchor_item_name("item", "ingress"),
+        item_progress = {0, 0}
+      }
+    }}
+  }
+
+  anchor_runtime.ensure_starter_anchors()
+
+  assert_equal(storage.starter_anchors.anchors[1].entity, generic_entity, "existing generic item anchor should be reused without underground-belt access")
+end)
+
+run_test("choosing an anchor recipe configures and keeps the generic entity inactive", function()
   local player_force = {valid = true, technologies = {}}
   local created_entities = {}
   local generic_entity
@@ -591,6 +647,7 @@ run_test("choosing an anchor recipe configures and replaces the generic entity",
     position = {x = -6, y = -7},
     surface = surface,
     force = player_force,
+    active = true,
     get_recipe = function()
       return {name = runtime_defs.get_config_recipe_name("iron-ore", "ingress")}
     end,
@@ -624,10 +681,11 @@ run_test("choosing an anchor recipe configures and replaces the generic entity",
 
   local anchor = storage.starter_anchors.anchors[1]
   assert_equal(anchor.resource, "iron-ore", "selected recipe should configure the resource")
-  assert_equal(anchor.entity_name, runtime_defs.get_ingress_entity_name("iron-ore", 1), "configured anchors should use resource-specific entities")
+  assert_equal(anchor.entity_name, runtime_defs.get_generic_anchor_entity_name("item", "ingress"), "configured anchors should keep the generic configurable entity")
+  assert_equal(generic_entity.active, false, "selected recipes should stop crafting so configurable anchors do not show a moving production progress bar")
 end)
 
-run_test("ingress tier research sync upgrades planet starter anchors", function()
+run_test("ingress tier research sync keeps configurable planet starter anchors generic", function()
   local player_force = {
     valid = true,
     technologies = {
@@ -703,7 +761,7 @@ run_test("ingress tier research sync upgrades planet starter anchors", function(
 
   assert_equal(anchor_runtime.sync_ingress_tier_from_research(player_force), true, "research sync should update the stored tier")
   assert_equal(storage.bootstrap.ingress_tier, 3, "red ingress research should set tier 3")
-  assert_equal(destroyed_yellow, true, "planet yellow ingress anchor should be destroyed")
-  assert_equal(created_entities[1].name, "the-square-scrap-ingress-anchor-red", "planet ingress anchor should be recreated at the researched belt tier")
+  assert_equal(destroyed_yellow, true, "legacy planet ingress anchor should be destroyed")
+  assert_equal(created_entities[1].name, runtime_defs.get_generic_anchor_entity_name("item", "ingress"), "planet ingress anchor should be recreated as a generic configurable anchor")
   assert_equal(storage.planets.fulgora.starter_anchors.anchors[1].entity, created_entities[1], "planet anchor state should point at the upgraded entity")
 end)

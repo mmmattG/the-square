@@ -33,7 +33,7 @@ run_test("non-Nauvis planets receive configured starter anchors in isolated stor
   assert_equal(storage.starter_anchors, nil, "planet starter creation should not mutate Nauvis anchors")
   assert_equal(storage.planets.vulcanus.starter_anchors, vulcanus, "Vulcanus anchors should live under Vulcanus state")
   assert_equal(storage.planets.gleba.starter_anchors, gleba, "Gleba anchors should live under Gleba state")
-  assert_equal(vulcanus.anchors[1].entity_name, defs.get_ingress_entity_name(vulcanus.anchors[1].resource), "positioned starter ingresses should spawn configured resource anchors")
+  assert_equal(vulcanus.anchors[1].entity_name, defs.get_generic_anchor_entity_name(vulcanus.anchors[1].kind, "ingress"), "positioned starter ingresses should spawn generic configurable anchors")
   assert_equal(vulcanus.anchors[1].item_name, defs.get_generic_anchor_item_name(vulcanus.anchors[1].kind, "ingress"), "starter ingresses should still mine to generic anchor items")
 end)
 

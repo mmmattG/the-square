@@ -738,19 +738,7 @@ function runtime_defs.get_anchor_entity_name_for_current_tier(anchor)
     return nil
   end
 
-  if not anchor.resource then
-    return runtime_defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
-  end
-
-  if anchor.flow == "egress" then
-    return runtime_defs.get_egress_entity_name(anchor.resource, runtime_defs.get_current_egress_tier_level())
-  end
-
-  if anchor.kind == "item" then
-    return runtime_defs.get_ingress_entity_name(anchor.resource, runtime_defs.get_current_ingress_tier_level())
-  end
-
-  return runtime_defs.get_ingress_entity_name(anchor.resource, 1)
+  return runtime_defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
 end
 
 function runtime_defs.build_ingress_tier_summary()
