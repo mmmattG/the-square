@@ -359,7 +359,9 @@ function bootstrap_runtime.add_expansion_points(amount)
 end
 
 function bootstrap_runtime.expand_planet_square(planet_name, player, gui_runtime, anchor_runtime)
-  return planet_square.apply_square_expansion(planet_name, {
+  local planet_square_runtime = require("lib.planet_square_runtime")
+
+  return planet_square_runtime.expand(planet_name, {
     player = player,
     gui_runtime = gui_runtime,
     anchor_runtime = anchor_runtime
@@ -367,33 +369,14 @@ function bootstrap_runtime.expand_planet_square(planet_name, player, gui_runtime
 end
 
 function bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
-  local result = planet_square.apply_square_expansion("nauvis", {
+  local planet_square_runtime = require("lib.planet_square_runtime")
+
+  return planet_square_runtime.expand("nauvis", {
     player = player,
     gui_runtime = gui_runtime,
-    anchor_runtime = anchor_runtime
+    anchor_runtime = anchor_runtime,
+    announce_global = true
   })
-
-  if not result then
-    return
-  end
-
-  game.print(
-    {"",
-      "[the-square] Square expanded from ",
-      result.previous_square_size,
-      "x",
-      result.previous_square_size,
-      " to ",
-      result.square_size,
-      "x",
-      result.square_size,
-      ". Awarded ",
-      result.awarded_expansion_points,
-      " expansion points (total: ",
-      result.expansion_points,
-      ")."
-    }
-  )
 end
 
 function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)

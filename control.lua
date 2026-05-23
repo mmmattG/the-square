@@ -2,7 +2,7 @@ local managed_line_runtime = require("lib.managed_line_runtime")
 local bootstrap_runtime = require("lib.bootstrap_runtime")
 local defs = require("lib.runtime_defs")
 local debug_platform_runtime = require("lib.debug_platform_runtime")
-local growth_runtime = require("lib.growth_runtime")
+local planet_square_runtime = require("lib.planet_square_runtime")
 local gui_runtime = require("lib.gui_runtime")
 local screenshot_runtime = require("lib.screenshot_runtime")
 local void_item_runtime = require("lib.void_item_runtime")
@@ -140,7 +140,12 @@ script.on_event(defines.events.on_gui_click, function(event)
 
   if event.element.name == defs.DEV_EXPAND_BUTTON_NAME then
     if player and gui_runtime.is_dev_mode_enabled(player) then
-      bootstrap_runtime.expand_square(player, gui_runtime, managed_line_runtime)
+      planet_square_runtime.expand("nauvis", {
+        player = player,
+        gui_runtime = gui_runtime,
+        managed_line_runtime = managed_line_runtime,
+        announce_global = true
+      })
       sync_all_runtime_guis()
     end
 
@@ -250,7 +255,10 @@ script.on_event(defines.events.on_research_finished, function(event)
     return
   end
 
-  if growth_runtime.handle_expansion_research_finished(research, bootstrap_runtime, gui_runtime, managed_line_runtime) then
+  if planet_square_runtime.expand_after_research(research, {
+    gui_runtime = gui_runtime,
+    managed_line_runtime = managed_line_runtime
+  }) then
     sync_all_runtime_guis()
   end
 
