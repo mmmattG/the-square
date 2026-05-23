@@ -224,14 +224,6 @@ local tips_and_tricks_items = {
   }
 }
 
-local function ingress_item_name(resource)
-  return "the-square-" .. resource .. "-ingress"
-end
-
-local function egress_item_name(resource)
-  return "the-square-" .. resource .. "-egress"
-end
-
 local function ingress_entity_name(resource, belt_tier_key)
   if not belt_tier_key or belt_tier_key == "yellow" then
     return "the-square-" .. resource .. "-ingress-anchor"
@@ -341,19 +333,6 @@ local function build_config_recipe(definition, flow, planet_name)
   }
 end
 
-local function build_ingress_item(definition)
-  return {
-    type = "item",
-    name = ingress_item_name(definition.resource),
-    localised_description = {"item-description.the-square-ingress-item"},
-    icon = definition.icon,
-    icon_size = 64,
-    subgroup = definition.kind == "fluid" and "energy-pipe-distribution" or "belt",
-    order = definition.order,
-    stack_size = 50
-  }
-end
-
 local function remove_collision_layers(collision_mask, layers_to_remove)
   if not collision_mask then
     return collision_mask
@@ -404,7 +383,7 @@ local function build_ingress_entity(definition, belt_tier_key, belt_prototype_na
   local source = definition.kind == "fluid"
     and table.deepcopy(data.raw["offshore-pump"]["offshore-pump"])
     or table.deepcopy(data.raw["underground-belt"][belt_prototype_name or "underground-belt"])
-  local item_name = ingress_item_name(definition.resource)
+  local item_name = generic_anchor_item_name(definition.kind, "ingress")
 
   source.name = ingress_entity_name(definition.resource, belt_tier_key)
   source.localised_description = {"entity-description.the-square-ingress-anchor"}
@@ -416,19 +395,6 @@ local function build_ingress_entity(definition, belt_tier_key, belt_prototype_na
   allow_anchor_on_out_of_map(source)
 
   return source
-end
-
-local function build_egress_item(definition)
-  return {
-    type = "item",
-    name = egress_item_name(definition.resource),
-    localised_description = {"item-description.the-square-egress-item"},
-    icon = definition.icon,
-    icon_size = 64,
-    subgroup = "energy-pipe-distribution",
-    order = definition.order,
-    stack_size = 50
-  }
 end
 
 local function build_anchor_slot_proxy()
@@ -474,7 +440,7 @@ local function build_egress_entity(definition, belt_tier_key, belt_prototype_nam
   local source = definition.kind == "item"
     and table.deepcopy(data.raw["underground-belt"][belt_prototype_name or "underground-belt"])
     or table.deepcopy(data.raw["pipe-to-ground"]["pipe-to-ground"])
-  local item_name = egress_item_name(definition.resource)
+  local item_name = generic_anchor_item_name(definition.kind, "egress")
 
   source.name = egress_entity_name(definition.resource, belt_tier_key)
   source.localised_description = {"entity-description.the-square-egress-anchor"}
@@ -668,8 +634,6 @@ prototypes[#prototypes + 1] = build_recipe("the-square-fluid-egress-anchor", "th
 }, 5)
 
 for _, definition in ipairs(ingress_resources) do
-  prototypes[#prototypes + 1] = build_ingress_item(definition)
-
   if definition.kind == "item" then
     for _, belt_tier in ipairs(item_ingress_belt_tiers) do
       prototypes[#prototypes + 1] = build_ingress_entity(
@@ -684,8 +648,6 @@ for _, definition in ipairs(ingress_resources) do
 end
 
 for _, definition in ipairs(egress_resources) do
-  prototypes[#prototypes + 1] = build_egress_item(definition)
-
   if definition.kind == "item" then
     for _, belt_tier in ipairs(item_egress_belt_tiers) do
       prototypes[#prototypes + 1] = build_egress_entity(
