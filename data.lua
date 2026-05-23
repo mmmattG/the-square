@@ -248,6 +248,48 @@ local function egress_entity_name(resource, belt_tier_key)
   return "the-square-" .. resource .. "-egress-anchor-" .. belt_tier_key
 end
 
+local function build_anchor_frame_item()
+  return {
+    type = "item",
+    name = "the-square-anchor-frame",
+    localised_description = {"item-description.the-square-anchor-frame"},
+    icons = {
+      {icon = "__base__/graphics/icons/steel-plate.png", icon_size = 64, scale = 0.75},
+      {icon = "__base__/graphics/icons/iron-gear-wheel.png", icon_size = 64, scale = 0.28, shift = {-10, -10}},
+      {icon = "__base__/graphics/icons/iron-gear-wheel.png", icon_size = 64, scale = 0.28, shift = {10, -10}},
+      {icon = "__base__/graphics/icons/iron-gear-wheel.png", icon_size = 64, scale = 0.28, shift = {-10, 10}},
+      {icon = "__base__/graphics/icons/iron-gear-wheel.png", icon_size = 64, scale = 0.28, shift = {10, 10}}
+    },
+    subgroup = "intermediate-product",
+    order = "z[the-square]-a[anchor-frame]",
+    stack_size = 50
+  }
+end
+
+local function build_generic_anchor_item(name, icon, order)
+  return {
+    type = "item",
+    name = name,
+    localised_description = {"item-description.the-square-generic-anchor"},
+    icon = icon,
+    icon_size = 64,
+    subgroup = "energy-pipe-distribution",
+    order = order,
+    stack_size = 50
+  }
+end
+
+local function build_recipe(name, result, ingredients, energy_required)
+  return {
+    type = "recipe",
+    name = name,
+    enabled = true,
+    energy_required = energy_required or 1,
+    ingredients = ingredients,
+    results = {{type = "item", name = result, amount = 1}}
+  }
+end
+
 local function build_ingress_item(definition)
   return {
     type = "item",
@@ -534,6 +576,36 @@ prototypes[#prototypes + 1] = {
 
 prototypes[#prototypes + 1] = build_anchor_slot_proxy()
 prototypes[#prototypes + 1] = build_anchor_place_input()
+prototypes[#prototypes + 1] = build_anchor_frame_item()
+prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-ingress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-b[item-ingress-anchor]")
+prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-egress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-c[item-egress-anchor]")
+prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-fluid-ingress-anchor", "__base__/graphics/icons/offshore-pump.png", "z[the-square]-d[fluid-ingress-anchor]")
+prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-fluid-egress-anchor", "__base__/graphics/icons/pipe-to-ground.png", "z[the-square]-e[fluid-egress-anchor]")
+prototypes[#prototypes + 1] = build_recipe("the-square-anchor-frame", "the-square-anchor-frame", {
+  {type = "item", name = "steel-plate", amount = 50},
+  {type = "item", name = "electronic-circuit", amount = 50},
+  {type = "item", name = "iron-gear-wheel", amount = 50}
+}, 10)
+prototypes[#prototypes + 1] = build_recipe("the-square-item-ingress-anchor", "the-square-item-ingress-anchor", {
+  {type = "item", name = "the-square-anchor-frame", amount = 1},
+  {type = "item", name = "transport-belt", amount = 50},
+  {type = "item", name = "underground-belt", amount = 5}
+}, 5)
+prototypes[#prototypes + 1] = build_recipe("the-square-item-egress-anchor", "the-square-item-egress-anchor", {
+  {type = "item", name = "the-square-anchor-frame", amount = 1},
+  {type = "item", name = "transport-belt", amount = 50},
+  {type = "item", name = "underground-belt", amount = 5}
+}, 5)
+prototypes[#prototypes + 1] = build_recipe("the-square-fluid-ingress-anchor", "the-square-fluid-ingress-anchor", {
+  {type = "item", name = "the-square-anchor-frame", amount = 1},
+  {type = "item", name = "pipe", amount = 50},
+  {type = "item", name = "offshore-pump", amount = 1}
+}, 5)
+prototypes[#prototypes + 1] = build_recipe("the-square-fluid-egress-anchor", "the-square-fluid-egress-anchor", {
+  {type = "item", name = "the-square-anchor-frame", amount = 1},
+  {type = "item", name = "pipe", amount = 50},
+  {type = "item", name = "pipe-to-ground", amount = 1}
+}, 5)
 
 for _, definition in ipairs(ingress_resources) do
   prototypes[#prototypes + 1] = build_ingress_item(definition)

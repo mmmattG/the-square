@@ -63,7 +63,7 @@ This document lists planned features for `the-square`, grouped first by planned 
 - Manual relocation is detach-and-replace
 - Expansion-time border movement preserves enabled inputs automatically
 - Disabled inputs move outward on expansion without auto-connection
-- Additional input lines can be purchased
+- Additional input lines are moving from resource-specific purchases to crafted generic anchors: Item Ingress Anchor, Item Egress Anchor, Fluid Ingress Anchor, and Fluid Egress Anchor, each built from an Anchor Frame intermediate.
 - Only raw or source resources arrive from outside
 - Crude oil is a later purchasable resource
 - Uranium ore is a later purchasable resource
@@ -75,7 +75,9 @@ This document lists planned features for `the-square`, grouped first by planned 
 - Research-driven Anchor upgrades affect all shared-tier item and fluid managed lines, whether ingress or egress
 - Anchor upgrades apply retroactively to existing and stashed lines
 - Logistics unlocks dual-lane yellow anchors, Logistics 2 unlocks red anchors, Logistics 3 unlocks blue anchors, and Space Age turbo belts unlock Turbo Anchors for both ingress and egress
-- Additional lines have flat cost in v1
+- Additional lines have flat cost in v1 until the crafted generic-anchor model fully replaces the line shop.
+- Anchor Frame recipe target: 50 steel plate, 50 electronic circuits, 50 iron gear wheels.
+- Generic anchor recipe targets: item anchors use 1 Anchor Frame, 50 transport belts, and 5 underground belts; fluid ingress uses 1 Anchor Frame, 50 pipes, and 1 offshore pump; fluid egress uses 1 Anchor Frame, 50 pipes, and 1 pipe-to-ground.
 - Expansion points awarded equal newly unlocked tiles
 - Expansion points spent on:
   - new resource lines
