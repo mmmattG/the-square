@@ -183,17 +183,20 @@ function runtime_defs.get_ingress_item_name(resource)
   return "the-square-" .. resource .. "-ingress"
 end
 
-function runtime_defs.get_ingress_entity_name(resource, ingress_tier_level)
-  local definition = nil
-
-  for _, input_definition in ipairs(runtime_defs.INPUT_DEFINITIONS) do
-    if input_definition.resource == resource then
-      definition = input_definition
-      break
+local function get_input_kind_for_resource(resource)
+  for _, definitions in pairs(runtime_defs.INPUT_DEFINITIONS_BY_PLANET) do
+    for _, input_definition in ipairs(definitions) do
+      if input_definition.resource == resource then
+        return input_definition.kind
+      end
     end
   end
 
-  if not definition or definition.kind ~= "item" then
+  return nil
+end
+
+function runtime_defs.get_ingress_entity_name(resource, ingress_tier_level)
+  if get_input_kind_for_resource(resource) ~= "item" then
     return "the-square-" .. resource .. "-ingress-anchor"
   end
 

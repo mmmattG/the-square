@@ -579,6 +579,6 @@ run_test("ingress tier research sync upgrades planet starter anchors", function(
   assert_equal(anchor_runtime.sync_ingress_tier_from_research(player_force), true, "research sync should update the stored tier")
   assert_equal(storage.bootstrap.ingress_tier, 3, "red ingress research should set tier 3")
   assert_equal(destroyed_yellow, true, "planet yellow ingress anchor should be destroyed")
-  assert_equal(created_entities[1].name, runtime_defs.get_ingress_entity_name("scrap", 3), "planet ingress anchor should be recreated at the researched belt tier")
+  assert_equal(created_entities[1].name, "the-square-scrap-ingress-anchor-red", "planet ingress anchor should be recreated at the researched belt tier")
   assert_equal(storage.planets.fulgora.starter_anchors.anchors[1].entity, created_entities[1], "planet anchor state should point at the upgraded entity")
 end)
