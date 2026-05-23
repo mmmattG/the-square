@@ -131,3 +131,25 @@ run_test("Space Age Planet Instance initializes independent planet state", funct
   assert_equal(storage.planets.vulcanus.square_size, 11, "planet state should be stored independently")
   assert_equal(storage.bootstrap, nil, "initializing another planet should not create Nauvis bootstrap state")
 end)
+
+run_test("Space Age Planet Instance migrates accidental Nauvis-sized planet state", function()
+  settings.startup = {}
+  storage = {
+    planets = {
+      fulgora = {
+        square_size = 7,
+        expansions_completed = 0,
+        expansion_research_levels = 0
+      }
+    }
+  }
+
+  local fulgora = planet_instance.ensure("fulgora")
+
+  assert_equal(fulgora:get_square_size(), 17, "Space Age planets should not retain Nauvis catalog default size")
+  assert_equal(fulgora:get_surface_size(), 19, "migrated surface size should match the planet square")
+
+  settings.startup = {
+    ["the-square-vulcanus-starting-square-size"] = {value = 11}
+  }
+end)

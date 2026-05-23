@@ -1,5 +1,6 @@
 local defs = require("lib.runtime_defs")
 local planet_config = require("lib.planet_config")
+local planet_catalog = require("lib.planet_catalog")
 
 local planet_instance = {}
 local planet_methods = {}
@@ -60,9 +61,13 @@ local function ensure_planet_defaults(planet_name, state)
   state.name = planet_name
   state.surface_name = state.surface_name or config.surface_name
 
+  local nauvis_catalog = planet_catalog.get("nauvis")
+  local nauvis_default_square_size = nauvis_catalog and nauvis_catalog.default_square_size or 7
+
   if state.square_size == nil
     or (
-      state.square_size == defs.get_square_size()
+      planet_name ~= "nauvis"
+      and state.square_size == nauvis_default_square_size
       and (state.expansion_research_levels or 0) == 0
       and (state.expansions_completed or 0) == 0
     )
