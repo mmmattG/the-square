@@ -896,6 +896,7 @@ function anchor_runtime.sync_ingress_tier_from_research(force)
 
   bootstrap.ingress_tier = target_tier_level
   anchor_runtime.ensure_starter_anchors()
+  anchor_runtime.ensure_all_planet_starter_anchors()
 
   return true
 end

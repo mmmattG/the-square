@@ -501,3 +501,84 @@ run_test("placing non-uranium ingress does not unlock uranium processing", funct
   )
   assert_equal(#force.get_played_sounds(), 0, "non-uranium placement should not play the research-complete sound")
 end)
+
+run_test("ingress tier research sync upgrades planet starter anchors", function()
+  local player_force = {
+    valid = true,
+    technologies = {
+      ["the-square-ingress-red"] = {researched = true},
+      ["the-square-ingress-blue"] = {researched = false}
+    }
+  }
+  local destroyed_yellow = false
+  local created_entities = {}
+  local yellow_anchor = {
+    valid = true,
+    name = runtime_defs.get_ingress_entity_name("scrap", 1),
+    force = player_force,
+    destroy = function(self)
+      self.valid = false
+      destroyed_yellow = true
+    end
+  }
+  local surface = {
+    name = "fulgora",
+    find_entities_filtered = function(_, filter)
+      filter = filter or _
+      if filter.name == runtime_defs.get_ingress_entity_name("scrap", 1) and yellow_anchor.valid then
+        return {yellow_anchor}
+      end
+
+      return {}
+    end,
+    create_entity = function(_, spec)
+      spec = spec or _
+      local entity = {
+        valid = true,
+        name = spec.name,
+        position = spec.position,
+        direction = spec.direction,
+        force = spec.force,
+        belt_to_ground_type = spec.type
+      }
+      created_entities[#created_entities + 1] = entity
+      return entity
+    end
+  }
+
+  game = {
+    forces = {player = player_force},
+    surfaces = {
+      fulgora = surface
+    },
+    players = {}
+  }
+  storage = {
+    bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
+    starter_anchors = nil,
+    planets = {
+      fulgora = {
+        square_size = 17,
+        surface_name = "fulgora",
+        starter_anchors = {anchors = {
+          {
+            resource = "scrap",
+            kind = "item",
+            flow = "ingress",
+            side = "north",
+            position = {x = 0, y = -9},
+            direction = defines.direction.south,
+            entity = yellow_anchor,
+            entity_name = runtime_defs.get_ingress_entity_name("scrap", 1)
+          }
+        }}
+      }
+    }
+  }
+
+  assert_equal(anchor_runtime.sync_ingress_tier_from_research(player_force), true, "research sync should update the stored tier")
+  assert_equal(storage.bootstrap.ingress_tier, 3, "red ingress research should set tier 3")
+  assert_equal(destroyed_yellow, true, "planet yellow ingress anchor should be destroyed")
+  assert_equal(created_entities[1].name, runtime_defs.get_ingress_entity_name("scrap", 3), "planet ingress anchor should be recreated at the researched belt tier")
+  assert_equal(storage.planets.fulgora.starter_anchors.anchors[1].entity, created_entities[1], "planet anchor state should point at the upgraded entity")
+end)
