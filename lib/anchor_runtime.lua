@@ -526,6 +526,58 @@ local function ensure_anchor_set(surface, square_size, starter_anchors)
   ensure_anchor_slot_proxies(surface, square_size, starter_anchors)
 end
 
+local function fill_starter_entity_inventory(entity, inventory_config)
+  if not (entity and inventory_config and entity.get_inventory and defines and defines.inventory) then
+    return
+  end
+
+  local inventory = entity.get_inventory(defines.inventory.chest)
+
+  if not inventory then
+    return
+  end
+
+  inventory.clear()
+
+  for _, stack in ipairs(inventory_config.articles or {}) do
+    inventory.insert(stack)
+  end
+end
+
+local function ensure_planet_starter_entities(surface, planet_name)
+  local force = game.forces.player
+
+  for _, starter_entity in ipairs(planet_config.get_starter_entities(planet_name)) do
+    local existing = surface.find_entities_filtered({name = starter_entity.name, position = starter_entity.position})[1]
+    local entity = existing
+
+    if not (entity and entity.valid) then
+      entity = surface.create_entity({
+        name = starter_entity.name,
+        position = starter_entity.position,
+        force = force,
+        raise_built = false
+      })
+    end
+
+    fill_starter_entity_inventory(entity, starter_entity.inventory)
+  end
+end
+
+function anchor_runtime.unlock_planet_bootstrap_research(planet_name, force)
+  if not (planet_name and force and force.technologies) then
+    return
+  end
+
+  for _, technology_name in ipairs(planet_config.get_bootstrap_research(planet_name)) do
+    local technology = force.technologies[technology_name]
+
+    if technology then
+      technology.researched = true
+    end
+  end
+end
+
 function anchor_runtime.ensure_starter_anchors()
   local bootstrap = storage.bootstrap
 
@@ -561,7 +613,9 @@ function anchor_runtime.ensure_planet_starter_anchors(planet_name)
     return
   end
 
+  anchor_runtime.unlock_planet_bootstrap_research(planet_name, game.forces.player)
   ensure_anchor_set(surface, planet:get_square_size(), anchor_runtime.ensure_planet_starter_anchor_state(planet_name))
+  ensure_planet_starter_entities(surface, planet_name)
 end
 
 function anchor_runtime.ensure_all_planet_starter_anchors()

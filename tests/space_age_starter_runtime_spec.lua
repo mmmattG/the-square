@@ -1,6 +1,6 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 
-defines = {direction = {south = 1, west = 2, north = 3, east = 4}}
+defines = {direction = {south = 1, west = 2, north = 3, east = 4}, inventory = {chest = 1}}
 settings = {global = {}, startup = {}}
 storage = {bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1}}
 game = {forces = {player = {valid = true, mining_drill_productivity_bonus = 0}}}
@@ -213,6 +213,31 @@ run_test("Gleba fruit ingresses and seed egresses use normal anchor rates", func
   assert_equal(counts.inserted.yumako, 1, "Yumako ingress should emit at the normal yellow single-lane rate")
   assert_equal(counts.removed["jellynut-seed"], 1, "Jellynut seed egress should drain at the normal yellow single-lane rate")
   assert_equal(counts.inserted.jellynut, 1, "Jellynut ingress should emit at the normal yellow single-lane rate")
+end)
+
+run_test("planet bootstrap research unlocks are planet-specific", function()
+  local techs = {}
+  for _, name in ipairs({"recycling", "heating-tower", "agriculture", "jellynut", "yumako", "calcite-processing", "tungsten-carbide", "lithium-processing"}) do
+    techs[name] = {researched = false}
+  end
+
+  local force = {technologies = techs}
+  anchor_runtime.unlock_planet_bootstrap_research("fulgora", force)
+  assert_equal(techs.recycling.researched, true, "Fulgora should unlock recycling")
+  assert_equal(techs.agriculture.researched, false, "Fulgora should not unlock Gleba research")
+
+  anchor_runtime.unlock_planet_bootstrap_research("gleba", force)
+  assert_equal(techs["heating-tower"].researched, true, "Gleba should unlock heating tower")
+  assert_equal(techs.agriculture.researched, true, "Gleba should unlock agriculture")
+  assert_equal(techs.jellynut.researched, true, "Gleba should unlock jellynut")
+  assert_equal(techs.yumako.researched, true, "Gleba should unlock yumako")
+
+  anchor_runtime.unlock_planet_bootstrap_research("vulcanus", force)
+  assert_equal(techs["calcite-processing"].researched, true, "Vulcanus should unlock calcite processing")
+  assert_equal(techs["tungsten-carbide"].researched, true, "Vulcanus should unlock tungsten carbide")
+
+  anchor_runtime.unlock_planet_bootstrap_research("aquilo", force)
+  assert_equal(techs["lithium-processing"].researched, true, "Aquilo should unlock lithium processing")
 end)
 
 run_test("entity presentation maps flow and kind to PRD visuals", function()

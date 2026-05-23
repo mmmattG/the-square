@@ -52,6 +52,14 @@ function planet_config.get(planet_name)
   }
 end
 
+function planet_config.get_bootstrap_research(planet_name)
+  return planet_catalog.get_bootstrap_research(planet_name)
+end
+
+function planet_config.get_starter_entities(planet_name)
+  return planet_catalog.get_starter_entities(planet_name)
+end
+
 function planet_config.each_supported_planet()
   local index = 0
 

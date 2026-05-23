@@ -55,6 +55,22 @@ run_test("overlapping resource names keep Planet-local behavior", function()
   gleba_stone.prerequisite_resource = nil
 end)
 
+run_test("starter config includes Fulgora placed entities and Gleba seed chest", function()
+  local planet_config = require("lib.planet_config")
+  local fulgora_entities = planet_config.get_starter_entities("fulgora")
+  local gleba_entities = planet_config.get_starter_entities("gleba")
+
+  assert_equal(#fulgora_entities, 5, "Fulgora should have one recycler and four rods")
+  assert_equal(fulgora_entities[1].name, "recycler", "Fulgora should spawn a recycler")
+  assert_equal(fulgora_entities[2].name, "lightning-rod", "Fulgora should spawn lightning rods")
+  assert_equal(#gleba_entities, 1, "Gleba should have one starter chest")
+  assert_equal(gleba_entities[1].inventory.articles[1].name, "yumako-seed", "Gleba chest should contain yumako seeds")
+  assert_equal(gleba_entities[1].inventory.articles[1].count, 50, "Gleba chest should contain 50 yumako seeds")
+  assert_equal(gleba_entities[1].inventory.articles[2].name, "jellynut-seed", "Gleba chest should contain jellynut seeds")
+  assert_equal(gleba_entities[1].inventory.articles[2].count, 50, "Gleba chest should contain 50 jellynut seeds")
+  assert_equal(#planet_config.get_starter_entities("nauvis"), 0, "Nauvis should not receive Space Age starter entities")
+end)
+
 run_test("starter layout includes planet-local Gleba seed egresses", function()
   local anchors = bootstrap_runtime.build_starter_anchor_layout(17, "gleba")
   local seen = {}
