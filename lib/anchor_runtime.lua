@@ -133,8 +133,19 @@ local function get_anchor_state_for_surface(surface)
   return managed_line_state.ensure(planet_name), planet, planet_name
 end
 
+local function is_generic_anchor_entity_name(entity_name)
+  for _, generic_entity_name in pairs(defs.GENERIC_ANCHOR_ENTITIES) do
+    if entity_name == generic_entity_name then
+      return true
+    end
+  end
+
+  return false
+end
+
 function anchor_runtime.is_managed_anchor_entity_name(entity_name)
   return entity_name == defs.ANCHOR_SLOT_PROXY_NAME
+    or is_generic_anchor_entity_name(entity_name)
     or is_ingress_entity_name(entity_name)
     or is_egress_entity_name(entity_name)
 end
@@ -142,6 +153,10 @@ end
 local function does_anchor_match_entity_name(anchor, entity_name)
   if not anchor then
     return false
+  end
+
+  if entity_name == defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow) then
+    return true
   end
 
   if anchor.flow == "egress" then
