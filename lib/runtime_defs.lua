@@ -49,7 +49,7 @@ runtime_defs.DEBUG_FRAME_NAME = "the_square_debug_frame"
 runtime_defs.SHOP_BUTTON_NAME = "the_square_shop_button"
 runtime_defs.SCREENSHOT_BUTTON_NAME = "the_square_screenshot_button"
 runtime_defs.SHOP_FRAME_NAME = "the_square_shop_frame"
-runtime_defs.MAX_INGRESS_TIER = 4
+runtime_defs.MAX_INGRESS_TIER = 5
 runtime_defs.MAX_EGRESS_TIER = 5
 runtime_defs.DEBUG_SPACE_AGE_PLANETS = {
   {name = "nauvis", label = "Nauvis"},
@@ -73,6 +73,11 @@ runtime_defs.INGRESS_RESEARCH_DEFINITIONS = {
     technology_name = "the-square-ingress-blue",
     prerequisite_technology_name = "logistics-3",
     tier_level = 4
+  },
+  {
+    technology_name = "the-square-egress-turbo",
+    prerequisite_technology_name = "turbo-transport-belt",
+    tier_level = 5
   }
 }
 runtime_defs.EGRESS_RESEARCH_DEFINITIONS = {
@@ -169,7 +174,8 @@ runtime_defs.ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER = {
   [1] = "yellow",
   [2] = "yellow",
   [3] = "red",
-  [4] = "blue"
+  [4] = "blue",
+  [5] = "turbo"
 }
 runtime_defs.ITEM_EGRESS_BELT_TIER_BY_EGRESS_TIER = {
   [1] = "yellow",
@@ -202,6 +208,12 @@ runtime_defs.INGRESS_TIER_DEFINITIONS = {
     label = "Blue double lane",
     item_lane_counts = {3, 3},
     fluid_amount_per_interval = 960
+  },
+  [5] = {
+    key = "turbo-double",
+    label = "Turbo double lane",
+    item_lane_counts = {4, 4},
+    fluid_amount_per_interval = 1280
   }
 }
 

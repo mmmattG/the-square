@@ -74,7 +74,7 @@ This document lists planned features for `the-square`, grouped first by planned 
 - Fluid lines start at the matching lowest anchor tier
 - Research-driven Anchor upgrades affect all shared-tier item and fluid managed lines, whether ingress or egress
 - Anchor upgrades apply retroactively to existing and stashed lines
-- Logistics unlocks dual-lane yellow anchors, Logistics 2 unlocks red anchors, Logistics 3 unlocks blue anchors, and Space Age turbo belts unlock Turbo Anchors for item egress only
+- Logistics unlocks dual-lane yellow anchors, Logistics 2 unlocks red anchors, Logistics 3 unlocks blue anchors, and Space Age turbo belts unlock Turbo Anchors for both ingress and egress
 - Additional lines have flat cost in v1
 - Expansion points awarded equal newly unlocked tiles
 - Expansion points spent on:

@@ -50,6 +50,7 @@ local item_egress_belt_tiers = {
 }
 
 if mods and mods["space-age"] and data.raw["underground-belt"]["turbo-underground-belt"] then
+  item_ingress_belt_tiers[#item_ingress_belt_tiers + 1] = {key = "turbo", prototype_name = "turbo-underground-belt"}
   item_egress_belt_tiers[#item_egress_belt_tiers + 1] = {key = "turbo", prototype_name = "turbo-underground-belt"}
 end
 
@@ -133,12 +134,6 @@ local function build_anchor_upgrade_icons(belt_icon)
   }
 end
 
-local function build_egress_upgrade_icons(belt_icon)
-  return {
-    {icon = belt_icon, icon_size = 64, scale = 0.8, shift = {-8, 0}},
-    {icon = "__base__/graphics/icons/underground-belt.png", icon_size = 64, scale = 0.5, shift = {14, 0}}
-  }
-end
 
 local ingress_research_definitions = {
   {
@@ -600,7 +595,7 @@ end
 if mods and mods["space-age"] and data.raw.technology["turbo-transport-belt"] then
   prototypes[#prototypes + 1] = build_ingress_research_technology({
     name = "the-square-egress-turbo",
-    icons = build_egress_upgrade_icons("__space-age__/graphics/icons/turbo-transport-belt.png"),
+    icons = build_anchor_upgrade_icons("__space-age__/graphics/icons/turbo-transport-belt.png"),
     prerequisite_technology_name = "turbo-transport-belt",
     previous_ingress_technology_name = "the-square-ingress-blue",
     localised_name = {"technology-name.the-square-egress-turbo"},

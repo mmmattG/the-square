@@ -104,7 +104,7 @@ run_test("item egress entity names follow researched belt tiers", function()
   assert_equal(runtime_defs.get_egress_entity_name("sulfuric-acid", 5), "the-square-sulfuric-acid-egress-anchor")
 end)
 
-run_test("egress tier research includes the Space Age-only final tier", function()
+run_test("anchor tier research includes the Space Age-only final tier", function()
   local force = {
     valid = true,
     technologies = {
@@ -113,5 +113,7 @@ run_test("egress tier research includes the Space Age-only final tier", function
     }
   }
 
+  assert_equal(runtime_defs.get_ingress_tier_level_for_force(force), 5)
   assert_equal(runtime_defs.get_egress_tier_level_for_force(force), 5)
+  assert_equal(runtime_defs.get_ingress_entity_name("scrap", 5), "the-square-scrap-ingress-anchor-turbo")
 end)
