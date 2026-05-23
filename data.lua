@@ -309,6 +309,24 @@ local function build_generic_anchor_entity(name, item_name, kind, flow)
   source.energy_usage = "1W"
   source.allowed_effects = {}
   source.module_slots = 0
+  source.graphics_set = {
+    animation = {
+      layers = {
+        {
+          filename = anchor_source.icon,
+          size = 64,
+          scale = 0.5,
+          shift = {0, 0}
+        },
+        {
+          filename = "__core__/graphics/icons/parametrise.png",
+          size = 64,
+          scale = 0.175,
+          shift = {0.125, 0.125}
+        }
+      }
+    }
+  }
   source.collision_box = anchor_source.collision_box
   source.selection_box = anchor_source.selection_box
   source.collision_mask = anchor_source.collision_mask

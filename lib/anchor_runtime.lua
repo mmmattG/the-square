@@ -62,7 +62,7 @@ local function configure_source_anchor_entity(entity, direction)
   end
 
   entity.destructible = false
-  entity.operable = is_generic_anchor_entity_name(entity.name)
+  entity.operable = true
 end
 
 local function get_required_underground_belt_type(anchor)
