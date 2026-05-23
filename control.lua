@@ -1,20 +1,19 @@
-local anchor_runtime = require("lib.anchor_runtime")
+local managed_line_runtime = require("lib.managed_line_runtime")
 local bootstrap_runtime = require("lib.bootstrap_runtime")
 local defs = require("lib.runtime_defs")
 local debug_platform_runtime = require("lib.debug_platform_runtime")
 local growth_runtime = require("lib.growth_runtime")
 local gui_runtime = require("lib.gui_runtime")
-local ingress_runtime = require("lib.ingress_runtime")
 local screenshot_runtime = require("lib.screenshot_runtime")
 local void_item_runtime = require("lib.void_item_runtime")
 
 local function sync_all_runtime_guis()
   gui_runtime.refresh_all_debug_guis()
-  gui_runtime.sync_all_shop_guis(anchor_runtime)
+  gui_runtime.sync_all_shop_guis(managed_line_runtime)
 end
 
 local function bootstrap_world()
-  bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
+  bootstrap_runtime.bootstrap_world(managed_line_runtime, gui_runtime)
 end
 
 local function handle_player_join_or_respawn(event)
@@ -24,7 +23,7 @@ local function handle_player_join_or_respawn(event)
     bootstrap_runtime.teleport_player_to_square(player)
     gui_runtime.sync_dev_gui(player)
     gui_runtime.sync_screenshot_gui(player)
-    gui_runtime.sync_shop_gui(player, anchor_runtime)
+    gui_runtime.sync_shop_gui(player, managed_line_runtime)
     gui_runtime.sync_cliff_explosive_gui(player)
   end
 end
@@ -36,8 +35,8 @@ end)
 script.on_configuration_changed(function()
   if storage.bootstrap then
     bootstrap_runtime.ensure_bootstrap_state_defaults()
-    anchor_runtime.ensure_starter_anchor_state()
-    anchor_runtime.sync_anchor_tiers_from_research(defs.get_player_force())
+    managed_line_runtime.ensure_starter_anchor_state()
+    managed_line_runtime.sync_tier(defs.get_player_force())
 
     if storage.bootstrap.square_size ~= defs.get_square_size() then
       bootstrap_runtime.notify_square_size_change_applies_to_new_saves()
@@ -52,9 +51,9 @@ script.on_configuration_changed(function()
 
     gui_runtime.sync_all_dev_guis()
     gui_runtime.sync_all_screenshot_guis()
-    gui_runtime.sync_all_shop_guis(anchor_runtime)
+    gui_runtime.sync_all_shop_guis(managed_line_runtime)
     gui_runtime.sync_all_cliff_explosive_guis()
-    bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
+    bootstrap_runtime.refresh_spawn_routing(managed_line_runtime, gui_runtime)
     return
   end
 
@@ -66,28 +65,28 @@ script.on_event(defines.events.on_player_respawned, handle_player_join_or_respaw
 
 script.on_event(defines.events.on_chunk_generated, function(event)
   if bootstrap_runtime.refresh_generated_chunk_for_planet_surface(event.surface, event.area) then
-    anchor_runtime.ensure_planet_starter_anchors(event.surface.name)
+    managed_line_runtime.ensure(event.surface.name)
   end
 end)
 
 script.on_event(defines.events.on_player_rotated_entity, function(event)
-  anchor_runtime.reset_rotated_anchor(event.entity)
+  managed_line_runtime.handle_rotated(event.entity)
 end)
 
 script.on_event(defines.events.on_player_flipped_entity, function(event)
-  anchor_runtime.reset_rotated_anchor(event.entity)
+  managed_line_runtime.handle_rotated(event.entity)
 end)
 
 if defines.events.on_entity_settings_pasted then
   script.on_event(defines.events.on_entity_settings_pasted, function(event)
-    anchor_runtime.handle_anchor_recipe_changed(event.destination, game.get_player(event.player_index))
+    managed_line_runtime.handle_recipe_changed(event.destination, game.get_player(event.player_index))
   end)
 end
 
 if defines.events.on_gui_opened then
   script.on_event(defines.events.on_gui_opened, function(event)
     if event.entity then
-      anchor_runtime.handle_anchor_gui_opened(event.entity, game.get_player(event.player_index))
+      managed_line_runtime.handle_gui_opened(event.entity, game.get_player(event.player_index))
     end
   end)
 end
@@ -95,15 +94,15 @@ end
 if defines.events.on_gui_closed then
   script.on_event(defines.events.on_gui_closed, function(event)
     if event.entity then
-      anchor_runtime.handle_anchor_recipe_changed(event.entity, game.get_player(event.player_index))
+      managed_line_runtime.handle_recipe_changed(event.entity, game.get_player(event.player_index))
     end
   end)
 end
 
 local function handle_entity_built(event)
-  anchor_runtime.handle_entity_built(event, gui_runtime)
+  managed_line_runtime.handle_built(event, gui_runtime)
   void_item_runtime.destroy_if_void_item(event)
-  gui_runtime.sync_all_shop_guis(anchor_runtime)
+  gui_runtime.sync_all_shop_guis(managed_line_runtime)
 end
 
 script.on_event(defines.events.on_built_entity, handle_entity_built)
@@ -124,8 +123,8 @@ if defines.events.on_trigger_created_entity then
 end
 
 local function handle_anchor_removed(event)
-  anchor_runtime.handle_anchor_mined(event.entity)
-  gui_runtime.sync_all_shop_guis(anchor_runtime)
+  managed_line_runtime.handle_mined(event.entity)
+  gui_runtime.sync_all_shop_guis(managed_line_runtime)
 end
 
 script.on_event(defines.events.on_player_mined_entity, handle_anchor_removed)
@@ -141,7 +140,7 @@ script.on_event(defines.events.on_gui_click, function(event)
 
   if event.element.name == defs.DEV_EXPAND_BUTTON_NAME then
     if player and gui_runtime.is_dev_mode_enabled(player) then
-      bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
+      bootstrap_runtime.expand_square(player, gui_runtime, managed_line_runtime)
       sync_all_runtime_guis()
     end
 
@@ -181,8 +180,8 @@ script.on_event(defs.PLACE_MANAGED_ANCHOR_INPUT_NAME, function(event)
   local player = game.get_player(event.player_index)
 
   if player then
-    anchor_runtime.handle_managed_anchor_slot_click(player)
-    gui_runtime.sync_all_shop_guis(anchor_runtime)
+    managed_line_runtime.handle_slot_click(player)
+    gui_runtime.sync_all_shop_guis(managed_line_runtime)
   end
 end)
 
@@ -190,7 +189,7 @@ script.on_event(defs.OPEN_MANAGED_ANCHOR_INPUT_NAME, function(event)
   local player = game.get_player(event.player_index)
 
   if player and player.selected then
-    anchor_runtime.handle_anchor_gui_opened(player.selected, player)
+    managed_line_runtime.handle_gui_opened(player.selected, player)
   end
 end)
 
@@ -204,12 +203,12 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
   end
 
   if event.setting == defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION then
-    anchor_runtime.apply_logistic_network_setting_to_all_forces()
+    managed_line_runtime.apply_logistic_network_setting_to_all_forces()
     return
   end
 
   if event.setting == defs.SETTING_LINE_PURCHASE_COST then
-    gui_runtime.sync_all_shop_guis(anchor_runtime)
+    gui_runtime.sync_all_shop_guis(managed_line_runtime)
     return
   end
 
@@ -229,7 +228,7 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
 
     if player then
       gui_runtime.sync_dev_gui(player)
-      gui_runtime.sync_shop_gui(player, anchor_runtime)
+      gui_runtime.sync_shop_gui(player, managed_line_runtime)
     end
 
     return
@@ -251,24 +250,24 @@ script.on_event(defines.events.on_research_finished, function(event)
     return
   end
 
-  if growth_runtime.handle_expansion_research_finished(research, bootstrap_runtime, gui_runtime, anchor_runtime) then
+  if growth_runtime.handle_expansion_research_finished(research, bootstrap_runtime, gui_runtime, managed_line_runtime) then
     sync_all_runtime_guis()
   end
 
-  if anchor_runtime.sync_anchor_tiers_from_research(research.force) then
+  if managed_line_runtime.sync_tier(research.force) then
     sync_all_runtime_guis()
   end
 
   if not defs.is_logistic_network_automation_enabled() then
-    anchor_runtime.apply_logistic_network_setting_to_force(research.force)
+    managed_line_runtime.apply_logistic_network_setting_to_force(research.force)
   end
 end)
 
 script.on_nth_tick(1, function()
-  ingress_runtime.pump_planet_starter_anchors()
+  managed_line_runtime.pump_all()
 end)
 
 script.on_nth_tick(defs.ITEM_ANCHOR_INTERVAL_TICKS, function()
-  anchor_runtime.ensure_all_planet_starter_anchors()
-  anchor_runtime.update_all_player_anchor_previews()
+  managed_line_runtime.ensure_all()
+  managed_line_runtime.update_all_player_anchor_previews()
 end)
