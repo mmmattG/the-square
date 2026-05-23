@@ -327,9 +327,9 @@ local function build_generic_anchor_entity(name, item_name, kind, flow)
       }
     }
   }
-  source.collision_box = anchor_source.collision_box
+  source.collision_box = {{0, 0}, {0, 0}}
   source.selection_box = anchor_source.selection_box
-  source.collision_mask = anchor_source.collision_mask
+  source.collision_mask = {layers = {}}
   source.tile_width = nil
   source.tile_height = nil
   allow_anchor_on_out_of_map(source)

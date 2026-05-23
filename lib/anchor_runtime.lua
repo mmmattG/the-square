@@ -411,9 +411,41 @@ local function destroy_entities_at_anchor_position(surface, anchor)
     return
   end
 
+  local config_proxy_name = defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
+
   for _, entity in ipairs(surface.find_entities_filtered({position = anchor.position})) do
-    if entity.valid and entity.name ~= anchor.entity_name and entity.force == game.forces.player then
+    if entity.valid
+      and entity.name ~= anchor.entity_name
+      and entity.name ~= config_proxy_name
+      and entity.force == game.forces.player
+    then
       entity.destroy({raise_destroy = false})
+    end
+  end
+end
+
+local function ensure_anchor_config_proxy(surface, anchor)
+  if not (surface and anchor and anchor.position and anchor.resource) then
+    return
+  end
+
+  local proxy_name = defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
+  local proxy = find_entity_at_position(surface, proxy_name, anchor.position)
+
+  if not proxy then
+    proxy = surface.create_entity({
+      name = proxy_name,
+      position = anchor.position,
+      direction = anchor.direction,
+      force = game.forces.player
+    })
+  end
+
+  if proxy and proxy.valid then
+    configure_source_anchor_entity(proxy, anchor.direction)
+
+    if proxy.set_recipe then
+      proxy.set_recipe(defs.get_config_recipe_name(anchor.resource, anchor.flow))
     end
   end
 end
@@ -432,6 +464,7 @@ local function ensure_anchor_entity(surface, anchor)
 
     if not required_belt_type or entity.belt_to_ground_type == required_belt_type then
       configure_source_anchor_entity(entity, anchor.direction)
+      ensure_anchor_config_proxy(surface, anchor)
       return entity
     end
   end
@@ -451,6 +484,7 @@ local function ensure_anchor_entity(surface, anchor)
     if not required_belt_type or entity.belt_to_ground_type == required_belt_type then
       anchor.entity = entity
       configure_source_anchor_entity(entity, anchor.direction)
+      ensure_anchor_config_proxy(surface, anchor)
       return entity
     end
 
@@ -468,6 +502,7 @@ local function ensure_anchor_entity(surface, anchor)
   if entity then
     anchor.entity = entity
     configure_source_anchor_entity(entity, anchor.direction)
+    ensure_anchor_config_proxy(surface, anchor)
   end
 
   return entity
