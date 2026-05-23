@@ -1,9 +1,13 @@
 local expansion_research = require("lib.expansion_research")
 local planet_config = require("lib.planet_config")
 
-local lava_icon = mods and mods["space-age"]
-  and "__space-age__/graphics/icons/fluid/lava.png"
-  or "__base__/graphics/icons/fluid/crude-oil.png"
+local function space_age_icon(path, fallback)
+  if mods and mods["space-age"] then
+    return "__space-age__/graphics/icons/" .. path
+  end
+
+  return fallback
+end
 
 local ingress_resources = {
   {resource = "iron-ore", kind = "item", icon = "__base__/graphics/icons/iron-ore.png", order = "a[ingress]-a[iron-ore]"},
@@ -14,23 +18,23 @@ local ingress_resources = {
   {resource = "wood", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "a[ingress]-f[wood]"},
   {resource = "crude-oil", kind = "fluid", icon = "__base__/graphics/icons/fluid/crude-oil.png", order = "a[ingress]-g[crude-oil]"},
   {resource = "uranium-ore", kind = "item", icon = "__base__/graphics/icons/uranium-ore.png", order = "a[ingress]-h[uranium-ore]"},
-  {resource = "calcite", kind = "item", icon = "__base__/graphics/icons/stone.png", order = "a[ingress]-i[calcite]"},
-  {resource = "tungsten-ore", kind = "item", icon = "__base__/graphics/icons/stone.png", order = "a[ingress]-j[tungsten-ore]"},
+  {resource = "calcite", kind = "item", icon = space_age_icon("calcite.png", "__base__/graphics/icons/stone.png"), order = "a[ingress]-i[calcite]"},
+  {resource = "tungsten-ore", kind = "item", icon = space_age_icon("tungsten-ore.png", "__base__/graphics/icons/stone.png"), order = "a[ingress]-j[tungsten-ore]"},
   {resource = "sulfuric-acid", kind = "fluid", icon = "__base__/graphics/icons/fluid/sulfuric-acid.png", order = "a[ingress]-k[sulfuric-acid]"},
-  {resource = "lava", kind = "fluid", icon = lava_icon, order = "a[ingress]-l[lava]"},
-  {resource = "scrap", kind = "item", icon = "__base__/graphics/icons/iron-stick.png", order = "a[ingress]-m[scrap]"},
+  {resource = "lava", kind = "fluid", icon = space_age_icon("fluid/lava.png", "__base__/graphics/icons/fluid/crude-oil.png"), order = "a[ingress]-l[lava]"},
+  {resource = "scrap", kind = "item", icon = space_age_icon("scrap.png", "__base__/graphics/icons/iron-stick.png"), order = "a[ingress]-m[scrap]"},
   {resource = "heavy-oil", kind = "fluid", icon = "__base__/graphics/icons/fluid/heavy-oil.png", order = "a[ingress]-n[heavy-oil]"},
-  {resource = "yumako", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "a[ingress]-o[yumako]"},
-  {resource = "jellynut", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "a[ingress]-p[jellynut]"},
-  {resource = "ammoniacal-solution", kind = "fluid", icon = "__base__/graphics/icons/fluid/water.png", order = "a[ingress]-q[ammoniacal-solution]"},
-  {resource = "fluorine", kind = "fluid", icon = "__base__/graphics/icons/fluid/water.png", order = "a[ingress]-r[fluorine]"},
-  {resource = "lithium-brine", kind = "fluid", icon = "__base__/graphics/icons/fluid/water.png", order = "a[ingress]-s[lithium-brine]"}
+  {resource = "yumako", kind = "item", icon = space_age_icon("yumako.png", "__base__/graphics/icons/wood.png"), order = "a[ingress]-o[yumako]"},
+  {resource = "jellynut", kind = "item", icon = space_age_icon("jellynut.png", "__base__/graphics/icons/wood.png"), order = "a[ingress]-p[jellynut]"},
+  {resource = "ammoniacal-solution", kind = "fluid", icon = space_age_icon("fluid/ammoniacal-solution.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-q[ammoniacal-solution]"},
+  {resource = "fluorine", kind = "fluid", icon = space_age_icon("fluid/fluorine.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-r[fluorine]"},
+  {resource = "lithium-brine", kind = "fluid", icon = space_age_icon("fluid/lithium-brine.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-s[lithium-brine]"}
 }
 
 local egress_resources = {
   {resource = "sulfuric-acid", kind = "fluid", icon = "__base__/graphics/icons/fluid/sulfuric-acid.png", order = "b[egress]-a[sulfuric-acid]"},
-  {resource = "yumako-seed", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "b[egress]-b[yumako-seed]"},
-  {resource = "jellynut-seed", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "b[egress]-c[jellynut-seed]"}
+  {resource = "yumako-seed", kind = "item", icon = space_age_icon("yumako-seed.png", "__base__/graphics/icons/wood.png"), order = "b[egress]-b[yumako-seed]"},
+  {resource = "jellynut-seed", kind = "item", icon = space_age_icon("jellynut-seed.png", "__base__/graphics/icons/wood.png"), order = "b[egress]-c[jellynut-seed]"}
 }
 
 local item_ingress_belt_tiers = {
