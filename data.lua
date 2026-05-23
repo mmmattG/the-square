@@ -325,6 +325,8 @@ local function build_config_recipe(definition, flow, planet_name)
     type = "recipe",
     name = config_recipe_name(definition.resource, flow),
     localised_name = {"recipe-name.the-square-configure-anchor", {"the-square-resource-name." .. definition.resource}},
+    icon = definition.icon,
+    icon_size = 64,
     category = "the-square-anchor-configuration",
     enabled = true,
     hidden = true,
