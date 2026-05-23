@@ -283,7 +283,7 @@ run_test("planet bootstrap research unlocks are planet-specific", function()
   assert_equal(techs["lithium-processing"].researched, true, "Aquilo should unlock lithium processing")
 end)
 
-run_test("entity presentation maps flow and kind to PRD visuals", function()
+run_test("entity presentation maps flow and kind to expected visuals", function()
   assert_equal(defs.get_anchor_presentation("ingress", "item"), "underground-belt-inward")
   assert_equal(defs.get_anchor_presentation("egress", "item"), "underground-belt-outward")
   assert_equal(defs.get_anchor_presentation("ingress", "fluid"), "offshore-pump")

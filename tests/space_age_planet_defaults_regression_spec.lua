@@ -35,7 +35,7 @@ local function resource_names(definitions)
   return table.concat(names, ",")
 end
 
-run_test("Space Age planet defaults match the PRD matrix", function()
+run_test("Space Age planet defaults match the expected matrix", function()
   local expected = {
     vulcanus = {tile = "volcanic-ash-soil", ingress = "calcite,coal,lava,sulfuric-acid,tungsten-ore", egress = ""},
     fulgora = {tile = "fulgoran-dust", ingress = "heavy-oil,scrap", egress = ""},
