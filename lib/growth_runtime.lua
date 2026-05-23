@@ -10,10 +10,7 @@ function growth_runtime.handle_expansion_research_finished(research, bootstrap_r
 
   local planet_name = defs.get_expansion_research_planet_name(research.name) or "nauvis"
 
-  if planet_name == "nauvis" then
-    storage.bootstrap = storage.bootstrap or {}
-    bootstrap_runtime.ensure_bootstrap_state_defaults()
-  end
+  planet_instance.ensure(planet_name)
 
   bootstrap_runtime.expand_planet_square(planet_name, game.players[1], gui_runtime, anchor_runtime)
 

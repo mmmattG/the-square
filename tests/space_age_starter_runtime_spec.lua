@@ -260,15 +260,6 @@ run_test("Gleba fruit ingresses and seed egresses use normal anchor rates", func
             {resource = "jellynut-seed", kind = "item", flow = "egress", position = {x = 9, y = 0}, entity = belt_entity("egress"), item_progress = {0, 0}}
           }
         }
-      },
-      nauvis = {
-        square_size = 7,
-        surface_name = "nauvis",
-        starter_anchors = {
-          anchors = {
-            {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = belt_entity("egress"), item_progress = {0, 0}}
-          }
-        }
       }
     }
   }

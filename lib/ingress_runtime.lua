@@ -110,10 +110,14 @@ local function get_mining_productivity_bonus()
   return player_force.mining_drill_productivity_bonus or 0
 end
 
-local function get_active_uranium_anchors(ingress_tier)
+local function get_active_uranium_anchors(ingress_tier, starter_anchors)
   local anchors = {}
 
-  for _, anchor in ipairs(storage.starter_anchors.anchors) do
+  if not starter_anchors then
+    return anchors
+  end
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
     local entity = anchor.position and anchor.entity or nil
 
     if anchor.flow == "ingress"
@@ -138,10 +142,8 @@ local function get_active_uranium_anchors(ingress_tier)
   return anchors
 end
 
-local function get_active_uranium_budget_per_interval(uranium_anchors)
-  local bootstrap = storage.bootstrap
-
-  if not bootstrap or #uranium_anchors == 0 then
+local function get_active_uranium_budget_per_interval(uranium_anchors, starter_anchors, bootstrap)
+  if not bootstrap or not starter_anchors or #uranium_anchors == 0 then
     return 0
   end
 
@@ -162,7 +164,7 @@ local function get_active_uranium_budget_per_interval(uranium_anchors)
   )
   local sulfuric_acid_egressed = 0
 
-  for _, anchor in ipairs(storage.starter_anchors.anchors) do
+  for _, anchor in ipairs(starter_anchors.anchors) do
     local entity = anchor.position and anchor.entity or nil
 
     if anchor.flow == "egress"
@@ -310,38 +312,45 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
   end
 end
 
-function ingress_runtime.pump_starter_anchors()
-  local starter_anchors = storage.starter_anchors
+local function get_uranium_context(ingress_tier, starter_anchors, bootstrap)
+  local uranium_anchors = get_active_uranium_anchors(ingress_tier, starter_anchors)
 
-  if not starter_anchors then
-    return
+  if #uranium_anchors == 0 then
+    return nil
   end
 
-  local ingress_tier = defs.get_current_ingress_tier()
-  local uranium_anchors = get_active_uranium_anchors(ingress_tier)
-  local uranium_budget = get_active_uranium_budget_per_interval(uranium_anchors)
+  local uranium_budget = get_active_uranium_budget_per_interval(uranium_anchors, starter_anchors, bootstrap)
   local uranium_capacities = {}
 
   for index, uranium_anchor in ipairs(uranium_anchors) do
     uranium_capacities[index] = uranium_anchor.capacity
   end
 
-  pump_anchor_set(starter_anchors, ingress_tier, {
+  return {
     anchors = uranium_anchors,
     allocations = resource_balance.allocate_shared_budget(uranium_budget, uranium_capacities).allocations
-  }, "nauvis")
+  }
+end
+
+function ingress_runtime.pump_planet_anchors(planet_name)
+  local planet = storage.planets and storage.planets[planet_name] and planet_instance.ensure(planet_name) or nil
+  local starter_anchors = planet and planet:get_bootstrap_storage().starter_anchors or nil
+
+  if not starter_anchors then
+    return
+  end
+
+  local ingress_tier = defs.get_current_ingress_tier()
+  pump_anchor_set(starter_anchors, ingress_tier, get_uranium_context(ingress_tier, starter_anchors, planet:get_bootstrap_storage()), planet_name)
+end
+
+function ingress_runtime.pump_starter_anchors()
+  ingress_runtime.pump_planet_anchors("nauvis")
 end
 
 function ingress_runtime.pump_planet_starter_anchors()
-  local ingress_tier = defs.get_current_ingress_tier()
-
   for _, planet_name in ipairs(planet_config.SUPPORTED_PLANETS) do
-    if planet_name ~= "nauvis" then
-      local planet = storage.planets and storage.planets[planet_name] and planet_instance.ensure(planet_name) or nil
-      local starter_anchors = planet and planet:get_bootstrap_storage().starter_anchors or nil
-
-      pump_anchor_set(starter_anchors, ingress_tier, nil, planet_name)
-    end
+    ingress_runtime.pump_planet_anchors(planet_name)
   end
 end
 

@@ -78,7 +78,9 @@ function managed_line_state.ensure(planet_name)
   end
 
   local bootstrap = planet:get_bootstrap_storage()
-  if planet_name == "nauvis" then
+  local is_legacy_aliased_state = storage.planets and storage.planets.nauvis == bootstrap
+
+  if is_legacy_aliased_state then
     migrate_legacy_nauvis_state(bootstrap)
     if storage.starter_anchors and not bootstrap.starter_anchors then
       bootstrap.starter_anchors = storage.starter_anchors
@@ -89,7 +91,7 @@ function managed_line_state.ensure(planet_name)
     layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = bootstrap_runtime.build_starter_anchor_layout(planet:get_square_size(), planet_name)
   }
-  if planet_name == "nauvis" then
+  if is_legacy_aliased_state then
     storage.starter_anchors = bootstrap.starter_anchors
   end
   local state = bootstrap.starter_anchors

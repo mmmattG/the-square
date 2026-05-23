@@ -1194,11 +1194,7 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
     try_unlock_uranium_processing(anchor, entity.force, actor)
   end
 
-  if planet_name == "nauvis" then
-    anchor_runtime.ensure_starter_anchors()
-  else
-    anchor_runtime.ensure_planet_starter_anchors(planet_name)
-  end
+  anchor_runtime.ensure_planet_starter_anchors(planet_name)
 end
 
 function anchor_runtime.handle_managed_anchor_slot_click(player)
@@ -1254,11 +1250,7 @@ function anchor_runtime.handle_managed_anchor_slot_click(player)
     try_unlock_uranium_processing(anchor, player.force, player)
   end
 
-  if planet_name == "nauvis" then
-    anchor_runtime.ensure_starter_anchors()
-  else
-    anchor_runtime.ensure_planet_starter_anchors(planet_name)
-  end
+  anchor_runtime.ensure_planet_starter_anchors(planet_name)
   anchor_runtime.update_player_anchor_preview(player)
 end
 
@@ -1274,11 +1266,7 @@ function anchor_runtime.handle_anchor_mined(entity)
   if anchor then
     stash_anchor(anchor)
 
-    if planet_name == "nauvis" then
-      anchor_runtime.ensure_starter_anchors()
-    else
-      anchor_runtime.ensure_planet_starter_anchors(planet_name)
-    end
+    anchor_runtime.ensure_planet_starter_anchors(planet_name)
   end
 end
 
@@ -1379,11 +1367,7 @@ function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
   try_unlock_oil_processing(anchor, entity.force, actor)
   try_unlock_uranium_processing(anchor, entity.force, actor)
 
-  if planet_name == "nauvis" then
-    anchor_runtime.ensure_starter_anchors()
-  else
-    anchor_runtime.ensure_planet_starter_anchors(planet_name)
-  end
+  anchor_runtime.ensure_planet_starter_anchors(planet_name)
 
   return true
 end

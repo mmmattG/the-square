@@ -61,7 +61,7 @@ local function ensure_planet_defaults(planet_name, state)
 
   if state.square_size == nil
     or (
-      planet_name ~= "nauvis"
+      planet_catalog.get(planet_name) ~= nauvis_catalog
       and state.square_size == nauvis_default_square_size
       and (state.expansion_research_levels or 0) == 0
       and (state.expansions_completed or 0) == 0
@@ -119,11 +119,16 @@ function planet_instance.from_bootstrap(bootstrap)
   return planet_instance.ensure_nauvis()
 end
 
+local ensure_overrides = {
+  nauvis = planet_instance.ensure_nauvis
+}
+
 function planet_instance.ensure(planet_name)
   planet_name = planet_name or "nauvis"
 
-  if planet_name == "nauvis" then
-    return planet_instance.ensure_nauvis()
+  local ensure_override = ensure_overrides[planet_name]
+  if ensure_override then
+    return ensure_override()
   end
 
   local planets = ensure_planets_storage()

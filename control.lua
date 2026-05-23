@@ -265,12 +265,10 @@ script.on_event(defines.events.on_research_finished, function(event)
 end)
 
 script.on_nth_tick(1, function()
-  ingress_runtime.pump_starter_anchors()
   ingress_runtime.pump_planet_starter_anchors()
 end)
 
 script.on_nth_tick(defs.ITEM_ANCHOR_INTERVAL_TICKS, function()
-  anchor_runtime.ensure_starter_anchors()
   anchor_runtime.ensure_all_planet_starter_anchors()
   anchor_runtime.update_all_player_anchor_previews()
 end)
