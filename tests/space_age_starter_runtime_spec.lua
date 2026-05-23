@@ -96,6 +96,67 @@ run_test("planet starter pumping only uses planet-local anchors", function()
   assert_equal(storage.removed, "yumako-seed", "Gleba egress should drain seed items")
 end)
 
+run_test("Gleba fruit ingresses require matching seed egress", function()
+  local counts = {inserted = {}, removed = {}}
+
+  local function belt_entity(has_items)
+    return {
+      valid = true,
+      get_transport_line = function()
+        return {
+          can_insert_at_back = function() return true end,
+          insert_at_back = function(stack)
+            counts.inserted[stack.name] = (counts.inserted[stack.name] or 0) + stack.count
+          end,
+          remove_item = function(stack)
+            if not has_items[stack.name] then
+              return 0
+            end
+
+            counts.removed[stack.name] = (counts.removed[stack.name] or 0) + stack.count
+            return stack.count
+          end
+        }
+      end
+    }
+  end
+
+  local function run_case(has_items)
+    counts = {inserted = {}, removed = {}}
+    storage = {
+      bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
+      planets = {gleba = {square_size = 17, surface_name = "gleba", starter_anchors = {anchors = {
+        {resource = "yumako", kind = "item", flow = "ingress", position = {x = 0, y = 9}, entity = belt_entity(has_items), item_progress = {0, 0}},
+        {resource = "jellynut", kind = "item", flow = "ingress", position = {x = 9, y = 0}, entity = belt_entity(has_items), item_progress = {0, 0}},
+        {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = belt_entity(has_items), item_progress = {0, 0}},
+        {resource = "jellynut-seed", kind = "item", flow = "egress", position = {x = 9, y = 0}, entity = belt_entity(has_items), item_progress = {0, 0}}
+      }}}}
+    }
+
+    for _ = 1, defs.ITEM_ANCHOR_INTERVAL_TICKS do
+      ingress_runtime.pump_planet_starter_anchors()
+    end
+
+    return counts
+  end
+
+  local no_seeds = run_case({})
+  assert_equal(no_seeds.inserted.yumako, nil, "no yumako seeds should mean no yumako fruit")
+  assert_equal(no_seeds.inserted.jellynut, nil, "no jellynut seeds should mean no jellynut fruit")
+
+  local yumako_only = run_case({["yumako-seed"] = true})
+  assert_equal(yumako_only.inserted.yumako, 1, "yumako seeds should feed yumako fruit")
+  assert_equal(yumako_only.inserted.jellynut, nil, "yumako seeds should not feed jellynut fruit")
+
+  local jellynut_only = run_case({["jellynut-seed"] = true})
+  assert_equal(jellynut_only.inserted.yumako, nil, "jellynut seeds should not feed yumako fruit")
+  assert_equal(jellynut_only.inserted.jellynut, 1, "jellynut seeds should feed jellynut fruit")
+
+  local both = run_case({["yumako-seed"] = true, ["jellynut-seed"] = true})
+  assert_equal(both.inserted.yumako, 1, "yumako fruit should emit when yumako seeds are drained")
+  assert_equal(both.inserted.jellynut, 1, "jellynut fruit should emit when jellynut seeds are drained")
+end)
+
 run_test("Gleba fruit ingresses and seed egresses use normal anchor rates", function()
   local counts = {inserted = {}, removed = {}}
 
