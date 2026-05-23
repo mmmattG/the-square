@@ -246,15 +246,10 @@ run_test("placing crude oil ingress unlocks oil processing once prerequisites ar
 
   assert_equal(
     force.technologies["oil-processing"].researched,
-    true,
-    "re-placing crude oil ingress should unlock oil processing once prerequisites are met"
+    false,
+    "mined anchors should be unconfigured and not unlock oil processing until reconfigured"
   )
-  assert_equal(#force.get_played_sounds(), 1, "unlocking oil processing should play the research-complete sound once")
-  assert_equal(
-    force.get_played_sounds()[1].path,
-    "utility/research_completed",
-    "unlocking oil processing should use the normal research-complete sound"
-  )
+  assert_equal(#force.get_played_sounds(), 0, "unconfigured replacement should not play the research-complete sound")
 end)
 
 run_test("placing crude oil ingress unlocks oil processing immediately when prerequisites are already researched", function()
@@ -404,15 +399,10 @@ run_test("placing uranium ore ingress unlocks uranium processing once prerequisi
 
   assert_equal(
     force.technologies["uranium-processing"].researched,
-    true,
-    "re-placing uranium ore ingress should unlock uranium processing once prerequisites are met"
+    false,
+    "mined anchors should be unconfigured and not unlock uranium processing until reconfigured"
   )
-  assert_equal(#force.get_played_sounds(), 1, "unlocking uranium processing should play the research-complete sound once")
-  assert_equal(
-    force.get_played_sounds()[1].path,
-    "utility/research_completed",
-    "unlocking uranium processing should use the normal research-complete sound"
-  )
+  assert_equal(#force.get_played_sounds(), 0, "unconfigured replacement should not play the research-complete sound")
 end)
 
 run_test("placing uranium ore ingress unlocks uranium processing immediately when prerequisites are already researched", function()
@@ -610,7 +600,7 @@ run_test("existing generic item anchors do not require underground belt fields",
   assert_equal(storage.starter_anchors.anchors[1].entity, generic_entity, "existing generic item anchor should be reused without underground-belt access")
 end)
 
-run_test("choosing an anchor recipe configures and keeps the generic entity inactive", function()
+run_test("choosing an anchor recipe configures the anchor for its minable base entity", function()
   local player_force = {valid = true, technologies = {}}
   local created_entities = {}
   local generic_entity
@@ -681,11 +671,11 @@ run_test("choosing an anchor recipe configures and keeps the generic entity inac
 
   local anchor = storage.starter_anchors.anchors[1]
   assert_equal(anchor.resource, "iron-ore", "selected recipe should configure the resource")
-  assert_equal(anchor.entity_name, runtime_defs.get_generic_anchor_entity_name("item", "ingress"), "configured anchors should keep the generic configurable entity")
-  assert_equal(generic_entity.active, false, "selected recipes should stop crafting so configurable anchors do not show a moving production progress bar")
+  assert_equal(anchor.entity_name, runtime_defs.get_ingress_entity_name("iron-ore", 1), "configured anchors should use the minable base entity instead of a top overlay")
+  assert_equal(generic_entity.active, false, "selected recipes should stop crafting before the generic anchor is replaced")
 end)
 
-run_test("ingress tier research sync keeps configurable planet starter anchors generic", function()
+run_test("ingress tier research sync keeps planet starter anchors as minable base entities", function()
   local player_force = {
     valid = true,
     technologies = {
@@ -762,6 +752,6 @@ run_test("ingress tier research sync keeps configurable planet starter anchors g
   assert_equal(anchor_runtime.sync_ingress_tier_from_research(player_force), true, "research sync should update the stored tier")
   assert_equal(storage.bootstrap.ingress_tier, 3, "red ingress research should set tier 3")
   assert_equal(destroyed_yellow, true, "legacy planet ingress anchor should be destroyed")
-  assert_equal(created_entities[1].name, runtime_defs.get_generic_anchor_entity_name("item", "ingress"), "planet ingress anchor should be recreated as a generic configurable anchor")
+  assert_equal(created_entities[1].name, runtime_defs.get_ingress_entity_name("scrap", 3), "planet ingress anchor should be recreated as the upgraded minable base entity")
   assert_equal(storage.planets.fulgora.starter_anchors.anchors[1].entity, created_entities[1], "planet anchor state should point at the upgraded entity")
 end)

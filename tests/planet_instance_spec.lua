@@ -132,6 +132,33 @@ run_test("Space Age Planet Instance initializes independent planet state", funct
   assert_equal(storage.bootstrap, nil, "initializing another planet should not create Nauvis bootstrap state")
 end)
 
+run_test("Nauvis and Space Age Planet Instances share one method set", function()
+  storage = {}
+
+  local nauvis = planet_instance.ensure("nauvis")
+  local vulcanus = planet_instance.ensure("vulcanus")
+
+  for _, method_name in ipairs({
+    "get_square_size",
+    "set_square_size",
+    "get_surface_name",
+    "set_surface_name",
+    "get_surface_size",
+    "get_floor_tile_name",
+    "get_expansion_points",
+    "add_expansion_points",
+    "get_completed_square_expansion_levels",
+    "set_completed_square_expansion_levels",
+    "get_managed_lines",
+    "get_bootstrap_storage"
+  }) do
+    assert_equal(type(nauvis[method_name]), "function", "Nauvis should expose " .. method_name)
+    assert_equal(nauvis[method_name], vulcanus[method_name], "Planet Instances should share " .. method_name)
+  end
+
+  assert_equal(storage.planets.nauvis, storage.bootstrap, "legacy bootstrap handle should alias the Nauvis Planet Instance state")
+end)
+
 run_test("Space Age Planet Instance migrates accidental Nauvis-sized planet state", function()
   settings.startup = {}
   storage = {

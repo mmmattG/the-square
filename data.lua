@@ -244,6 +244,10 @@ local function generic_anchor_item_name(kind, flow)
   return "the-square-" .. kind .. "-" .. flow .. "-anchor"
 end
 
+local function generic_anchor_entity_name(kind, flow)
+  return "the-square-generic-" .. kind .. "-" .. flow .. "-anchor"
+end
+
 local function build_anchor_frame_item()
   return {
     type = "item",
@@ -284,11 +288,20 @@ end
 
 local allow_anchor_on_out_of_map
 
-local function build_generic_anchor_animation(anchor_source, kind)
-  if kind == "item" and anchor_source.structure and anchor_source.structure.direction_in then
-    local sheet = table.deepcopy(anchor_source.structure.direction_in.sheet)
-    sheet.direction_count = sheet.direction_count or 4
-    return sheet
+local function build_generic_anchor_animation(anchor_source, kind, flow)
+  if kind == "item" and anchor_source.structure then
+    local direction_key = flow == "egress" and "direction_out" or "direction_in"
+    local structure = anchor_source.structure[direction_key] or anchor_source.structure.direction_in
+
+    if structure and structure.sheet then
+      local sheet = table.deepcopy(structure.sheet)
+      sheet.direction_count = sheet.direction_count or 4
+      return sheet
+    end
+  end
+
+  if kind == "fluid" and flow == "ingress" and anchor_source.graphics_set and anchor_source.graphics_set.animation then
+    return table.deepcopy(anchor_source.graphics_set.animation)
   end
 
   return {
@@ -335,7 +348,7 @@ local function build_generic_anchor_entity(name, item_name, kind, flow)
   source.allowed_effects = {}
   source.module_slots = 0
   source.graphics_set = {
-    animation = build_generic_anchor_animation(anchor_source, kind)
+    animation = build_generic_anchor_animation(anchor_source, kind, flow)
   }
   source.collision_box = {{0, 0}, {0, 0}}
   source.selection_box = {{-0.5, -0.5}, {0.5, 0.5}}
@@ -371,7 +384,7 @@ local function build_config_recipe(definition, flow, planet_name)
     icon_size = 64,
     category = "the-square-anchor-configuration",
     enabled = true,
-    hidden = true,
+    hidden = false,
     hidden_in_factoriopedia = true,
     allow_productivity = false,
     allow_quality = false,
@@ -435,12 +448,56 @@ local function build_ingress_entity(definition, belt_tier_key, belt_prototype_na
   local item_name = generic_anchor_item_name(definition.kind, "ingress")
 
   source.name = ingress_entity_name(definition.resource, belt_tier_key)
+  source.localised_name = {"entity-name." .. generic_anchor_entity_name(definition.kind, "ingress")}
   source.localised_description = {"entity-description.the-square-ingress-anchor"}
   source.icon = definition.icon
   source.icon_size = 64
   source.minable = {mining_time = 0.1, result = generic_anchor_item_name(definition.kind, "ingress")}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
+  allow_anchor_on_out_of_map(source)
+
+  return source
+end
+
+local function anchor_config_proxy_name(kind, flow)
+  return "the-square-anchor-config-proxy-" .. kind .. "-" .. flow
+end
+
+local function build_anchor_config_proxy(kind, flow)
+  local source = table.deepcopy(data.raw["assembling-machine"]["assembling-machine-1"])
+  source.name = anchor_config_proxy_name(kind, flow)
+  source.localised_name = {"entity-name.the-square-generic-" .. kind .. "-" .. flow .. "-anchor"}
+  source.localised_description = {"entity-description.the-square-generic-anchor"}
+  source.icon = "__core__/graphics/icons/parametrise.png"
+  source.icon_size = 64
+  source.flags = {
+    "not-on-map",
+    "placeable-off-grid",
+    "not-blueprintable",
+    "not-deconstructable",
+    "not-flammable"
+  }
+  source.minable = nil
+  source.placeable_by = nil
+  source.next_upgrade = nil
+  source.crafting_categories = {"the-square-anchor-configuration"}
+  source.crafting_speed = 1
+  source.energy_source = {type = "void"}
+  source.energy_usage = "1W"
+  source.allowed_effects = {}
+  source.module_slots = 0
+  source.graphics_set = {
+    animation = {
+      filename = "__core__/graphics/empty.png",
+      size = 1
+    }
+  }
+  source.collision_box = {{0, 0}, {0, 0}}
+  source.selection_box = {{-0.49, -0.49}, {0.49, 0.49}}
+  source.collision_mask = {layers = {}}
+  source.tile_width = nil
+  source.tile_height = nil
   allow_anchor_on_out_of_map(source)
 
   return source
@@ -485,6 +542,17 @@ local function build_anchor_place_input()
   }
 end
 
+local function build_anchor_open_input()
+  return {
+    type = "custom-input",
+    name = "the-square-open-managed-anchor",
+    key_sequence = "",
+    linked_game_control = "open-gui",
+    consuming = "none",
+    include_selected_prototype = true
+  }
+end
+
 local function build_egress_entity(definition, belt_tier_key, belt_prototype_name)
   local source = definition.kind == "item"
     and table.deepcopy(data.raw["underground-belt"][belt_prototype_name or "underground-belt"])
@@ -492,6 +560,7 @@ local function build_egress_entity(definition, belt_tier_key, belt_prototype_nam
   local item_name = generic_anchor_item_name(definition.kind, "egress")
 
   source.name = egress_entity_name(definition.resource, belt_tier_key)
+  source.localised_name = {"entity-name." .. generic_anchor_entity_name(definition.kind, "egress")}
   source.localised_description = {"entity-description.the-square-egress-anchor"}
   source.icon = definition.icon
   source.icon_size = 64
@@ -645,8 +714,13 @@ prototypes[#prototypes + 1] = {
   name = "the-square-anchor-configuration"
 }
 
+prototypes[#prototypes + 1] = build_anchor_config_proxy("item", "ingress")
+prototypes[#prototypes + 1] = build_anchor_config_proxy("item", "egress")
+prototypes[#prototypes + 1] = build_anchor_config_proxy("fluid", "ingress")
+prototypes[#prototypes + 1] = build_anchor_config_proxy("fluid", "egress")
 prototypes[#prototypes + 1] = build_anchor_slot_proxy()
 prototypes[#prototypes + 1] = build_anchor_place_input()
+prototypes[#prototypes + 1] = build_anchor_open_input()
 prototypes[#prototypes + 1] = build_anchor_frame_item()
 prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-ingress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-b[item-ingress-anchor]", "the-square-generic-item-ingress-anchor")
 prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-egress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-c[item-egress-anchor]", "the-square-generic-item-egress-anchor")

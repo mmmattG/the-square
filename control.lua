@@ -84,6 +84,14 @@ if defines.events.on_entity_settings_pasted then
   end)
 end
 
+if defines.events.on_gui_opened then
+  script.on_event(defines.events.on_gui_opened, function(event)
+    if event.entity then
+      anchor_runtime.handle_anchor_gui_opened(event.entity, game.get_player(event.player_index))
+    end
+  end)
+end
+
 if defines.events.on_gui_closed then
   script.on_event(defines.events.on_gui_closed, function(event)
     if event.entity then
@@ -175,6 +183,14 @@ script.on_event(defs.PLACE_MANAGED_ANCHOR_INPUT_NAME, function(event)
   if player then
     anchor_runtime.handle_managed_anchor_slot_click(player)
     gui_runtime.sync_all_shop_guis(anchor_runtime)
+  end
+end)
+
+script.on_event(defs.OPEN_MANAGED_ANCHOR_INPUT_NAME, function(event)
+  local player = game.get_player(event.player_index)
+
+  if player and player.selected then
+    anchor_runtime.handle_anchor_gui_opened(player.selected, player)
   end
 end)
 

@@ -153,12 +153,29 @@ local function get_generic_anchor_kind_flow(entity_name)
   return nil, nil
 end
 
+local function get_anchor_config_proxy_entity_name(kind, flow)
+  return "the-square-anchor-config-proxy-" .. (kind or "item") .. "-" .. (flow or "ingress")
+end
+
+local function get_anchor_config_proxy_kind_flow(entity_name)
+  if type(entity_name) ~= "string" then
+    return nil, nil
+  end
+
+  return string.match(entity_name, "^the%-square%-anchor%-config%-proxy%-(%w+)%-(%w+)$")
+end
+
+local function is_anchor_config_proxy_entity_name(entity_name)
+  return get_anchor_config_proxy_kind_flow(entity_name) ~= nil
+end
+
 is_generic_anchor_entity_name = function(entity_name)
   return get_generic_anchor_kind_flow(entity_name) ~= nil
 end
 
 function anchor_runtime.is_managed_anchor_entity_name(entity_name)
   return entity_name == defs.ANCHOR_SLOT_PROXY_NAME
+    or is_anchor_config_proxy_entity_name(entity_name)
     or is_generic_anchor_entity_name(entity_name)
     or is_ingress_entity_name(entity_name)
     or is_egress_entity_name(entity_name)
@@ -167,6 +184,11 @@ end
 local function does_anchor_match_entity_name(anchor, entity_name)
   if not anchor then
     return false
+  end
+
+  local proxy_kind, proxy_flow = get_anchor_config_proxy_kind_flow(entity_name)
+  if proxy_kind and proxy_flow then
+    return proxy_kind == anchor.kind and proxy_flow == anchor.flow
   end
 
   if entity_name == defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow) then
@@ -255,6 +277,10 @@ local function stash_anchor(anchor)
 
   anchor.position = nil
   anchor.side = nil
+  anchor.resource = nil
+  anchor.item_progress = {0, 0}
+  anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind, anchor.flow)
+  anchor.entity_name = defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
   clear_anchor_entity(anchor)
 end
 
@@ -418,15 +444,16 @@ local function destroy_entities_at_anchor_position(surface, anchor)
     return
   end
 
-  local config_proxy_name = defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
+  local positions = {anchor.position, get_tile_center_position(anchor.position)}
 
-  for _, entity in ipairs(surface.find_entities_filtered({position = anchor.position})) do
-    if entity.valid
-      and entity.name ~= anchor.entity_name
-      and entity.name ~= config_proxy_name
-      and entity.force == game.forces.player
-    then
-      entity.destroy({raise_destroy = false})
+  for _, position in ipairs(positions) do
+    for _, entity in ipairs(surface.find_entities_filtered({position = position})) do
+      if entity.valid
+        and entity.name ~= anchor.entity_name
+        and entity.force == game.forces.player
+      then
+        entity.destroy({raise_destroy = false})
+      end
     end
   end
 end
@@ -445,6 +472,7 @@ local function ensure_anchor_entity(surface, anchor)
 
     if not required_belt_type or entity.belt_to_ground_type == required_belt_type then
       configure_source_anchor_entity(entity, anchor.direction)
+      destroy_entities_at_anchor_position(surface, anchor)
       return entity
     end
   end
@@ -464,6 +492,7 @@ local function ensure_anchor_entity(surface, anchor)
     if not required_belt_type or entity.belt_to_ground_type == required_belt_type then
       anchor.entity = entity
       configure_source_anchor_entity(entity, anchor.direction)
+      destroy_entities_at_anchor_position(surface, anchor)
       return entity
     end
 
@@ -481,6 +510,7 @@ local function ensure_anchor_entity(surface, anchor)
   if entity then
     anchor.entity = entity
     configure_source_anchor_entity(entity, anchor.direction)
+    destroy_entities_at_anchor_position(surface, anchor)
   end
 
   return entity
@@ -1252,8 +1282,60 @@ function anchor_runtime.handle_anchor_mined(entity)
   end
 end
 
+function anchor_runtime.handle_anchor_gui_opened(entity, player)
+  if not (entity and entity.valid and player and player.valid) then
+    return false
+  end
+
+  if is_generic_anchor_entity_name(entity.name) or is_anchor_config_proxy_entity_name(entity.name) then
+    return false
+  end
+
+  local starter_anchors = get_anchor_state_for_surface(entity.surface)
+  local anchor = find_anchor_by_entity(entity, starter_anchors)
+    or find_anchor_by_entity_name_and_position(entity.name, entity.position, starter_anchors)
+
+  if not (anchor and anchor.resource and entity.surface) then
+    return false
+  end
+
+  local generic_name = defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
+  local recipe_name = defs.get_config_recipe_name(anchor.resource, anchor.flow)
+  local surface = entity.surface
+
+  entity.destroy({raise_destroy = false})
+
+  local generic = surface.create_entity({
+    name = generic_name,
+    position = anchor.position,
+    direction = anchor.direction,
+    force = game.forces.player
+  })
+
+  if not (generic and generic.valid) then
+    anchor.entity = nil
+    return false
+  end
+
+  anchor.entity = generic
+  anchor.entity_name = generic_name
+  configure_source_anchor_entity(generic, anchor.direction)
+
+  if generic.set_recipe then
+    generic.set_recipe(recipe_name)
+  end
+
+  if generic.active ~= nil then
+    generic.active = false
+  end
+
+  player.opened = generic
+
+  return true
+end
+
 function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
-  if not (entity and entity.valid and is_generic_anchor_entity_name(entity.name)) then
+  if not (entity and entity.valid and (is_generic_anchor_entity_name(entity.name) or is_anchor_config_proxy_entity_name(entity.name))) then
     return false
   end
 

@@ -25,12 +25,26 @@ local function get_item_anchor_emissions(anchor, ingress_tier, elapsed_ticks)
   return emission
 end
 
+local function get_anchor_transport_line(entity, lane_index)
+  if not (entity and entity.valid and entity.get_transport_line) then
+    return nil
+  end
+
+  local ok, line = pcall(entity.get_transport_line, lane_index)
+
+  if not ok then
+    return nil
+  end
+
+  return line
+end
+
 local function pump_item_anchor(entity, resource, lane_index, item_count)
   if item_count <= 0 then
     return 0
   end
 
-  local line = entity.get_transport_line(lane_index)
+  local line = get_anchor_transport_line(entity, lane_index)
 
   if not line then
     return 0
@@ -55,7 +69,7 @@ local function drain_item_anchor(entity, resource, lane_index, item_count)
     return 0
   end
 
-  local line = entity.get_transport_line(lane_index)
+  local line = get_anchor_transport_line(entity, lane_index)
 
   if not line then
     return 0
@@ -70,10 +84,18 @@ local function drain_fluid_anchor(entity, resource, amount)
     return 0
   end
 
-  local removed = entity.remove_fluid({
+  if not entity.remove_fluid then
+    return 0
+  end
+
+  local ok, removed = pcall(entity.remove_fluid, {
     name = resource,
     amount = amount
   })
+
+  if not ok then
+    return 0
+  end
 
   return removed or 0
 end
@@ -265,10 +287,12 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
             pump_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
           end
         else
-          entity.insert_fluid({
-            name = anchor.resource,
-            amount = ingress_tier.fluid_amount_per_interval
-          })
+          if entity.insert_fluid then
+            pcall(entity.insert_fluid, {
+              name = anchor.resource,
+              amount = ingress_tier.fluid_amount_per_interval
+            })
+          end
         end
       elseif anchor.flow == "egress" then
         if anchor.kind == "item" then

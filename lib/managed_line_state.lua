@@ -65,10 +65,6 @@ end
 function managed_line_state.get(planet_name)
   planet_name = planet_name or "nauvis"
 
-  if planet_name == "nauvis" then
-    return storage.starter_anchors
-  end
-
   local planet_state = storage.planets and storage.planets[planet_name]
   return planet_state and planet_state.starter_anchors or nil
 end
@@ -81,24 +77,22 @@ function managed_line_state.ensure(planet_name)
     return nil
   end
 
-  local state
-
+  local bootstrap = planet:get_bootstrap_storage()
   if planet_name == "nauvis" then
-    local bootstrap = planet:get_bootstrap_storage()
     migrate_legacy_nauvis_state(bootstrap)
-    storage.starter_anchors = storage.starter_anchors or {
-      layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
-      anchors = bootstrap_runtime.build_starter_anchor_layout(bootstrap.square_size)
-    }
-    state = storage.starter_anchors
-  else
-    local bootstrap = planet:get_bootstrap_storage()
-    bootstrap.starter_anchors = bootstrap.starter_anchors or {
-      layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
-      anchors = bootstrap_runtime.build_starter_anchor_layout(planet:get_square_size(), planet_name)
-    }
-    state = bootstrap.starter_anchors
+    if storage.starter_anchors and not bootstrap.starter_anchors then
+      bootstrap.starter_anchors = storage.starter_anchors
+    end
   end
+
+  bootstrap.starter_anchors = bootstrap.starter_anchors or {
+    layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = bootstrap_runtime.build_starter_anchor_layout(planet:get_square_size(), planet_name)
+  }
+  if planet_name == "nauvis" then
+    storage.starter_anchors = bootstrap.starter_anchors
+  end
+  local state = bootstrap.starter_anchors
 
   for _, anchor in ipairs(state.anchors) do
     normalize_anchor(anchor, planet:get_square_size())

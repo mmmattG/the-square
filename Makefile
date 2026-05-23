@@ -2,7 +2,7 @@ SHELL := /bin/sh
 
 LUA ?= $(shell command -v luajit 2>/dev/null || command -v lua 2>/dev/null)
 
-.PHONY: all build install test e2e-test
+.PHONY: all build install test e2e-load-test e2e-test
 
 all: build install
 
@@ -22,7 +22,12 @@ test:
 		"$(LUA)" "$$spec" || exit 1; \
 	done
 
+# Runs Factorio itself and verifies the mod reaches save creation without prototype/load errors.
+# Set FACTORIO=/path/to/factorio if the binary is not on PATH or in a common install location.
+e2e-load-test:
+	./scripts/e2e-load-mod.sh
+
 # Runs Factorio itself and creates a fresh default save with this mod enabled.
 # Set FACTORIO=/path/to/factorio if the binary is not on PATH or in a common install location.
-e2e-test:
+e2e-test: e2e-load-test
 	./scripts/e2e-create-default-world.sh

@@ -33,7 +33,7 @@ run_test("non-Nauvis planets receive configured starter anchors in isolated stor
   assert_equal(storage.starter_anchors, nil, "planet starter creation should not mutate Nauvis anchors")
   assert_equal(storage.planets.vulcanus.starter_anchors, vulcanus, "Vulcanus anchors should live under Vulcanus state")
   assert_equal(storage.planets.gleba.starter_anchors, gleba, "Gleba anchors should live under Gleba state")
-  assert_equal(vulcanus.anchors[1].entity_name, defs.get_generic_anchor_entity_name(vulcanus.anchors[1].kind, "ingress"), "positioned starter ingresses should spawn generic configurable anchors")
+  assert_equal(vulcanus.anchors[1].entity_name, defs.get_ingress_entity_name(vulcanus.anchors[1].resource, 1), "positioned starter ingresses should spawn minable base anchors")
   assert_equal(vulcanus.anchors[1].item_name, defs.get_generic_anchor_item_name(vulcanus.anchors[1].kind, "ingress"), "starter ingresses should still mine to generic anchor items")
 end)
 
@@ -96,6 +96,29 @@ run_test("planet starter pumping only uses planet-local anchors", function()
   ingress_runtime.pump_planet_starter_anchors()
   assert_equal(storage.inserted, "scrap", "Fulgora ingress should emit scrap")
   assert_equal(storage.removed, "yumako-seed", "Gleba egress should drain seed items")
+end)
+
+run_test("generic configured item anchors do not crash the pump loop", function()
+  storage = {
+    bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
+    starter_anchors = {anchors = {
+      {
+        resource = "iron-ore",
+        kind = "item",
+        flow = "ingress",
+        position = {x = 0, y = -4},
+        entity = {
+          valid = true,
+          get_transport_line = function()
+            error("Entity is not transport-belt-connectable.")
+          end
+        },
+        item_progress = {0.875, 0}
+      }
+    }}
+  }
+
+  ingress_runtime.pump_starter_anchors()
 end)
 
 run_test("Gleba fruit ingresses require matching seed egress", function()

@@ -5,19 +5,18 @@ local planet_catalog = require("lib.planet_catalog")
 local planet_instance = {}
 local planet_methods = {}
 planet_methods.__index = planet_methods
-local nauvis_methods = {}
-nauvis_methods.__index = nauvis_methods
 
 local function get_target_surface_size(square_size)
   return defs.get_surface_size(square_size)
 end
 
-local function clear_managed_line_entity_refs()
-  if not (storage and storage.starter_anchors and storage.starter_anchors.anchors) then
+local function clear_managed_line_entity_refs(state)
+  local starter_anchors = state and state.starter_anchors or storage and storage.starter_anchors
+  if not (starter_anchors and starter_anchors.anchors) then
     return
   end
 
-  for _, anchor in ipairs(storage.starter_anchors.anchors) do
+  for _, anchor in ipairs(starter_anchors.anchors) do
     anchor.entity = nil
   end
 end
@@ -28,7 +27,7 @@ local function ensure_bootstrap_defaults(bootstrap)
 
   if not bootstrap.surface_name or bootstrap.surface_name == defs.LEGACY_SURFACE_NAME then
     bootstrap.surface_name = defs.SURFACE_NAME
-    clear_managed_line_entity_refs()
+    clear_managed_line_entity_refs(bootstrap)
   end
   bootstrap.surface_size = target_surface_size
   bootstrap.expansion_points = bootstrap.expansion_points or 0
@@ -40,10 +39,6 @@ local function ensure_bootstrap_defaults(bootstrap)
   bootstrap.expansion_speed_research_levels = nil
 
   return bootstrap
-end
-
-local function wrap_bootstrap(bootstrap)
-  return setmetatable({bootstrap = bootstrap}, nauvis_methods)
 end
 
 local function ensure_planets_storage()
@@ -88,12 +83,31 @@ local function wrap_planet(state)
   return setmetatable({state = state}, planet_methods)
 end
 
-function planet_instance.ensure_nauvis()
-  if not storage.bootstrap then
-    return nil
+local function migrate_nauvis_state()
+  local planets = ensure_planets_storage()
+  local state = storage.bootstrap or planets.nauvis or {}
+
+  if planets.nauvis and planets.nauvis ~= state then
+    for key, value in pairs(planets.nauvis) do
+      if state[key] == nil then
+        state[key] = value
+      end
+    end
   end
 
-  return wrap_bootstrap(ensure_bootstrap_defaults(storage.bootstrap))
+  if storage.starter_anchors then
+    state.starter_anchors = storage.starter_anchors
+  end
+
+  planets.nauvis = ensure_bootstrap_defaults(state)
+  storage.bootstrap = planets.nauvis
+  storage.starter_anchors = planets.nauvis.starter_anchors
+
+  return planets.nauvis
+end
+
+function planet_instance.ensure_nauvis()
+  return wrap_planet(migrate_nauvis_state())
 end
 
 function planet_instance.from_bootstrap(bootstrap)
@@ -101,22 +115,14 @@ function planet_instance.from_bootstrap(bootstrap)
     return nil
   end
 
-  return wrap_bootstrap(ensure_bootstrap_defaults(bootstrap))
+  storage.bootstrap = bootstrap
+  return planet_instance.ensure_nauvis()
 end
 
 function planet_instance.ensure(planet_name)
   planet_name = planet_name or "nauvis"
 
   if planet_name == "nauvis" then
-    if storage.bootstrap then
-      return planet_instance.ensure_nauvis()
-    end
-
-    local config = planet_config.get("nauvis")
-    storage.bootstrap = {
-      square_size = config.square_size,
-      surface_name = config.surface_name
-    }
     return planet_instance.ensure_nauvis()
   end
 
@@ -138,55 +144,6 @@ function planet_instance.for_surface(surface_name)
   end
 
   return planet_instance.ensure(surface_name)
-end
-
-function nauvis_methods:get_square_size()
-  return self.bootstrap.square_size
-end
-
-function nauvis_methods:set_square_size(square_size)
-  self.bootstrap.square_size = square_size
-  self.bootstrap.surface_size = get_target_surface_size(square_size)
-end
-
-function nauvis_methods:get_surface_name()
-  return self.bootstrap.surface_name
-end
-
-function nauvis_methods:set_surface_name(surface_name)
-  self.bootstrap.surface_name = surface_name
-end
-
-function nauvis_methods:get_surface_size()
-  return self.bootstrap.surface_size
-end
-
-function nauvis_methods:get_floor_tile_name()
-  return nil
-end
-
-function nauvis_methods:get_expansion_points()
-  return self.bootstrap.expansion_points or 0
-end
-
-function nauvis_methods:add_expansion_points(amount)
-  self.bootstrap.expansion_points = self:get_expansion_points() + amount
-end
-
-function nauvis_methods:get_completed_square_expansion_levels()
-  return self.bootstrap.expansion_research_levels or 0
-end
-
-function nauvis_methods:set_completed_square_expansion_levels(levels)
-  self.bootstrap.expansion_research_levels = levels
-end
-
-function nauvis_methods:get_managed_lines()
-  return storage.starter_anchors
-end
-
-function nauvis_methods:get_bootstrap_storage()
-  return self.bootstrap
 end
 
 function planet_methods:get_square_size()

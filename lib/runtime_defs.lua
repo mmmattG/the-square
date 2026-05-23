@@ -54,6 +54,7 @@ runtime_defs.GENERIC_ANCHOR_ENTITIES = {
   fluid_egress = "the-square-generic-fluid-egress-anchor"
 }
 runtime_defs.PLACE_MANAGED_ANCHOR_INPUT_NAME = "the-square-place-managed-anchor"
+runtime_defs.OPEN_MANAGED_ANCHOR_INPUT_NAME = "the-square-open-managed-anchor"
 runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH = 1
 runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION = 12
 runtime_defs.DEV_EXPAND_BUTTON_NAME = "the_square_dev_expand_button"
@@ -738,7 +739,19 @@ function runtime_defs.get_anchor_entity_name_for_current_tier(anchor)
     return nil
   end
 
-  return runtime_defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
+  if not anchor.resource then
+    return runtime_defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
+  end
+
+  if anchor.flow == "egress" then
+    return runtime_defs.get_egress_entity_name(anchor.resource, runtime_defs.get_current_egress_tier_level())
+  end
+
+  if anchor.kind == "item" then
+    return runtime_defs.get_ingress_entity_name(anchor.resource, runtime_defs.get_current_ingress_tier_level())
+  end
+
+  return runtime_defs.get_ingress_entity_name(anchor.resource, 1)
 end
 
 function runtime_defs.build_ingress_tier_summary()
