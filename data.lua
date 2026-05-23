@@ -262,13 +262,19 @@ local function build_anchor_frame_item()
   }
 end
 
+local function build_parameterised_anchor_icons(icon)
+  return {
+    {icon = icon, icon_size = 64},
+    {icon = "__core__/graphics/icons/parametrise.png", icon_size = 64, scale = 0.35, shift = {8, 8}}
+  }
+end
+
 local function build_generic_anchor_item(name, icon, order)
   return {
     type = "item",
     name = name,
     localised_description = {"item-description.the-square-generic-anchor"},
-    icon = icon,
-    icon_size = 64,
+    icons = build_parameterised_anchor_icons(icon),
     subgroup = "energy-pipe-distribution",
     order = order,
     stack_size = 50
@@ -290,6 +296,8 @@ local function build_generic_anchor_entity(name, item_name, kind, flow)
 
   source.name = name
   source.localised_description = {"entity-description.the-square-generic-anchor"}
+  source.icons = build_parameterised_anchor_icons(source.icon)
+  source.icon = nil
   source.minable = {mining_time = 0.1, result = item_name}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
