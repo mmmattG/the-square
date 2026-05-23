@@ -266,7 +266,7 @@ local function build_anchor_frame_item()
   }
 end
 
-local function build_generic_anchor_item(name, icon, order, place_result)
+local function build_generic_anchor_item(name, icon, order)
   return {
     type = "item",
     name = name,
@@ -275,28 +275,25 @@ local function build_generic_anchor_item(name, icon, order, place_result)
     icon_size = 64,
     subgroup = "energy-pipe-distribution",
     order = order,
-    stack_size = 50,
-    place_result = place_result
+    stack_size = 50
   }
 end
 
 local allow_anchor_on_out_of_map
 
 local function build_generic_anchor_entity(name, item_name, kind, flow)
-  local source = table.deepcopy(data.raw["assembling-machine"]["assembling-machine-1"])
+  local source
+
+  if kind == "fluid" and flow == "ingress" then
+    source = table.deepcopy(data.raw["offshore-pump"]["offshore-pump"])
+  elseif kind == "fluid" then
+    source = table.deepcopy(data.raw["pipe-to-ground"]["pipe-to-ground"])
+  else
+    source = table.deepcopy(data.raw["underground-belt"]["underground-belt"])
+  end
 
   source.name = name
   source.localised_description = {"entity-description.the-square-generic-anchor"}
-  source.icon = kind == "fluid" and (flow == "ingress" and "__base__/graphics/icons/offshore-pump.png" or "__base__/graphics/icons/pipe-to-ground.png") or "__base__/graphics/icons/underground-belt.png"
-  source.icon_size = 64
-  source.crafting_categories = {"the-square-anchor-configuration"}
-  source.crafting_speed = 1
-  source.energy_source = {type = "void"}
-  source.energy_usage = "1W"
-  source.allowed_effects = {}
-  source.module_slots = 0
-  source.fluid_boxes = nil
-  source.fixed_recipe = nil
   source.minable = {mining_time = 0.1, result = item_name}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
@@ -632,10 +629,10 @@ prototypes[#prototypes + 1] = {
 prototypes[#prototypes + 1] = build_anchor_slot_proxy()
 prototypes[#prototypes + 1] = build_anchor_place_input()
 prototypes[#prototypes + 1] = build_anchor_frame_item()
-prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-ingress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-b[item-ingress-anchor]", "the-square-generic-item-ingress-anchor")
-prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-egress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-c[item-egress-anchor]", "the-square-generic-item-egress-anchor")
-prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-fluid-ingress-anchor", "__base__/graphics/icons/offshore-pump.png", "z[the-square]-d[fluid-ingress-anchor]", "the-square-generic-fluid-ingress-anchor")
-prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-fluid-egress-anchor", "__base__/graphics/icons/pipe-to-ground.png", "z[the-square]-e[fluid-egress-anchor]", "the-square-generic-fluid-egress-anchor")
+prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-ingress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-b[item-ingress-anchor]")
+prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-egress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-c[item-egress-anchor]")
+prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-fluid-ingress-anchor", "__base__/graphics/icons/offshore-pump.png", "z[the-square]-d[fluid-ingress-anchor]")
+prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-fluid-egress-anchor", "__base__/graphics/icons/pipe-to-ground.png", "z[the-square]-e[fluid-egress-anchor]")
 prototypes[#prototypes + 1] = build_generic_anchor_entity("the-square-generic-item-ingress-anchor", "the-square-item-ingress-anchor", "item", "ingress")
 prototypes[#prototypes + 1] = build_generic_anchor_entity("the-square-generic-item-egress-anchor", "the-square-item-egress-anchor", "item", "egress")
 prototypes[#prototypes + 1] = build_generic_anchor_entity("the-square-generic-fluid-ingress-anchor", "the-square-fluid-ingress-anchor", "fluid", "ingress")
