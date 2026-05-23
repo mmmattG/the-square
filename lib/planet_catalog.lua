@@ -58,7 +58,7 @@ local planets = {
     name = "gleba",
     label = "Gleba",
     default_square_size = 17,
-    floor_tile_name = "wetland-light-green-slime",
+    floor_tile_name = "lowland-cream-cauliflower",
     native_free_resources = {
       {resource = "stone", kind = "item", starter_side = "north", prerequisite_resource = nil},
       {resource = "water", kind = "fluid", starter_side = "west", prerequisite_resource = nil},

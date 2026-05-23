@@ -157,6 +157,49 @@ run_test("Gleba fruit ingresses require matching seed egress", function()
   assert_equal(both.inserted.jellynut, 1, "jellynut fruit should emit when jellynut seeds are drained")
 end)
 
+run_test("one Gleba seed budgets fifty matching fruit", function()
+  local counts = {inserted = {}, removed = {}}
+  local seed_available = true
+
+  local function belt_entity()
+    return {
+      valid = true,
+      get_transport_line = function()
+        return {
+          can_insert_at_back = function() return true end,
+          insert_at_back = function(stack)
+            counts.inserted[stack.name] = (counts.inserted[stack.name] or 0) + stack.count
+          end,
+          remove_item = function(stack)
+            if stack.name ~= "yumako-seed" or not seed_available then
+              return 0
+            end
+
+            seed_available = false
+            counts.removed[stack.name] = (counts.removed[stack.name] or 0) + stack.count
+            return stack.count
+          end
+        }
+      end
+    }
+  end
+
+  storage = {
+    bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
+    planets = {gleba = {square_size = 17, surface_name = "gleba", starter_anchors = {anchors = {
+      {resource = "yumako", kind = "item", flow = "ingress", position = {x = 0, y = 9}, entity = belt_entity(), item_progress = {0, 0}},
+      {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = belt_entity(), item_progress = {0, 0}}
+    }}}}
+  }
+
+  for _ = 1, defs.ITEM_ANCHOR_INTERVAL_TICKS * 50 do
+    ingress_runtime.pump_planet_starter_anchors()
+  end
+
+  assert_equal(counts.removed["yumako-seed"], 1, "only one yumako seed should be drained")
+  assert_equal(counts.inserted.yumako, 50, "one yumako seed should budget fifty yumako fruit")
+end)
+
 run_test("Gleba fruit ingresses and seed egresses use normal anchor rates", function()
   local counts = {inserted = {}, removed = {}}
 

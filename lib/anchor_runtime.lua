@@ -544,7 +544,13 @@ local function fill_starter_entity_inventory(entity, inventory_config)
   end
 end
 
-local function ensure_planet_starter_entities(surface, planet_name)
+local function ensure_planet_starter_entities(surface, planet_name, planet)
+  local state = planet and planet.state
+
+  if state and state.starter_entities_spawned then
+    return
+  end
+
   local force = game.forces.player
 
   for _, starter_entity in ipairs(planet_config.get_starter_entities(planet_name)) do
@@ -561,6 +567,10 @@ local function ensure_planet_starter_entities(surface, planet_name)
     end
 
     fill_starter_entity_inventory(entity, starter_entity.inventory)
+  end
+
+  if state then
+    state.starter_entities_spawned = true
   end
 end
 
@@ -615,7 +625,7 @@ function anchor_runtime.ensure_planet_starter_anchors(planet_name)
 
   anchor_runtime.unlock_planet_bootstrap_research(planet_name, game.forces.player)
   ensure_anchor_set(surface, planet:get_square_size(), anchor_runtime.ensure_planet_starter_anchor_state(planet_name))
-  ensure_planet_starter_entities(surface, planet_name)
+  ensure_planet_starter_entities(surface, planet_name, planet)
 end
 
 function anchor_runtime.ensure_all_planet_starter_anchors()

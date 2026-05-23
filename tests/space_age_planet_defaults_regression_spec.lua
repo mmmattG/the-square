@@ -39,7 +39,7 @@ run_test("Space Age planet defaults match the PRD matrix", function()
   local expected = {
     vulcanus = {tile = "volcanic-ash-soil", ingress = "calcite,coal,lava,sulfuric-acid,tungsten-ore", egress = ""},
     fulgora = {tile = "fulgoran-dust", ingress = "heavy-oil,scrap", egress = ""},
-    gleba = {tile = "wetland-light-green-slime", ingress = "jellynut,stone,water,yumako", egress = "jellynut-seed,yumako-seed"},
+    gleba = {tile = "lowland-cream-cauliflower", ingress = "jellynut,stone,water,yumako", egress = "jellynut-seed,yumako-seed"},
     aquilo = {tile = "snow-flat", ingress = "ammoniacal-solution,crude-oil,fluorine,lithium-brine", egress = ""}
   }
 

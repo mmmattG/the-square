@@ -98,7 +98,7 @@ run_test("Space Age planet configs default to 17x17 thematic squares", function(
   local expected_floor_tiles = {
     vulcanus = "volcanic-ash-soil",
     fulgora = "fulgoran-dust",
-    gleba = "wetland-light-green-slime",
+    gleba = "lowland-cream-cauliflower",
     aquilo = "snow-flat"
   }
 

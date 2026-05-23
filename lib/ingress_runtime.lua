@@ -187,6 +187,8 @@ local function pump_uranium_ingress_anchor(entity, requested_emission, shared_bu
   return inserted
 end
 
+local GLEBA_FRUIT_PER_SEED = 50
+
 local gleba_seed_by_fruit = {
   yumako = "yumako-seed",
   jellynut = "jellynut-seed"
@@ -214,9 +216,10 @@ local function drain_gleba_seed_budgets(starter_anchors, ingress_tier, planet_na
 
     if fruit and anchor.flow == "egress" and anchor.kind == "item" and entity and entity.valid then
       local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
-      budgets[fruit] = (budgets[fruit] or 0)
-        + drain_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
+      local drained_seeds = drain_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
         + drain_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
+
+      budgets[fruit] = (budgets[fruit] or 0) + drained_seeds * GLEBA_FRUIT_PER_SEED
     end
   end
 
@@ -244,15 +247,17 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
             pump_uranium_ingress_anchor(entity, uranium_anchor and uranium_anchor.requested_emission, allocated_budget)
             uranium_anchor_index = uranium_anchor_index + 1
           elseif should_gate_gleba_fruit(planet_name, anchor) then
-            local available = gleba_fruit_budgets[anchor.resource] or 0
+            local available = (anchor.gleba_fruit_budget or 0) + (gleba_fruit_budgets[anchor.resource] or 0)
             local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
 
             if available > 0 then
               local lane_one_inserted = pump_item_anchor(entity, anchor.resource, 1, math.min(emission.lane_emissions[1] or 0, available))
               available = available - lane_one_inserted
               local lane_two_inserted = pump_item_anchor(entity, anchor.resource, 2, math.min(emission.lane_emissions[2] or 0, available))
-              gleba_fruit_budgets[anchor.resource] = available - lane_two_inserted
+              available = available - lane_two_inserted
             end
+
+            anchor.gleba_fruit_budget = available
           else
             local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
 
