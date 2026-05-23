@@ -3,10 +3,11 @@ local defs = require("lib.runtime_defs")
 local planet_config = require("lib.planet_config")
 local planet_instance = require("lib.planet_instance")
 local managed_line_state = require("lib.managed_line_state")
+local anchor_identity = require("lib.anchor_identity")
+local anchor_placement = require("lib.anchor_placement")
 
 local anchor_runtime = {}
 
-local is_generic_anchor_entity_name
 
 local function get_edge_positions(bounds, side)
   local positions = {}
@@ -73,35 +74,11 @@ local function get_required_underground_belt_type(anchor)
     return nil
   end
 
-  if is_generic_anchor_entity_name and is_generic_anchor_entity_name(anchor.entity_name) then
+  if anchor_identity.is_generic_entity_name(anchor.entity_name) then
     return nil
   end
 
   return "output"
-end
-
-local function is_ingress_entity_name(entity_name)
-  for _, planet_name in ipairs(planet_config.SUPPORTED_PLANETS) do
-    for _, definition in ipairs(defs.get_input_definitions(planet_name)) do
-      if defs.is_ingress_entity_name_for_resource(definition.resource, entity_name) then
-        return true
-      end
-    end
-  end
-
-  return false
-end
-
-local function is_egress_entity_name(entity_name)
-  for _, planet_name in ipairs(planet_config.SUPPORTED_PLANETS) do
-    for _, definition in ipairs(defs.get_output_definitions(planet_name)) do
-      if defs.is_egress_entity_name_for_resource(definition.resource, entity_name) then
-        return true
-      end
-    end
-  end
-
-  return false
 end
 
 local function get_planet_name_for_surface_name(surface_name)
@@ -142,160 +119,28 @@ local function get_anchor_state_for_surface(surface)
   return managed_line_state.ensure(planet_name), planet, planet_name
 end
 
-local function get_generic_anchor_kind_flow(entity_name)
-  for key, generic_entity_name in pairs(defs.GENERIC_ANCHOR_ENTITIES) do
-    if entity_name == generic_entity_name then
-      local kind, flow = string.match(key, "^(%w+)_(%w+)$")
-      return kind, flow
-    end
-  end
-
-  return nil, nil
-end
-
-local function get_anchor_config_proxy_entity_name(kind, flow)
-  return "the-square-anchor-config-proxy-" .. (kind or "item") .. "-" .. (flow or "ingress")
-end
-
-local function get_anchor_config_proxy_kind_flow(entity_name)
-  if type(entity_name) ~= "string" then
-    return nil, nil
-  end
-
-  return string.match(entity_name, "^the%-square%-anchor%-config%-proxy%-(%w+)%-(%w+)$")
-end
-
-local function is_anchor_config_proxy_entity_name(entity_name)
-  return get_anchor_config_proxy_kind_flow(entity_name) ~= nil
-end
-
-is_generic_anchor_entity_name = function(entity_name)
-  return get_generic_anchor_kind_flow(entity_name) ~= nil
-end
-
 function anchor_runtime.is_managed_anchor_entity_name(entity_name)
-  return entity_name == defs.ANCHOR_SLOT_PROXY_NAME
-    or is_anchor_config_proxy_entity_name(entity_name)
-    or is_generic_anchor_entity_name(entity_name)
-    or is_ingress_entity_name(entity_name)
-    or is_egress_entity_name(entity_name)
-end
-
-local function does_anchor_match_entity_name(anchor, entity_name)
-  if not anchor then
-    return false
-  end
-
-  local proxy_kind, proxy_flow = get_anchor_config_proxy_kind_flow(entity_name)
-  if proxy_kind and proxy_flow then
-    return proxy_kind == anchor.kind and proxy_flow == anchor.flow
-  end
-
-  if entity_name == defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow) then
-    return true
-  end
-
-  if anchor.flow == "egress" then
-    return defs.is_egress_entity_name_for_resource(anchor.resource, entity_name)
-  end
-
-  return defs.is_ingress_entity_name_for_resource(anchor.resource, entity_name)
+  return anchor_identity.is_managed_entity_name(entity_name)
 end
 
 local function find_matching_stashed_anchor(item_or_entity_name, starter_anchors)
-  if not starter_anchors then
-    starter_anchors = storage.starter_anchors
-  end
-
-  if not starter_anchors then
-    return nil
-  end
-
-  for _, anchor in ipairs(starter_anchors.anchors) do
-    if not anchor.position and (
-      anchor.item_name == item_or_entity_name
-      or does_anchor_match_entity_name(anchor, item_or_entity_name)
-    ) then
-      return anchor
-    end
-  end
-
-  return nil
+  return anchor_placement.find_matching_stashed_anchor(item_or_entity_name, starter_anchors or storage.starter_anchors)
 end
 
 local function find_anchor_by_entity(entity, starter_anchors)
-  if not starter_anchors then
-    starter_anchors = storage.starter_anchors
-  end
-
-  if not starter_anchors or not (entity and entity.valid) then
-    return nil
-  end
-
-  for _, anchor in ipairs(starter_anchors.anchors) do
-    if anchor.entity == entity then
-      return anchor
-    end
-  end
-
-  return nil
+  return anchor_placement.find_anchor_by_entity(entity, starter_anchors or storage.starter_anchors)
 end
 
 local function find_anchor_by_entity_name_and_position(entity_name, position, starter_anchors)
-  if not starter_anchors then
-    starter_anchors = storage.starter_anchors
-  end
-
-  if not starter_anchors or not position then
-    return nil
-  end
-
-  local position_key = defs.get_position_key(defs.snap_entity_position_to_tile(position))
-
-  for _, anchor in ipairs(starter_anchors.anchors) do
-    if anchor.position
-      and defs.get_position_key(anchor.position) == position_key
-      and does_anchor_match_entity_name(anchor, entity_name)
-    then
-      return anchor
-    end
-  end
-
-  return nil
-end
-
-local function clear_anchor_entity(anchor)
-  if anchor then
-    anchor.entity = nil
-  end
+  return anchor_placement.find_anchor_by_entity_name_and_position(entity_name, position, starter_anchors or storage.starter_anchors)
 end
 
 local function stash_anchor(anchor)
-  if not anchor then
-    return
-  end
-
-  anchor.position = nil
-  anchor.side = nil
-  anchor.resource = nil
-  anchor.item_progress = {0, 0}
-  anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind, anchor.flow)
-  anchor.entity_name = defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
-  clear_anchor_entity(anchor)
+  anchor_placement.stash(anchor)
 end
 
 local function assign_anchor_position(anchor, side, position)
-  if not (anchor and side and position) then
-    return false
-  end
-
-  anchor.position = position
-  anchor.side = side
-  anchor.direction = defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, side)
-  anchor.entity_name = defs.get_anchor_entity_name_for_current_tier(anchor)
-  anchor.entity = nil
-
-  return true
+  return anchor_placement.assign(anchor, side, position)
 end
 
 local function print_anchor_debug_message(recipient, message)
@@ -383,38 +228,6 @@ end
 
 local function try_unlock_uranium_processing(anchor, force, debug_recipient)
   try_unlock_ingress_technology(anchor, force, debug_recipient, "uranium-ore", "uranium-processing", "uranium ore")
-end
-
-local function is_fluid_anchor_too_close(anchor, position, side, starter_anchors)
-  if not starter_anchors then
-    starter_anchors = storage.starter_anchors
-  end
-
-  if not starter_anchors or not anchor or anchor.kind ~= "fluid" then
-    return false
-  end
-
-  for _, other_anchor in ipairs(starter_anchors.anchors) do
-    if other_anchor ~= anchor
-      and other_anchor.kind == "fluid"
-      and other_anchor.side == side
-      and other_anchor.position
-    then
-      local delta
-
-      if side == "north" or side == "south" then
-        delta = math.abs(other_anchor.position.x - position.x)
-      else
-        delta = math.abs(other_anchor.position.y - position.y)
-      end
-
-      if delta <= 1 then
-        return true
-      end
-    end
-  end
-
-  return false
 end
 
 local function entity_overlaps_anchor_ring(square_size, entity)
@@ -925,9 +738,9 @@ function anchor_runtime.update_player_anchor_preview(player)
   end
 
   local tile_position = defs.snap_entity_position_to_tile(proxy.position)
-  local side = defs.get_anchor_side_for_position(planet:get_square_size(), tile_position)
+  local ok, _, side = anchor_placement.check(anchor, tile_position, planet:get_square_size(), starter_anchors)
 
-  if not side or is_fluid_anchor_too_close(anchor, tile_position, side, starter_anchors) then
+  if not ok then
     return
   end
 
@@ -1147,8 +960,8 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
   end
 
   local tile_position = defs.snap_entity_position_to_tile(entity.position)
-  local side = defs.get_anchor_side_for_position(planet:get_square_size(), tile_position)
   local anchor_position = tile_position
+  local side = defs.get_anchor_side_for_position(planet:get_square_size(), anchor_position)
 
   if not side then
     reject_anchor_placement(entity, actor, {"message.the-square-managed-line-invalid-edge"})
@@ -1157,8 +970,8 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
 
   local anchor = find_matching_stashed_anchor(entity.name, starter_anchors)
 
-  if not anchor and is_generic_anchor_entity_name(entity.name) then
-    local kind, flow = get_generic_anchor_kind_flow(entity.name)
+  if not anchor and anchor_identity.is_generic_entity_name(entity.name) then
+    local kind, flow = anchor_identity.get_generic_kind_flow(entity.name)
     anchor = {
       kind = kind,
       flow = flow,
@@ -1174,8 +987,15 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
     return
   end
 
-  if is_fluid_anchor_too_close(anchor, anchor_position, side, starter_anchors) then
-    reject_anchor_placement(entity, actor, {"message.the-square-managed-line-fluid-gap-required"})
+  local ok, reason = anchor_placement.check(anchor, anchor_position, planet:get_square_size(), starter_anchors)
+
+  if not ok then
+    reject_anchor_placement(
+      entity,
+      actor,
+      reason == "fluid-gap-required" and {"message.the-square-managed-line-fluid-gap-required"}
+        or {"message.the-square-managed-line-invalid-edge"}
+    )
     return
   end
 
@@ -1221,15 +1041,11 @@ function anchor_runtime.handle_managed_anchor_slot_click(player)
   end
 
   local tile_position = defs.snap_entity_position_to_tile(proxy.position)
-  local side = defs.get_anchor_side_for_position(planet:get_square_size(), tile_position)
+  local ok, reason, side = anchor_placement.check(anchor, tile_position, planet:get_square_size(), starter_anchors)
 
-  if not side then
-    player.print({"message.the-square-managed-line-invalid-edge"})
-    return
-  end
-
-  if is_fluid_anchor_too_close(anchor, tile_position, side, starter_anchors) then
-    player.print({"message.the-square-managed-line-fluid-gap-required"})
+  if not ok then
+    player.print(reason == "fluid-gap-required" and {"message.the-square-managed-line-fluid-gap-required"}
+      or {"message.the-square-managed-line-invalid-edge"})
     return
   end
 
@@ -1275,7 +1091,7 @@ function anchor_runtime.handle_anchor_gui_opened(entity, player)
     return false
   end
 
-  if is_generic_anchor_entity_name(entity.name) or is_anchor_config_proxy_entity_name(entity.name) then
+  if anchor_identity.is_generic_entity_name(entity.name) or anchor_identity.is_config_proxy_entity_name(entity.name) then
     return false
   end
 
@@ -1323,7 +1139,7 @@ function anchor_runtime.handle_anchor_gui_opened(entity, player)
 end
 
 function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
-  if not (entity and entity.valid and (is_generic_anchor_entity_name(entity.name) or is_anchor_config_proxy_entity_name(entity.name))) then
+  if not (entity and entity.valid and (anchor_identity.is_generic_entity_name(entity.name) or anchor_identity.is_config_proxy_entity_name(entity.name))) then
     return false
   end
 

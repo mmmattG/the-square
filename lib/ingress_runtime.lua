@@ -1,5 +1,5 @@
 local item_ingress = require("lib.item_ingress")
-local resource_balance = require("lib.resource_balance")
+local throughput_policy = require("lib.managed_line_throughput_policy")
 local defs = require("lib.runtime_defs")
 local planet_config = require("lib.planet_config")
 local planet_instance = require("lib.planet_instance")
@@ -160,7 +160,7 @@ local function get_active_uranium_budget_per_interval(uranium_anchors, starter_a
   end
 
   local sulfuric_acid_needed = total_capacity / (
-    resource_balance.URANIUM_ORE_PER_SULFURIC_ACID * (1 + mining_productivity_bonus)
+    throughput_policy.URANIUM_ORE_PER_SULFURIC_ACID * (1 + mining_productivity_bonus)
   )
   local sulfuric_acid_egressed = 0
 
@@ -186,7 +186,7 @@ local function get_active_uranium_budget_per_interval(uranium_anchors, starter_a
     end
   end
 
-  local budget = resource_balance.compute_uranium_budget(
+  local budget = throughput_policy.compute_uranium_budget(
     sulfuric_acid_egressed,
     mining_productivity_bonus,
     bootstrap.uranium_ore_progress_carry or 0
@@ -211,20 +211,6 @@ local function pump_uranium_ingress_anchor(entity, requested_emission, shared_bu
   return inserted
 end
 
-local GLEBA_FRUIT_PER_SEED = 50
-
-local gleba_seed_by_fruit = {
-  yumako = "yumako-seed",
-  jellynut = "jellynut-seed"
-}
-
-local function should_gate_gleba_fruit(planet_name, anchor)
-  return planet_name == "gleba"
-    and anchor.flow == "ingress"
-    and anchor.kind == "item"
-    and gleba_seed_by_fruit[anchor.resource] ~= nil
-end
-
 local function drain_gleba_seed_budgets(starter_anchors, ingress_tier, planet_name)
   local budgets = {}
 
@@ -234,16 +220,14 @@ local function drain_gleba_seed_budgets(starter_anchors, ingress_tier, planet_na
 
   for _, anchor in ipairs(starter_anchors.anchors) do
     local entity = anchor.position and anchor.entity or nil
-    local fruit = anchor.resource == "yumako-seed" and "yumako"
-      or anchor.resource == "jellynut-seed" and "jellynut"
-      or nil
+    local fruit = throughput_policy.get_gleba_fruit_for_seed_anchor(anchor)
 
     if fruit and anchor.flow == "egress" and anchor.kind == "item" and entity and entity.valid then
       local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
       local drained_seeds = drain_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
         + drain_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
 
-      budgets[fruit] = (budgets[fruit] or 0) + drained_seeds * GLEBA_FRUIT_PER_SEED
+      budgets[fruit] = (budgets[fruit] or 0) + drained_seeds * throughput_policy.GLEBA_FRUIT_PER_SEED
     end
   end
 
@@ -270,7 +254,7 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
 
             pump_uranium_ingress_anchor(entity, uranium_anchor and uranium_anchor.requested_emission, allocated_budget)
             uranium_anchor_index = uranium_anchor_index + 1
-          elseif should_gate_gleba_fruit(planet_name, anchor) then
+          elseif throughput_policy.should_gate_gleba_fruit(planet_name, anchor) then
             local available = (anchor.gleba_fruit_budget or 0) + (gleba_fruit_budgets[anchor.resource] or 0)
             local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
 
@@ -298,13 +282,13 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
         end
       elseif anchor.flow == "egress" then
         if anchor.kind == "item" then
-          if not (planet_name == "gleba" and (anchor.resource == "yumako-seed" or anchor.resource == "jellynut-seed")) then
+          if not throughput_policy.should_skip_regular_egress(planet_name, anchor, uranium_context) then
             local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
 
             drain_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
             drain_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
           end
-        elseif not (uranium_context and anchor.resource == "sulfuric-acid") then
+        elseif not throughput_policy.should_skip_regular_egress(planet_name, anchor, uranium_context) then
           drain_fluid_anchor(entity, anchor.resource, ingress_tier.fluid_amount_per_interval)
         end
       end
@@ -328,7 +312,7 @@ local function get_uranium_context(ingress_tier, starter_anchors, bootstrap)
 
   return {
     anchors = uranium_anchors,
-    allocations = resource_balance.allocate_shared_budget(uranium_budget, uranium_capacities).allocations
+    allocations = throughput_policy.allocate_shared_budget(uranium_budget, uranium_capacities)
   }
 end
 
