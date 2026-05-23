@@ -2,7 +2,9 @@ SHELL := /bin/sh
 
 LUA ?= $(shell command -v luajit 2>/dev/null || command -v lua 2>/dev/null)
 
-.PHONY: build install test e2e-test
+.PHONY: all build install test e2e-test
+
+all: build install
 
 build:
 	./scripts/build-mod.sh
