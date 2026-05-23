@@ -237,7 +237,7 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
   for _, anchor in ipairs(starter_anchors.anchors) do
     local entity = anchor.position and anchor.entity or nil
 
-    if entity and entity.valid then
+    if entity and entity.valid and anchor.resource then
       if anchor.flow == "ingress" then
         if anchor.kind == "item" then
           if uranium_context and anchor.resource == "uranium-ore" then

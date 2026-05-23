@@ -106,6 +106,28 @@ local function migrate_anchor_namespace(anchor)
   anchor.entity_name = replace_legacy_prefix(anchor.entity_name)
 end
 
+local function migrate_anchor_to_generic(anchor)
+  if not anchor then
+    return
+  end
+
+  anchor.flow = anchor.flow or "ingress"
+  anchor.kind = anchor.kind or "item"
+  anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind, anchor.flow)
+  anchor.entity_name = defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
+  anchor.entity = nil
+end
+
+local function migrate_anchor_set_to_generic(anchor_set)
+  if not (anchor_set and anchor_set.anchors) then
+    return
+  end
+
+  for _, anchor in ipairs(anchor_set.anchors) do
+    migrate_anchor_to_generic(anchor)
+  end
+end
+
 local function migrate_managed_anchor_namespace()
   if storage.starter_anchors and storage.starter_anchors.anchors then
     for _, anchor in ipairs(storage.starter_anchors.anchors) do
@@ -122,3 +144,10 @@ end
 
 migrate_legacy_bootstrap_surface()
 migrate_managed_anchor_namespace()
+migrate_anchor_set_to_generic(storage.starter_anchors)
+
+if storage.planets then
+  for _, planet_state in pairs(storage.planets) do
+    migrate_anchor_set_to_generic(planet_state.starter_anchors)
+  end
+end

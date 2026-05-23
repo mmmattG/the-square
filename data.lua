@@ -280,19 +280,23 @@ local function build_generic_anchor_item(name, icon, order, place_result)
   }
 end
 
-local function build_generic_anchor_entity(name, item_name, kind, flow)
-  local source
+local allow_anchor_on_out_of_map
 
-  if kind == "fluid" and flow == "ingress" then
-    source = table.deepcopy(data.raw["offshore-pump"]["offshore-pump"])
-  elseif kind == "fluid" then
-    source = table.deepcopy(data.raw["pipe-to-ground"]["pipe-to-ground"])
-  else
-    source = table.deepcopy(data.raw["underground-belt"]["underground-belt"])
-  end
+local function build_generic_anchor_entity(name, item_name, kind, flow)
+  local source = table.deepcopy(data.raw["assembling-machine"]["assembling-machine-1"])
 
   source.name = name
   source.localised_description = {"entity-description.the-square-generic-anchor"}
+  source.icon = kind == "fluid" and (flow == "ingress" and "__base__/graphics/icons/offshore-pump.png" or "__base__/graphics/icons/pipe-to-ground.png") or "__base__/graphics/icons/underground-belt.png"
+  source.icon_size = 64
+  source.crafting_categories = {"the-square-anchor-configuration"}
+  source.crafting_speed = 1
+  source.energy_source = {type = "void"}
+  source.energy_usage = "1W"
+  source.allowed_effects = {}
+  source.module_slots = 0
+  source.fluid_boxes = nil
+  source.fixed_recipe = nil
   source.minable = {mining_time = 0.1, result = item_name}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
@@ -384,7 +388,7 @@ local function make_anchor_lightning_safe(source)
   source.resistances[#source.resistances + 1] = {type = "electric", percent = 100}
 end
 
-local function allow_anchor_on_out_of_map(source)
+allow_anchor_on_out_of_map = function(source)
   source.collision_mask = remove_collision_layers(source.collision_mask, {
     ["ground-tile"] = true,
     ground_tile = true

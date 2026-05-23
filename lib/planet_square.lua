@@ -197,7 +197,7 @@ function planet_square.apply_square_expansion(planet_name, options)
 
   planet:set_square_size(next_square_size)
   planet:set_completed_square_expansion_levels(next_expansion_level)
-  planet:add_expansion_points(newly_unlocked_tiles)
+  -- Expansion Points were retired; expansion research grows the square but no longer awards currency.
 
   local bootstrap = planet:get_bootstrap_storage()
   bootstrap.expansions_completed = next_expansion_level

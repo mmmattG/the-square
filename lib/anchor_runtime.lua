@@ -133,14 +133,19 @@ local function get_anchor_state_for_surface(surface)
   return managed_line_state.ensure(planet_name), planet, planet_name
 end
 
-local function is_generic_anchor_entity_name(entity_name)
-  for _, generic_entity_name in pairs(defs.GENERIC_ANCHOR_ENTITIES) do
+local function get_generic_anchor_kind_flow(entity_name)
+  for key, generic_entity_name in pairs(defs.GENERIC_ANCHOR_ENTITIES) do
     if entity_name == generic_entity_name then
-      return true
+      local kind, flow = string.match(key, "^(%w+)_(%w+)$")
+      return kind, flow
     end
   end
 
-  return false
+  return nil, nil
+end
+
+local function is_generic_anchor_entity_name(entity_name)
+  return get_generic_anchor_kind_flow(entity_name) ~= nil
 end
 
 function anchor_runtime.is_managed_anchor_entity_name(entity_name)
@@ -1107,6 +1112,18 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
 
   local anchor = find_matching_stashed_anchor(entity.name, starter_anchors)
 
+  if not anchor and is_generic_anchor_entity_name(entity.name) then
+    local kind, flow = get_generic_anchor_kind_flow(entity.name)
+    anchor = {
+      kind = kind,
+      flow = flow,
+      item_name = defs.get_generic_anchor_item_name(kind, flow),
+      entity_name = entity.name,
+      item_progress = {0, 0}
+    }
+    starter_anchors.anchors[#starter_anchors.anchors + 1] = anchor
+  end
+
   if not anchor then
     reject_anchor_placement(entity, actor, {"message.the-square-managed-line-unowned"})
     return
@@ -1218,6 +1235,50 @@ function anchor_runtime.handle_anchor_mined(entity)
       anchor_runtime.ensure_planet_starter_anchors(planet_name)
     end
   end
+end
+
+function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
+  if not (entity and entity.valid and is_generic_anchor_entity_name(entity.name)) then
+    return false
+  end
+
+  local starter_anchors, _, planet_name = get_anchor_state_for_surface(entity.surface)
+  local anchor = find_anchor_by_entity(entity, starter_anchors)
+    or find_anchor_by_entity_name_and_position(entity.name, entity.position, starter_anchors)
+
+  if not anchor then
+    return false
+  end
+
+  local recipe = entity.get_recipe and entity.get_recipe(entity) or nil
+  if not recipe then
+    anchor.resource = nil
+    anchor.item_progress = {0, 0}
+    return true
+  end
+
+  local resource, flow = defs.parse_config_recipe_name(recipe.name)
+  local definition = defs.get_config_definition(resource, flow, planet_name)
+
+  if not definition or flow ~= anchor.flow or definition.kind ~= anchor.kind then
+    if entity.set_recipe then
+      entity.set_recipe(entity, anchor.resource and defs.get_config_recipe_name(anchor.resource, anchor.flow) or nil)
+    end
+    if actor and actor.valid and actor.print then
+      actor.print({"message.the-square-managed-line-invalid-configuration"})
+    end
+    return false
+  end
+
+  anchor.resource = resource
+  anchor.kind = definition.kind
+  anchor.flow = flow
+  anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind, anchor.flow)
+  anchor.entity_name = defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
+  anchor.item_progress = {0, 0}
+  try_unlock_oil_processing(anchor, entity.force, actor)
+  try_unlock_uranium_processing(anchor, entity.force, actor)
+  return true
 end
 
 function anchor_runtime.handle_entity_built(event, gui_runtime)

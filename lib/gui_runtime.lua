@@ -141,9 +141,8 @@ local function build_status_lines()
     .. (defs.is_logistic_network_automation_enabled() and "enabled" or "disabled")
   lines[#lines + 1] = "Expansion research: " .. completed_levels .. " levels completed"
   lines[#lines + 1] = "Next expansion: level " .. next_level .. " using " .. next_band.label
-  lines[#lines + 1] = "Next reward: " .. next_reward .. " tiles and " .. next_reward .. " expansion points"
+  lines[#lines + 1] = "Next expansion unlocks " .. next_reward .. " tiles"
   lines[#lines + 1] = "Expansions completed: " .. (bootstrap.expansions_completed or 0)
-  lines[#lines + 1] = "Expansion points: " .. (bootstrap.expansion_points or 0)
 
   return lines
 end
@@ -273,89 +272,13 @@ local function ensure_shop_frame(player)
 end
 
 function gui_runtime.refresh_shop_gui(player, anchor_runtime)
-  if not (player and player.valid) then
-    return
-  end
-
-  local frame = player.gui.left[defs.SHOP_FRAME_NAME]
-  local bootstrap = storage.bootstrap
-
-  if not frame or not bootstrap then
-    return
-  end
-
-  frame.clear()
-  frame.add({
-    type = "label",
-    caption = {"gui.the-square-shop-points", bootstrap.expansion_points or 0}
-  })
-  frame.add({
-    type = "label",
-    caption = {
-      "gui.the-square-shop-ingress-rate",
-      defs.get_current_ingress_tier().label,
-      defs.format_decimal(defs.get_ingress_item_rate_per_second())
-    }
-  })
-  frame.add({
-    type = "label",
-    caption = {"gui.the-square-shop-line-cost", defs.get_line_purchase_cost()}
-  })
-
-  for _, definition in ipairs(defs.INPUT_DEFINITIONS) do
-    local flow = frame.add({
-      type = "flow",
-      direction = "horizontal"
-    })
-    local can_purchase = anchor_runtime.can_purchase_line(definition.resource)
-    local button = flow.add({
-      type = "button",
-      name = "the_square_shop_buy__" .. definition.resource,
-      caption = {"gui.the-square-shop-buy", {"item-name." .. defs.get_ingress_item_name(definition.resource)}}
-    })
-
-    button.enabled = can_purchase and (bootstrap.expansion_points or 0) >= defs.get_line_purchase_cost()
-
-    flow.add({
-      type = "label",
-      caption = build_shop_status_caption(definition.resource, anchor_runtime)
-    })
-  end
-
-  for _, definition in ipairs(defs.OUTPUT_DEFINITIONS) do
-    local flow = frame.add({
-      type = "flow",
-      direction = "horizontal"
-    })
-    local can_purchase = anchor_runtime.can_purchase_line(definition.resource)
-    local button = flow.add({
-      type = "button",
-      name = "the_square_shop_buy__" .. definition.resource,
-      caption = {"gui.the-square-shop-buy", {"item-name." .. defs.get_egress_item_name(definition.resource)}}
-    })
-
-    button.enabled = can_purchase and (bootstrap.expansion_points or 0) >= defs.get_line_purchase_cost()
-
-    flow.add({
-      type = "label",
-      caption = build_shop_status_caption(definition.resource, anchor_runtime)
-    })
+  if player and player.valid then
+    destroy_child(player.gui.top, defs.SHOP_BUTTON_NAME)
+    destroy_child(player.gui.left, defs.SHOP_FRAME_NAME)
   end
 end
 
 function gui_runtime.toggle_shop_gui(player, anchor_runtime)
-  if not (player and player.valid) then
-    return
-  end
-
-  local frame = player.gui.left[defs.SHOP_FRAME_NAME]
-
-  if frame then
-    frame.destroy()
-    return
-  end
-
-  ensure_shop_frame(player)
   gui_runtime.refresh_shop_gui(player, anchor_runtime)
 end
 
@@ -364,13 +287,7 @@ function gui_runtime.sync_shop_gui(player, anchor_runtime)
     return
   end
 
-  local removed_legacy = gui_runtime.destroy_legacy_guis(player)
-  ensure_shop_button(player)
-
-  if removed_legacy.shop_frame and not player.gui.left[defs.SHOP_FRAME_NAME] then
-    ensure_shop_frame(player)
-  end
-
+  gui_runtime.destroy_legacy_guis(player)
   gui_runtime.refresh_shop_gui(player, anchor_runtime)
 end
 

@@ -247,6 +247,32 @@ function runtime_defs.get_config_recipe_name(resource, flow)
   return "the-square-configure-" .. resource .. "-" .. flow
 end
 
+function runtime_defs.parse_config_recipe_name(recipe_name)
+  if type(recipe_name) ~= "string" then
+    return nil, nil
+  end
+
+  local resource, flow = string.match(recipe_name, "^the%-square%-configure%-(.+)%-(ingress)$")
+  if resource then
+    return resource, flow
+  end
+
+  resource, flow = string.match(recipe_name, "^the%-square%-configure%-(.+)%-(egress)$")
+  return resource, flow
+end
+
+function runtime_defs.get_config_definition(resource, flow, planet_name)
+  if flow == "egress" then
+    return runtime_defs.get_output_definition(resource, planet_name)
+  end
+
+  if flow == "ingress" then
+    return runtime_defs.get_input_definition(resource, planet_name)
+  end
+
+  return nil
+end
+
 function runtime_defs.get_ingress_item_name(resource)
   local definition = runtime_defs.get_input_definition(resource)
   return runtime_defs.get_generic_anchor_item_name(definition and definition.kind or "item", "ingress")

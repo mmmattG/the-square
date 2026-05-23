@@ -21,6 +21,12 @@ end
 local function normalize_anchor(anchor, square_size)
   anchor.flow = anchor.flow or "ingress"
   anchor.item_progress = anchor.item_progress or {0, 0}
+  anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind or "item", anchor.flow)
+  if anchor.position then
+    anchor.entity_name = defs.get_generic_anchor_entity_name(anchor.kind or "item", anchor.flow)
+  else
+    anchor.entity_name = anchor.entity_name or defs.get_generic_anchor_entity_name(anchor.kind or "item", anchor.flow)
+  end
   anchor.direction = anchor.side and defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side) or nil
   migrate_anchor_to_anchor_ring(square_size, anchor)
 end

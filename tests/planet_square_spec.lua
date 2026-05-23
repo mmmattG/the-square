@@ -92,7 +92,7 @@ run_test("Planet Square expands Nauvis through one interface and preserves Ancho
   local result = planet_square.apply_square_expansion("nauvis")
 
   assert_equal(result.square_size, 9, "Nauvis should grow by one Ring")
-  assert_equal(storage.bootstrap.expansion_points, 32, "Nauvis should receive the Ring reward")
+  assert_equal(storage.bootstrap.expansion_points, 0, "Nauvis should not receive retired Expansion Points")
   assert_equal(storage.starter_anchors.anchors[1].position.y, -5, "Managed Lines should shift outward")
   assert_equal(surface.created_entities[1].name, "transport-belt", "Nauvis expansion should leave trailing ingress stubs")
   assert_equal(surface.map_gen_settings.width, 11, "surface dimensions should be resized")
@@ -123,7 +123,7 @@ run_test("Planet Square expands a non-Nauvis Planet with the same Anchor Shift s
   local result = planet_square.apply_square_expansion("vulcanus")
 
   assert_equal(result.square_size, 7, "Planet-local square should grow by one Ring")
-  assert_equal(storage.planets.vulcanus.expansion_points, 25, "Planet should receive only its local Ring reward")
+  assert_equal(storage.planets.vulcanus.expansion_points, 1, "Planet should not receive retired Expansion Points")
   assert_equal(storage.bootstrap.expansion_points, 5, "Nauvis points should be unchanged")
   assert_equal(storage.planets.vulcanus.starter_anchors.anchors[1].position.y, -4, "Planet Managed Lines should shift outward")
   assert_equal(vulcanus.created_entities[1].name, "transport-belt", "item ingress should leave a normal belt stub")
