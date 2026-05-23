@@ -285,12 +285,26 @@ local function remove_collision_layers(collision_mask, layers_to_remove)
   return filtered_mask
 end
 
+local function make_anchor_lightning_safe(source)
+  source.resistances = source.resistances or {}
+
+  for _, resistance in ipairs(source.resistances) do
+    if resistance.type == "electric" then
+      resistance.percent = math.max(resistance.percent or 0, 100)
+      return
+    end
+  end
+
+  source.resistances[#source.resistances + 1] = {type = "electric", percent = 100}
+end
+
 local function allow_anchor_on_out_of_map(source)
   source.collision_mask = remove_collision_layers(source.collision_mask, {
     ["ground-tile"] = true,
     ground_tile = true
   })
   source.tile_buildability_rules = nil
+  make_anchor_lightning_safe(source)
 end
 
 local function build_ingress_entity(definition, belt_tier_key, belt_prototype_name)
@@ -343,6 +357,7 @@ local function build_anchor_slot_proxy()
     collision_mask = {layers = {}},
     selection_box = {{-0.5, -0.5}, {0.5, 0.5}},
     max_health = 1,
+    resistances = {{type = "electric", percent = 100}},
     render_layer = "object",
     picture = {
       filename = "__core__/graphics/empty.png",

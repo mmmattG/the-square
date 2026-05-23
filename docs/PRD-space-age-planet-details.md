@@ -80,6 +80,7 @@ Items thrown or dropped into out-of-map void outside any managed square should b
 - Item egresses are represented as outward underground belts.
 - Starter layout placement only needs to be valid and movable; exact side/coordinate choices are not important for this PRD.
 - Items thrown or dropped onto out-of-map void outside the managed square should be destroyed on every supported planet.
+- Managed anchor slot proxies and managed anchor endpoints should be lightning-safe on Fulgora via anchor-specific electric resistance, so line placement is not constrained by player-provided lightning rod coverage. This does not change normal factory entity lightning behavior.
 - Useful module boundaries are: planet configuration/catalog, planet-scoped ingress/egress definitions, starter layout construction, tile selection, entity presentation for line endpoints, and void-item destruction.
 - Prefer deep, isolated modules for config interpretation and starter layout planning so behavior can be tested without Factorio runtime APIs.
 
@@ -92,6 +93,7 @@ Items thrown or dropped into out-of-map void outside any managed square should b
 - Add tests for entity presentation mapping: item ingress inward underground belt, item egress outward underground belt, fluid ingress offshore pump, fluid egress underground pipe.
 - Add tests for Gleba seed egress behavior supplying yumako and jellynut ingress at normal rates.
 - Add tests for void item destruction on all supported planet surfaces.
+- Manual Fulgora lightning check for this slice: on Fulgora, place or move a managed anchor slot/endpoint outside lightning-rod coverage and allow a lightning storm to pass; the anchor infrastructure should survive, while ordinary unprotected factory entities should retain vanilla lightning vulnerability.
 - Prior art exists in the repository around planet instance specs, bootstrap runtime specs, bootstrap layout specs, ingress runtime specs, and resource balance specs. New tests should follow that behavior-first Lua module style.
 
 ## Out of Scope
