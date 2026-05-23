@@ -199,7 +199,7 @@ local function find_anchor_by_entity_name_and_position(entity_name, position, st
     return nil
   end
 
-  local position_key = defs.get_position_key(position)
+  local position_key = defs.get_position_key(defs.snap_entity_position_to_tile(position))
 
   for _, anchor in ipairs(starter_anchors.anchors) do
     if anchor.position

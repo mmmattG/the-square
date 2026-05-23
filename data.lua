@@ -1,6 +1,10 @@
 local expansion_research = require("lib.expansion_research")
 local planet_config = require("lib.planet_config")
 
+local lava_icon = mods and mods["space-age"]
+  and "__space-age__/graphics/icons/fluid/lava.png"
+  or "__base__/graphics/icons/fluid/crude-oil.png"
+
 local ingress_resources = {
   {resource = "iron-ore", kind = "item", icon = "__base__/graphics/icons/iron-ore.png", order = "a[ingress]-a[iron-ore]"},
   {resource = "copper-ore", kind = "item", icon = "__base__/graphics/icons/copper-ore.png", order = "a[ingress]-b[copper-ore]"},
@@ -13,7 +17,7 @@ local ingress_resources = {
   {resource = "calcite", kind = "item", icon = "__base__/graphics/icons/stone.png", order = "a[ingress]-i[calcite]"},
   {resource = "tungsten-ore", kind = "item", icon = "__base__/graphics/icons/stone.png", order = "a[ingress]-j[tungsten-ore]"},
   {resource = "sulfuric-acid", kind = "fluid", icon = "__base__/graphics/icons/fluid/sulfuric-acid.png", order = "a[ingress]-k[sulfuric-acid]"},
-  {resource = "lava", kind = "fluid", icon = "__base__/graphics/icons/fluid/crude-oil.png", order = "a[ingress]-l[lava]"},
+  {resource = "lava", kind = "fluid", icon = lava_icon, order = "a[ingress]-l[lava]"},
   {resource = "scrap", kind = "item", icon = "__base__/graphics/icons/iron-stick.png", order = "a[ingress]-m[scrap]"},
   {resource = "heavy-oil", kind = "fluid", icon = "__base__/graphics/icons/fluid/heavy-oil.png", order = "a[ingress]-n[heavy-oil]"},
   {resource = "yumako", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "a[ingress]-o[yumako]"},

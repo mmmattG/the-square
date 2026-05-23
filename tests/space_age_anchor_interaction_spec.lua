@@ -102,3 +102,55 @@ run_test("Vulcanus anchors can be picked up and placed using planet-local state"
   assert_equal(anchor.position.y, -9, "placing should use the Vulcanus square bounds")
   assert_equal(player.cursor_stack.valid_for_read, false, "placing should consume the cursor item")
 end)
+
+run_test("Space Age item ingress mining matches centered entity positions after reload", function()
+  local planet_cases = {
+    {planet = "vulcanus", resource = "calcite"},
+    {planet = "vulcanus", resource = "tungsten-ore"},
+    {planet = "fulgora", resource = "scrap"},
+    {planet = "gleba", resource = "yumako"},
+    {planet = "gleba", resource = "jellynut"}
+  }
+
+  for _, case in ipairs(planet_cases) do
+    local surface = {
+      name = case.planet,
+      find_entities_filtered = function() return {} end,
+      create_entity = function(entity)
+        return {valid = true, name = entity.name, position = entity.position, surface = surface}
+      end
+    }
+    game.surfaces[case.planet] = surface
+    storage = {
+      bootstrap = {square_size = 7, surface_name = "nauvis"},
+      planets = {}
+    }
+    storage.planets[case.planet] = {
+      square_size = 17,
+      surface_size = 19,
+      surface_name = case.planet,
+      starter_anchors = {
+        anchors = {
+          runtime_defs.create_managed_anchor(
+            runtime_defs.get_input_definition(case.resource, case.planet),
+            "ingress",
+            "north",
+            {x = 0, y = -9}
+          )
+        }
+      }
+    }
+
+    local anchor = storage.planets[case.planet].starter_anchors.anchors[1]
+    anchor.entity = nil
+
+    anchor_runtime.handle_anchor_mined({
+      valid = true,
+      name = anchor.entity_name,
+      position = {x = 0.5, y = -8.5},
+      surface = surface
+    })
+
+    assert_equal(anchor.position, nil, case.planet .. " " .. case.resource .. " ingress should stash when mined by centered entity position")
+  end
+end)
