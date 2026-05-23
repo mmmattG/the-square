@@ -66,7 +66,7 @@ run_test("Planet Square runtime expands one Planet-local Square through one inte
   local refreshed = false
   local ensured_planet = nil
   local gui_runtime = {refresh_all_debug_guis = function() refreshed = true end}
-  local managed_line_runtime = {ensure_planet_starter_anchors = function(planet_name) ensured_planet = planet_name end}
+  local managed_line_runtime = {ensure = function(planet_name) ensured_planet = planet_name end}
 
   local result = planet_square_runtime.expand("vulcanus", {
     gui_runtime = gui_runtime,

@@ -20,7 +20,7 @@ local function run_test(name, fn)
   io.stdout:write("PASS " .. name .. "\n")
 end
 
-run_test("managed_line_runtime exposes the deep Managed Line interface and compatibility seam", function()
+run_test("managed_line_runtime exposes only the deep Managed Line interface", function()
   storage = {}
   game = {surfaces = {}, forces = {player = {technologies = {}}}}
 
@@ -29,15 +29,7 @@ run_test("managed_line_runtime exposes the deep Managed Line interface and compa
   assert_equal(type(managed_line_runtime.purchase), "function", "Managed Line runtime should expose purchase")
   assert_equal(type(managed_line_runtime.sync_tier), "function", "Managed Line runtime should expose sync_tier")
   assert_equal(type(managed_line_runtime.handle_built), "function", "Managed Line runtime should expose explicit event handlers")
-
-  assert_equal(
-    managed_line_runtime.purchase_managed_line_for_resource,
-    managed_line_runtime.purchase,
-    "legacy purchase export should route through the deep seam"
-  )
-  assert_equal(
-    managed_line_runtime.sync_ingress_tier_from_research,
-    managed_line_runtime.sync_tier,
-    "legacy tier sync export should route through the deep seam"
-  )
+  assert_equal(type(managed_line_runtime.get_owned_line_counts), "function", "Managed Line runtime should expose shop queries")
+  assert_equal(type(managed_line_runtime.purchase_managed_line_for_resource), "nil", "legacy purchase export should not leak through the seam")
+  assert_equal(type(managed_line_runtime.sync_ingress_tier_from_research), "nil", "legacy tier export should not leak through the seam")
 end)

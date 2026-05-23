@@ -5,6 +5,7 @@ local planet_instance = require("lib.planet_instance")
 local managed_line_state = require("lib.managed_line_state")
 local anchor_identity = require("lib.anchor_identity")
 local anchor_placement = require("lib.anchor_placement")
+local managed_line_placement = require("lib.managed_line_placement")
 
 local anchor_runtime = {}
 
@@ -137,10 +138,6 @@ end
 
 local function stash_anchor(anchor)
   anchor_placement.stash(anchor)
-end
-
-local function assign_anchor_position(anchor, side, position)
-  return anchor_placement.assign(anchor, side, position)
 end
 
 local function print_anchor_debug_message(recipient, message)
@@ -943,6 +940,24 @@ function anchor_runtime.purchase_managed_line_for_resource(player, resource)
   end
 end
 
+local function run_anchor_placement_effects(anchor, force, actor, source_label)
+  if anchor.flow == "ingress" and anchor.resource == "crude-oil" then
+    print_anchor_debug_message(actor, "the-square debug: placed crude oil ingress via " .. source_label)
+  end
+
+  if anchor.flow == "ingress" and anchor.resource == "uranium-ore" then
+    print_anchor_debug_message(actor, "the-square debug: placed uranium ore ingress via " .. source_label)
+  end
+
+  try_unlock_oil_processing(anchor, force, actor)
+  try_unlock_uranium_processing(anchor, force, actor)
+end
+
+local function get_anchor_placement_rejection_message(reason)
+  return reason == "fluid-gap-required" and {"message.the-square-managed-line-fluid-gap-required"}
+    or {"message.the-square-managed-line-invalid-edge"}
+end
+
 local function handle_managed_anchor_built(entity, actor, gui_runtime)
   if not (entity and entity.valid) then
     return
@@ -959,8 +974,7 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
     gui_runtime.print_ingress_placement_debug(actor, planet:get_square_size(), entity.position)
   end
 
-  local tile_position = defs.snap_entity_position_to_tile(entity.position)
-  local anchor_position = tile_position
+  local anchor_position = defs.snap_entity_position_to_tile(entity.position)
   local side = defs.get_anchor_side_for_position(planet:get_square_size(), anchor_position)
 
   if not side then
@@ -987,34 +1001,26 @@ local function handle_managed_anchor_built(entity, actor, gui_runtime)
     return
   end
 
-  local ok, reason = anchor_placement.check(anchor, anchor_position, planet:get_square_size(), starter_anchors)
-
-  if not ok then
-    reject_anchor_placement(
-      entity,
-      actor,
-      reason == "fluid-gap-required" and {"message.the-square-managed-line-fluid-gap-required"}
-        or {"message.the-square-managed-line-invalid-edge"}
-    )
-    return
-  end
-
-  entity.destroy({raise_destroy = false})
-
-  if assign_anchor_position(anchor, side, anchor_position) then
-    if anchor.flow == "ingress" and anchor.resource == "crude-oil" then
-      print_anchor_debug_message(actor, "the-square debug: placed crude oil ingress via build event")
-    end
-
-    if anchor.flow == "ingress" and anchor.resource == "uranium-ore" then
-      print_anchor_debug_message(actor, "the-square debug: placed uranium ore ingress via build event")
-    end
-
-    try_unlock_oil_processing(anchor, entity.force, actor)
-    try_unlock_uranium_processing(anchor, entity.force, actor)
-  end
-
-  anchor_runtime.ensure_planet_starter_anchors(planet_name)
+  managed_line_placement.place_built_entity({
+    entity = entity,
+    actor = actor,
+    anchor = anchor,
+    side = side,
+    position = anchor_position,
+    square_size = planet:get_square_size(),
+    starter_anchors = starter_anchors,
+    callbacks = {
+      reject = function(rejected_entity, rejected_actor, reason)
+        reject_anchor_placement(rejected_entity, rejected_actor, get_anchor_placement_rejection_message(reason))
+      end,
+      after_assign = function(placed_anchor, force, placement_actor)
+        run_anchor_placement_effects(placed_anchor, force, placement_actor, "build event")
+      end,
+      after_placement = function()
+        anchor_runtime.ensure_planet_starter_anchors(planet_name)
+      end
+    }
+  })
 end
 
 function anchor_runtime.handle_managed_anchor_slot_click(player)
@@ -1041,33 +1047,28 @@ function anchor_runtime.handle_managed_anchor_slot_click(player)
   end
 
   local tile_position = defs.snap_entity_position_to_tile(proxy.position)
-  local ok, reason, side = anchor_placement.check(anchor, tile_position, planet:get_square_size(), starter_anchors)
 
-  if not ok then
-    player.print(reason == "fluid-gap-required" and {"message.the-square-managed-line-fluid-gap-required"}
-      or {"message.the-square-managed-line-invalid-edge"})
-    return
-  end
-
-  if not consume_cursor_item(player, item_name) then
-    return
-  end
-
-  if assign_anchor_position(anchor, side, tile_position) then
-    if anchor.flow == "ingress" and anchor.resource == "crude-oil" then
-      print_anchor_debug_message(player, "the-square debug: placed crude oil ingress via anchor slot")
-    end
-
-    if anchor.flow == "ingress" and anchor.resource == "uranium-ore" then
-      print_anchor_debug_message(player, "the-square debug: placed uranium ore ingress via anchor slot")
-    end
-
-    try_unlock_oil_processing(anchor, player.force, player)
-    try_unlock_uranium_processing(anchor, player.force, player)
-  end
-
-  anchor_runtime.ensure_planet_starter_anchors(planet_name)
-  anchor_runtime.update_player_anchor_preview(player)
+  managed_line_placement.place_from_slot({
+    player = player,
+    anchor = anchor,
+    item_name = item_name,
+    position = tile_position,
+    square_size = planet:get_square_size(),
+    starter_anchors = starter_anchors,
+    callbacks = {
+      reject_slot = function(rejected_player, reason)
+        rejected_player.print(get_anchor_placement_rejection_message(reason))
+      end,
+      consume_cursor_item = consume_cursor_item,
+      after_assign = function(placed_anchor, force, placement_actor)
+        run_anchor_placement_effects(placed_anchor, force, placement_actor, "anchor slot")
+      end,
+      after_placement = function()
+        anchor_runtime.ensure_planet_starter_anchors(planet_name)
+        anchor_runtime.update_player_anchor_preview(player)
+      end
+    }
+  })
 end
 
 function anchor_runtime.handle_anchor_mined(entity)

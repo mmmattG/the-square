@@ -5,11 +5,12 @@ local planet_config = require("lib.planet_config")
 
 local managed_line_runtime = {}
 
--- Deep Managed Line seam. These are the preferred names for callers that work
--- with Planet-local Managed Lines. Legacy exports are re-exported below during
--- the migration so existing tests and modules can move incrementally.
 function managed_line_runtime.get(planet_name)
   return managed_line_state.get(planet_name)
+end
+
+function managed_line_runtime.ensure_state(planet_name)
+  return managed_line_state.ensure(planet_name or "nauvis")
 end
 
 function managed_line_runtime.ensure(planet_name)
@@ -67,30 +68,28 @@ function managed_line_runtime.handle_slot_click(player)
   return anchor_runtime.handle_managed_anchor_slot_click(player)
 end
 
--- Compatibility exports from anchor_runtime.
-for name, value in pairs(anchor_runtime) do
-  if managed_line_runtime[name] == nil then
-    managed_line_runtime[name] = value
-  end
+function managed_line_runtime.apply_logistic_network_setting_to_all_forces()
+  return anchor_runtime.apply_logistic_network_setting_to_all_forces()
 end
 
--- Compatibility exports from ingress_runtime.
-for name, value in pairs(ingress_runtime) do
-  if managed_line_runtime[name] == nil then
-    managed_line_runtime[name] = value
-  end
+function managed_line_runtime.apply_logistic_network_setting_to_force(force)
+  return anchor_runtime.apply_logistic_network_setting_to_force(force)
 end
 
--- Compatibility exports from managed_line_state. Keep get/ensure pointing at
--- the deeper interface above.
-for name, value in pairs(managed_line_state) do
-  if managed_line_runtime[name] == nil then
-    managed_line_runtime[name] = value
-  end
+function managed_line_runtime.update_all_player_previews()
+  return anchor_runtime.update_all_player_anchor_previews()
 end
 
-managed_line_runtime.purchase_managed_line = managed_line_runtime.purchase
-managed_line_runtime.purchase_managed_line_for_resource = managed_line_runtime.purchase
-managed_line_runtime.sync_ingress_tier_from_research = managed_line_runtime.sync_tier
+function managed_line_runtime.get_owned_line_counts(resource)
+  return anchor_runtime.get_owned_line_counts(resource)
+end
+
+function managed_line_runtime.is_resource_unlocked(resource)
+  return anchor_runtime.is_resource_unlocked(resource)
+end
+
+function managed_line_runtime.unlock_planet_bootstrap_research(planet_name, force)
+  return anchor_runtime.unlock_planet_bootstrap_research(planet_name, force)
+end
 
 return managed_line_runtime

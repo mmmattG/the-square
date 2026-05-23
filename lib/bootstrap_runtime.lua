@@ -392,7 +392,7 @@ function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
   game.forces.player.set_spawn_position({x = 0, y = 0}, surface)
 
   if anchor_runtime then
-    anchor_runtime.ensure_starter_anchors()
+    anchor_runtime.ensure("nauvis")
     anchor_runtime.apply_logistic_network_setting_to_all_forces()
   end
 
@@ -428,7 +428,7 @@ function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
   ensure_surface_dimensions(surface, bootstrap.surface_size or defs.get_surface_size(bootstrap.square_size))
 
   if anchor_runtime then
-    anchor_runtime.ensure_starter_anchors()
+    anchor_runtime.ensure("nauvis")
     anchor_runtime.apply_logistic_network_setting_to_all_forces()
   end
 

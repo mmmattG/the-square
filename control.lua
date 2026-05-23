@@ -35,7 +35,7 @@ end)
 script.on_configuration_changed(function()
   if storage.bootstrap then
     bootstrap_runtime.ensure_bootstrap_state_defaults()
-    managed_line_runtime.ensure_starter_anchor_state()
+    managed_line_runtime.ensure_state("nauvis")
     managed_line_runtime.sync_tier(defs.get_player_force())
 
     if storage.bootstrap.square_size ~= defs.get_square_size() then
@@ -277,5 +277,5 @@ end)
 
 script.on_nth_tick(defs.ITEM_ANCHOR_INTERVAL_TICKS, function()
   managed_line_runtime.ensure_all()
-  managed_line_runtime.update_all_player_anchor_previews()
+  managed_line_runtime.update_all_player_previews()
 end)
