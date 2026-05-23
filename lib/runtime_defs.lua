@@ -50,6 +50,7 @@ runtime_defs.SHOP_BUTTON_NAME = "the_square_shop_button"
 runtime_defs.SCREENSHOT_BUTTON_NAME = "the_square_screenshot_button"
 runtime_defs.SHOP_FRAME_NAME = "the_square_shop_frame"
 runtime_defs.MAX_INGRESS_TIER = 4
+runtime_defs.MAX_EGRESS_TIER = 5
 runtime_defs.DEBUG_SPACE_AGE_PLANETS = {
   {name = "nauvis", label = "Nauvis"},
   {name = "vulcanus", label = "Vulcanus"},
@@ -72,6 +73,24 @@ runtime_defs.INGRESS_RESEARCH_DEFINITIONS = {
     technology_name = "the-square-ingress-blue",
     prerequisite_technology_name = "logistics-3",
     tier_level = 4
+  }
+}
+runtime_defs.EGRESS_RESEARCH_DEFINITIONS = {
+  {
+    technology_name = "the-square-ingress-dual-lane",
+    tier_level = 2
+  },
+  {
+    technology_name = "the-square-ingress-red",
+    tier_level = 3
+  },
+  {
+    technology_name = "the-square-ingress-blue",
+    tier_level = 4
+  },
+  {
+    technology_name = "the-square-egress-turbo",
+    tier_level = 5
   }
 }
 runtime_defs.EXPANSION_RESEARCH_LEVELS_PER_TIER = 10
@@ -151,6 +170,13 @@ runtime_defs.ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER = {
   [2] = "yellow",
   [3] = "red",
   [4] = "blue"
+}
+runtime_defs.ITEM_EGRESS_BELT_TIER_BY_EGRESS_TIER = {
+  [1] = "yellow",
+  [2] = "yellow",
+  [3] = "red",
+  [4] = "blue",
+  [5] = "turbo"
 }
 runtime_defs.INGRESS_TIER_DEFINITIONS = {
   [1] = {
@@ -271,12 +297,44 @@ function runtime_defs.get_egress_item_name(resource)
   return "the-square-" .. resource .. "-egress"
 end
 
-function runtime_defs.get_egress_entity_name(resource)
-  return "the-square-" .. resource .. "-egress-anchor"
+local function get_output_kind_for_resource(resource)
+  for _, definitions in pairs(runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET) do
+    for _, output_definition in ipairs(definitions) do
+      if output_definition.resource == resource then
+        return output_definition.kind
+      end
+    end
+  end
+
+  return nil
+end
+
+function runtime_defs.get_egress_entity_name(resource, egress_tier_level)
+  if get_output_kind_for_resource(resource) ~= "item" then
+    return "the-square-" .. resource .. "-egress-anchor"
+  end
+
+  local belt_tier_key = runtime_defs.ITEM_EGRESS_BELT_TIER_BY_EGRESS_TIER[egress_tier_level or 1] or "yellow"
+
+  if belt_tier_key == "yellow" then
+    return "the-square-" .. resource .. "-egress-anchor"
+  end
+
+  return "the-square-" .. resource .. "-egress-anchor-" .. belt_tier_key
 end
 
 function runtime_defs.is_egress_entity_name_for_resource(resource, entity_name)
-  return entity_name == runtime_defs.get_egress_entity_name(resource)
+  if entity_name == runtime_defs.get_egress_entity_name(resource, 1) then
+    return true
+  end
+
+  for tier_level = 2, runtime_defs.MAX_EGRESS_TIER do
+    if entity_name == runtime_defs.get_egress_entity_name(resource, tier_level) then
+      return true
+    end
+  end
+
+  return false
 end
 
 function runtime_defs.get_anchor_presentation(flow, kind, resource)
@@ -421,14 +479,14 @@ function runtime_defs.get_current_ingress_tier()
   return runtime_defs.get_ingress_tier_definition(runtime_defs.get_current_ingress_tier_level())
 end
 
-function runtime_defs.get_ingress_tier_level_for_force(force)
+local function get_researched_tier_level_for_force(force, research_definitions)
   local tier_level = 1
 
   if not (force and force.valid and force.technologies) then
     return tier_level
   end
 
-  for _, definition in ipairs(runtime_defs.INGRESS_RESEARCH_DEFINITIONS) do
+  for _, definition in ipairs(research_definitions) do
     local technology = force.technologies[definition.technology_name]
 
     if technology and technology.researched and definition.tier_level > tier_level then
@@ -437,6 +495,14 @@ function runtime_defs.get_ingress_tier_level_for_force(force)
   end
 
   return tier_level
+end
+
+function runtime_defs.get_ingress_tier_level_for_force(force)
+  return get_researched_tier_level_for_force(force, runtime_defs.INGRESS_RESEARCH_DEFINITIONS)
+end
+
+function runtime_defs.get_egress_tier_level_for_force(force)
+  return get_researched_tier_level_for_force(force, runtime_defs.EGRESS_RESEARCH_DEFINITIONS)
 end
 
 function runtime_defs.get_next_expansion_tile_reward(square_size)
@@ -569,13 +635,33 @@ function runtime_defs.snap_entity_position_to_tile(position)
   }
 end
 
+function runtime_defs.get_current_egress_tier_level()
+  local bootstrap = storage.bootstrap
+
+  if not bootstrap then
+    return 1
+  end
+
+  local tier_level = bootstrap.egress_tier or runtime_defs.get_current_ingress_tier_level()
+
+  if tier_level < 1 then
+    return 1
+  end
+
+  if tier_level > runtime_defs.MAX_EGRESS_TIER then
+    return runtime_defs.MAX_EGRESS_TIER
+  end
+
+  return tier_level
+end
+
 function runtime_defs.get_anchor_entity_name_for_current_tier(anchor)
   if not anchor then
     return nil
   end
 
   if anchor.flow == "egress" then
-    return runtime_defs.get_egress_entity_name(anchor.resource)
+    return runtime_defs.get_egress_entity_name(anchor.resource, runtime_defs.get_current_egress_tier_level())
   end
 
   if anchor.kind == "item" then

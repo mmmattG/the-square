@@ -96,3 +96,22 @@ run_test("screenshot alt mode defaults to the runtime-global toggle", function()
     "base screenshots should include alt mode info by default"
   )
 end)
+
+run_test("item egress entity names follow researched belt tiers", function()
+  assert_equal(runtime_defs.get_egress_entity_name("yumako-seed", 1), "the-square-yumako-seed-egress-anchor")
+  assert_equal(runtime_defs.get_egress_entity_name("yumako-seed", 3), "the-square-yumako-seed-egress-anchor-red")
+  assert_equal(runtime_defs.get_egress_entity_name("yumako-seed", 5), "the-square-yumako-seed-egress-anchor-turbo")
+  assert_equal(runtime_defs.get_egress_entity_name("sulfuric-acid", 5), "the-square-sulfuric-acid-egress-anchor")
+end)
+
+run_test("egress tier research includes the Space Age-only final tier", function()
+  local force = {
+    valid = true,
+    technologies = {
+      ["the-square-ingress-blue"] = {researched = true},
+      ["the-square-egress-turbo"] = {researched = true}
+    }
+  }
+
+  assert_equal(runtime_defs.get_egress_tier_level_for_force(force), 5)
+end)

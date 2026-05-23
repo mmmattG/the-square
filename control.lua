@@ -36,7 +36,7 @@ script.on_configuration_changed(function()
   if storage.bootstrap then
     bootstrap_runtime.ensure_bootstrap_state_defaults()
     anchor_runtime.ensure_starter_anchor_state()
-    anchor_runtime.sync_ingress_tier_from_research(defs.get_player_force())
+    anchor_runtime.sync_anchor_tiers_from_research(defs.get_player_force())
 
     if storage.bootstrap.square_size ~= defs.get_square_size() then
       bootstrap_runtime.notify_square_size_change_applies_to_new_saves()
@@ -218,7 +218,7 @@ script.on_event(defines.events.on_research_finished, function(event)
     sync_all_runtime_guis()
   end
 
-  if anchor_runtime.sync_ingress_tier_from_research(research.force) then
+  if anchor_runtime.sync_anchor_tiers_from_research(research.force) then
     sync_all_runtime_guis()
   end
 

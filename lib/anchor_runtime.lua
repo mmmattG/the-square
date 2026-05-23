@@ -945,24 +945,39 @@ local function spend_expansion_points(amount)
   return true
 end
 
-function anchor_runtime.sync_ingress_tier_from_research(force)
+function anchor_runtime.sync_anchor_tiers_from_research(force)
   local bootstrap = storage.bootstrap
 
   if not bootstrap then
     return false
   end
 
-  local target_tier_level = defs.get_ingress_tier_level_for_force(force or defs.get_player_force())
+  local target_ingress_tier_level = defs.get_ingress_tier_level_for_force(force or defs.get_player_force())
+  local target_egress_tier_level = defs.get_egress_tier_level_for_force(force or defs.get_player_force())
+  local changed = false
 
-  if bootstrap.ingress_tier == target_tier_level then
+  if bootstrap.ingress_tier ~= target_ingress_tier_level then
+    bootstrap.ingress_tier = target_ingress_tier_level
+    changed = true
+  end
+
+  if bootstrap.egress_tier ~= target_egress_tier_level then
+    bootstrap.egress_tier = target_egress_tier_level
+    changed = true
+  end
+
+  if not changed then
     return false
   end
 
-  bootstrap.ingress_tier = target_tier_level
   anchor_runtime.ensure_starter_anchors()
   anchor_runtime.ensure_all_planet_starter_anchors()
 
   return true
+end
+
+function anchor_runtime.sync_ingress_tier_from_research(force)
+  return anchor_runtime.sync_anchor_tiers_from_research(force)
 end
 
 local function get_shop_item_name(resource)

@@ -43,6 +43,16 @@ local item_ingress_belt_tiers = {
   {key = "blue", prototype_name = "express-underground-belt"}
 }
 
+local item_egress_belt_tiers = {
+  {key = "yellow", prototype_name = "underground-belt"},
+  {key = "red", prototype_name = "fast-underground-belt"},
+  {key = "blue", prototype_name = "express-underground-belt"}
+}
+
+if mods and mods["space-age"] and data.raw["underground-belt"]["turbo-underground-belt"] then
+  item_egress_belt_tiers[#item_egress_belt_tiers + 1] = {key = "turbo", prototype_name = "turbo-underground-belt"}
+end
+
 local square_expansion_research_bands = {
   {
     start_level = 1,
@@ -220,8 +230,12 @@ local function ingress_entity_name(resource, belt_tier_key)
   return "the-square-" .. resource .. "-ingress-anchor-" .. belt_tier_key
 end
 
-local function egress_entity_name(resource)
-  return "the-square-" .. resource .. "-egress-anchor"
+local function egress_entity_name(resource, belt_tier_key)
+  if not belt_tier_key or belt_tier_key == "yellow" then
+    return "the-square-" .. resource .. "-egress-anchor"
+  end
+
+  return "the-square-" .. resource .. "-egress-anchor-" .. belt_tier_key
 end
 
 local function build_ingress_item(definition)
@@ -338,13 +352,13 @@ local function build_anchor_place_input()
   }
 end
 
-local function build_egress_entity(definition)
+local function build_egress_entity(definition, belt_tier_key, belt_prototype_name)
   local source = definition.kind == "item"
-    and table.deepcopy(data.raw["underground-belt"]["underground-belt"])
+    and table.deepcopy(data.raw["underground-belt"][belt_prototype_name or "underground-belt"])
     or table.deepcopy(data.raw["pipe-to-ground"]["pipe-to-ground"])
   local item_name = egress_item_name(definition.resource)
 
-  source.name = egress_entity_name(definition.resource)
+  source.name = egress_entity_name(definition.resource, belt_tier_key)
   source.localised_description = {"entity-description.the-square-egress-anchor"}
   source.icon = definition.icon
   source.icon_size = 64
@@ -513,7 +527,18 @@ end
 
 for _, definition in ipairs(egress_resources) do
   prototypes[#prototypes + 1] = build_egress_item(definition)
-  prototypes[#prototypes + 1] = build_egress_entity(definition)
+
+  if definition.kind == "item" then
+    for _, belt_tier in ipairs(item_egress_belt_tiers) do
+      prototypes[#prototypes + 1] = build_egress_entity(
+        definition,
+        belt_tier.key,
+        belt_tier.prototype_name
+      )
+    end
+  else
+    prototypes[#prototypes + 1] = build_egress_entity(definition)
+  end
 end
 
 local starting_square_size = expansion_research.DEFAULT_STARTING_SQUARE_SIZE
@@ -554,6 +579,18 @@ end
 
 for _, definition in ipairs(ingress_research_definitions) do
   prototypes[#prototypes + 1] = build_ingress_research_technology(definition)
+end
+
+if mods and mods["space-age"] and data.raw.technology["turbo-transport-belt"] then
+  prototypes[#prototypes + 1] = build_ingress_research_technology({
+    name = "the-square-egress-turbo",
+    icon = "__space-age__/graphics/icons/turbo-transport-belt.png",
+    prerequisite_technology_name = "turbo-transport-belt",
+    previous_ingress_technology_name = "the-square-ingress-blue",
+    localised_name = {"technology-name.the-square-egress-turbo"},
+    localised_description = {"technology-description.the-square-egress-turbo"},
+    effect_description = {"technology-effect.the-square-egress-turbo"}
+  })
 end
 
 for _, definition in ipairs(tips_and_tricks_items) do
