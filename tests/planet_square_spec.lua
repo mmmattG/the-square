@@ -130,6 +130,60 @@ run_test("Planet Square expands a non-Nauvis Planet with the same Anchor Shift s
   assert_equal(vulcanus.created_entities[2].name, "pipe", "fluid ingress should leave a pipe stub")
 end)
 
+run_test("Planet Square expansion leaves egress belt stubs instead of extra egress anchors", function()
+  local gleba = make_surface("gleba")
+  install_game({gleba = gleba})
+  storage = {
+    planets = {
+      gleba = {
+        square_size = 5,
+        surface_size = 7,
+        surface_name = "gleba",
+        floor_tile_name = "lowland-cream-cauliflower",
+        expansion_points = 0,
+        starter_anchors = {
+          anchors = {
+            {kind = "item", flow = "egress", side = "south", position = {x = 0, y = 3}, entity_name = "the-square-yumako-seed-egress-anchor"}
+          }
+        }
+      }
+    }
+  }
+
+  planet_square.apply_square_expansion("gleba")
+
+  assert_equal(gleba.created_entities[1].name, "transport-belt", "item egress should leave a belt stub, not an egress anchor")
+  assert_equal(storage.planets.gleba.starter_anchors.anchors[1].position.y, 4, "egress Managed Lines should shift outward")
+end)
+
+run_test("Planet Square expansion leaves turbo belt stubs at turbo anchor tier", function()
+  local gleba = make_surface("gleba")
+  install_game({gleba = gleba})
+  storage = {
+    bootstrap = {ingress_tier = 5, egress_tier = 5},
+    planets = {
+      gleba = {
+        square_size = 5,
+        surface_size = 7,
+        surface_name = "gleba",
+        floor_tile_name = "lowland-cream-cauliflower",
+        expansion_points = 0,
+        starter_anchors = {
+          anchors = {
+            {kind = "item", flow = "ingress", side = "north", position = {x = 0, y = -3}, entity_name = "the-square-yumako-ingress-anchor-turbo"},
+            {kind = "item", flow = "egress", side = "south", position = {x = 0, y = 3}, entity_name = "the-square-yumako-seed-egress-anchor-turbo"}
+          }
+        }
+      }
+    }
+  }
+
+  planet_square.apply_square_expansion("gleba")
+
+  assert_equal(gleba.created_entities[1].name, "turbo-transport-belt", "turbo ingress should leave a turbo belt stub")
+  assert_equal(gleba.created_entities[2].name, "turbo-transport-belt", "turbo egress should leave a turbo belt stub")
+end)
+
 run_test("Square Expansion research routes to the researched Planet", function()
   local vulcanus = make_surface("vulcanus")
   install_game({vulcanus = vulcanus})

@@ -81,7 +81,9 @@ local function get_trailing_entity_name(anchor)
     return "pipe"
   end
 
-  local belt_tier_key = defs.ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER[defs.get_current_ingress_tier_level()] or "yellow"
+  local tier_level = anchor.flow == "egress" and defs.get_current_egress_tier_level() or defs.get_current_ingress_tier_level()
+  local tier_map = anchor.flow == "egress" and defs.ITEM_EGRESS_BELT_TIER_BY_EGRESS_TIER or defs.ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER
+  local belt_tier_key = tier_map[tier_level] or "yellow"
 
   if belt_tier_key == "red" then
     return "fast-transport-belt"
@@ -89,6 +91,10 @@ local function get_trailing_entity_name(anchor)
 
   if belt_tier_key == "blue" then
     return "express-transport-belt"
+  end
+
+  if belt_tier_key == "turbo" then
+    return "turbo-transport-belt"
   end
 
   return "transport-belt"
@@ -130,7 +136,7 @@ local function leave_trailing_stubs_for_expansion(surface, managed_lines)
   end
 
   for _, anchor in ipairs(managed_lines.anchors) do
-    if anchor.position and anchor.flow == "ingress" then
+    if anchor.position then
       leave_trailing_ingress_stub(surface, anchor)
     end
   end

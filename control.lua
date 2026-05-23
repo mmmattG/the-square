@@ -25,6 +25,7 @@ local function handle_player_join_or_respawn(event)
     gui_runtime.sync_dev_gui(player)
     gui_runtime.sync_screenshot_gui(player)
     gui_runtime.sync_shop_gui(player, anchor_runtime)
+    gui_runtime.sync_cliff_explosive_gui(player)
   end
 end
 
@@ -52,6 +53,7 @@ script.on_configuration_changed(function()
     gui_runtime.sync_all_dev_guis()
     gui_runtime.sync_all_screenshot_guis()
     gui_runtime.sync_all_shop_guis(anchor_runtime)
+    gui_runtime.sync_all_cliff_explosive_guis()
     bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
     return
   end
@@ -148,6 +150,14 @@ script.on_event(defines.events.on_gui_click, function(event)
     return
   end
 
+  if event.element.name == defs.CLIFF_EXPLOSIVE_BUTTON_NAME then
+    if player and gui_runtime.is_cliff_explosive_button_enabled(player) then
+      player.insert({name = "cliff-explosives", count = 1})
+    end
+
+    return
+  end
+
   local resource = string.match(event.element.name, "^the_square_shop_buy__(.+)$")
 
   if resource and player then
@@ -203,6 +213,16 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
     if player then
       gui_runtime.sync_dev_gui(player)
       gui_runtime.sync_shop_gui(player, anchor_runtime)
+    end
+
+    return
+  end
+
+  if event.setting == defs.SETTING_CLIFF_EXPLOSIVE_BUTTON then
+    local player = game.get_player(event.player_index)
+
+    if player then
+      gui_runtime.sync_cliff_explosive_gui(player)
     end
   end
 end)

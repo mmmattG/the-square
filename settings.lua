@@ -141,5 +141,12 @@ data:extend({
     setting_type = "runtime-per-user",
     default_value = false,
     order = "i"
+  },
+  {
+    type = "bool-setting",
+    name = "the-square-cliff-explosive-button",
+    setting_type = "runtime-per-user",
+    default_value = false,
+    order = "j"
   }
 })

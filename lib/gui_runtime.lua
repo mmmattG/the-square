@@ -92,6 +92,12 @@ function gui_runtime.is_ingress_placement_debug_enabled(player)
     and settings.get_player_settings(player)[defs.SETTING_INGRESS_PLACEMENT_DEBUG].value
 end
 
+function gui_runtime.is_cliff_explosive_button_enabled(player)
+  return player
+    and player.valid
+    and settings.get_player_settings(player)[defs.SETTING_CLIFF_EXPLOSIVE_BUTTON].value
+end
+
 function gui_runtime.print_ingress_placement_debug(player, square_size, position)
   if not gui_runtime.is_ingress_placement_debug_enabled(player) then
     return
@@ -375,6 +381,32 @@ function gui_runtime.sync_screenshot_gui(player)
 
   gui_runtime.destroy_legacy_guis(player)
   ensure_screenshot_button(player)
+end
+
+function gui_runtime.sync_cliff_explosive_gui(player)
+  if not (player and player.valid) then
+    return
+  end
+
+  local button = player.gui.top[defs.CLIFF_EXPLOSIVE_BUTTON_NAME]
+
+  if gui_runtime.is_cliff_explosive_button_enabled(player) then
+    if not button then
+      player.gui.top.add({
+        type = "button",
+        name = defs.CLIFF_EXPLOSIVE_BUTTON_NAME,
+        caption = {"gui.the-square-cliff-explosive-button"}
+      })
+    end
+  elseif button then
+    button.destroy()
+  end
+end
+
+function gui_runtime.sync_all_cliff_explosive_guis()
+  for _, player in pairs(game.players) do
+    gui_runtime.sync_cliff_explosive_gui(player)
+  end
 end
 
 function gui_runtime.sync_all_screenshot_guis()
