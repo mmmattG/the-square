@@ -125,10 +125,18 @@ local planet_expansion_research_definitions = {
   }
 }
 
+local function build_anchor_upgrade_icons(belt_icon)
+  return {
+    {icon = belt_icon, icon_size = 64, scale = 0.8, shift = {-8, 0}},
+    {icon = "__base__/graphics/icons/underground-belt.png", icon_size = 64, scale = 0.45, shift = {14, -12}},
+    {icon = "__base__/graphics/icons/underground-belt.png", icon_size = 64, scale = 0.45, shift = {14, 12}}
+  }
+end
+
 local ingress_research_definitions = {
   {
     name = "the-square-ingress-dual-lane",
-    icon = "__base__/graphics/icons/transport-belt.png",
+    icons = build_anchor_upgrade_icons("__base__/graphics/icons/transport-belt.png"),
     prerequisite_technology_name = "logistics",
     previous_ingress_technology_name = nil,
     localised_name = {"technology-name.the-square-ingress-dual-lane"},
@@ -137,7 +145,7 @@ local ingress_research_definitions = {
   },
   {
     name = "the-square-ingress-red",
-    icon = "__base__/graphics/icons/fast-transport-belt.png",
+    icons = build_anchor_upgrade_icons("__base__/graphics/icons/fast-transport-belt.png"),
     prerequisite_technology_name = "logistics-2",
     previous_ingress_technology_name = "the-square-ingress-dual-lane",
     localised_name = {"technology-name.the-square-ingress-red"},
@@ -146,7 +154,7 @@ local ingress_research_definitions = {
   },
   {
     name = "the-square-ingress-blue",
-    icon = "__base__/graphics/icons/express-transport-belt.png",
+    icons = build_anchor_upgrade_icons("__base__/graphics/icons/express-transport-belt.png"),
     prerequisite_technology_name = "logistics-3",
     previous_ingress_technology_name = "the-square-ingress-red",
     localised_name = {"technology-name.the-square-ingress-blue"},
@@ -454,6 +462,7 @@ local function build_ingress_research_technology(definition)
     localised_name = definition.localised_name,
     localised_description = definition.localised_description,
     icon = definition.icon,
+    icons = definition.icons,
     icon_size = definition.icon_size or 64,
     order = "c-b[" .. definition.name .. "]",
     prerequisites = prerequisites,
@@ -584,7 +593,7 @@ end
 if mods and mods["space-age"] and data.raw.technology["turbo-transport-belt"] then
   prototypes[#prototypes + 1] = build_ingress_research_technology({
     name = "the-square-egress-turbo",
-    icon = "__space-age__/graphics/icons/turbo-transport-belt.png",
+    icons = build_anchor_upgrade_icons("__space-age__/graphics/icons/turbo-transport-belt.png"),
     prerequisite_technology_name = "turbo-transport-belt",
     previous_ingress_technology_name = "the-square-ingress-blue",
     localised_name = {"technology-name.the-square-egress-turbo"},

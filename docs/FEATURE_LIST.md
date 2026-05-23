@@ -71,10 +71,10 @@ This document lists planned features for `the-square`, grouped first by planned 
 ### Throughput And Economy
 
 - Item lines start at single yellow-belt-lane equivalent
-- Fluid lines start at the matching lowest fluid ingress tier
-- Research-driven ingress upgrades affect all item and fluid lines
-- Ingress upgrades apply retroactively to existing and stashed lines
-- Logistics unlocks dual-lane yellow ingress, Logistics 2 unlocks red ingress, and Logistics 3 unlocks blue ingress
+- Fluid lines start at the matching lowest anchor tier
+- Research-driven Anchor upgrades affect all shared-tier item and fluid managed lines, whether ingress or egress
+- Anchor upgrades apply retroactively to existing and stashed lines
+- Logistics unlocks dual-lane yellow anchors, Logistics 2 unlocks red anchors, Logistics 3 unlocks blue anchors, and Space Age turbo belts unlock Turbo Anchors
 - Additional lines have flat cost in v1
 - Expansion points awarded equal newly unlocked tiles
 - Expansion points spent on:
@@ -172,7 +172,7 @@ This document lists planned features for `the-square`, grouped first by planned 
 - Base growth-rate constants
 - Size bonus strength
 - Expansion-point costs
-- Ingress upgrade ladder
+- Anchor upgrade ladder
 - Dummy research costs
 - Expansion-speed research scaling
 

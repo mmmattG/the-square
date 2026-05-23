@@ -33,8 +33,9 @@
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
-| **Expansion Points** | The Planet-local currency earned from Ring growth and spent on local ingress capacity. | Global points, universal currency |
-| **Ingress Tier** | The current throughput level shared by a Planet's owned ingress lines. | Belt tier, pipe tier, lane tier |
+| **Expansion Points** | The Planet-local currency earned from Ring growth and spent on local managed-line capacity. | Global points, universal currency |
+| **Anchor Tier** | The current throughput level shared by a Planet's owned managed anchors, including ingress and matching egress tiers. | Ingress tier, belt tier, pipe tier, lane tier |
+| **Anchor Upgrade** | A global research step that raises the throughput of owned managed anchors without changing ownership or placement rules. | Ingress upgrade, output upgrade |
 | **Difficulty Preset** | A named package of tuning values that changes harshness without changing core rules. | Rule set, mode variant |
 | **Expert Preset** | The intended default high-harshness tuning for the mod. | Normal mode, standard mode |
 | **Easy Preset** | A softer tuning preset that mainly increases starting area and eases pacing. | Casual mode, sandbox mode |
