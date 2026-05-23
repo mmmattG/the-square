@@ -6,6 +6,8 @@ local managed_line_state = require("lib.managed_line_state")
 
 local anchor_runtime = {}
 
+local is_generic_anchor_entity_name
+
 local function get_edge_positions(bounds, side)
   local positions = {}
   local min_x = bounds.left_top.x
@@ -60,7 +62,7 @@ local function configure_source_anchor_entity(entity, direction)
   end
 
   entity.destructible = false
-  entity.operable = false
+  entity.operable = is_generic_anchor_entity_name(entity.name)
 end
 
 local function get_required_underground_belt_type(anchor)
@@ -144,7 +146,7 @@ local function get_generic_anchor_kind_flow(entity_name)
   return nil, nil
 end
 
-local function is_generic_anchor_entity_name(entity_name)
+is_generic_anchor_entity_name = function(entity_name)
   return get_generic_anchor_kind_flow(entity_name) ~= nil
 end
 
@@ -1274,10 +1276,17 @@ function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
   anchor.kind = definition.kind
   anchor.flow = flow
   anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind, anchor.flow)
-  anchor.entity_name = defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
+  anchor.entity_name = defs.get_anchor_entity_name_for_current_tier(anchor)
   anchor.item_progress = {0, 0}
   try_unlock_oil_processing(anchor, entity.force, actor)
   try_unlock_uranium_processing(anchor, entity.force, actor)
+
+  if planet_name == "nauvis" then
+    anchor_runtime.ensure_starter_anchors()
+  else
+    anchor_runtime.ensure_planet_starter_anchors(planet_name)
+  end
+
   return true
 end
 

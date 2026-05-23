@@ -502,6 +502,131 @@ run_test("placing non-uranium ingress does not unlock uranium processing", funct
   assert_equal(#force.get_played_sounds(), 0, "non-uranium placement should not play the research-complete sound")
 end)
 
+run_test("placed generic anchors stay unconfigured and operable", function()
+  local player_force = {valid = true, technologies = {}}
+  local created_entities = {}
+  local surface = {
+    name = "fes-bootstrap",
+    find_entities_filtered = function()
+      return {}
+    end,
+    create_entity = function(_, spec)
+      spec = spec or _
+      local entity = {
+        valid = true,
+        name = spec.name,
+        position = spec.position,
+        direction = spec.direction,
+        force = spec.force,
+        belt_to_ground_type = spec.type
+      }
+      created_entities[#created_entities + 1] = entity
+      return entity
+    end
+  }
+  game = {
+    forces = {player = player_force},
+    surfaces = {["fes-bootstrap"] = surface},
+    players = {}
+  }
+  storage = {
+    bootstrap = {square_size = 12, surface_name = "fes-bootstrap", ingress_tier = 1},
+    starter_anchors = {layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION, anchors = {
+      {
+        kind = "fluid",
+        flow = "ingress",
+        side = "north",
+        position = {x = -6, y = -7},
+        direction = defines.direction.north,
+        entity_name = runtime_defs.get_generic_anchor_entity_name("fluid", "ingress"),
+        item_name = runtime_defs.get_generic_anchor_item_name("fluid", "ingress"),
+        item_progress = {0, 0}
+      }
+    }}
+  }
+
+  anchor_runtime.ensure_starter_anchors()
+
+  local anchor = storage.starter_anchors.anchors[1]
+  assert_equal(anchor.resource, nil, "new generic anchors should not configure a resource during placement")
+  assert_equal(anchor.entity_name, runtime_defs.get_generic_anchor_entity_name("fluid", "ingress"), "unconfigured anchors should spawn the matching generic entity")
+  assert_equal(anchor.entity.name, runtime_defs.get_generic_anchor_entity_name("fluid", "ingress"), "placement should recreate an unconfigured generic entity")
+  assert_equal(anchor.entity.operable, true, "unconfigured generic anchors should stay operable so clicking opens configuration")
+end)
+
+run_test("choosing an anchor recipe configures and replaces the generic entity", function()
+  local player_force = {valid = true, technologies = {}}
+  local created_entities = {}
+  local generic_entity
+  local surface = {
+    name = "fes-bootstrap",
+    find_entities_filtered = function(_, filter)
+      filter = filter or _
+      if filter and filter.position and generic_entity and generic_entity.valid then
+        return {generic_entity}
+      end
+
+      return {}
+    end,
+    create_entity = function(_, spec)
+      spec = spec or _
+      local entity = {
+        valid = true,
+        name = spec.name,
+        position = spec.position,
+        direction = spec.direction,
+        force = spec.force,
+        belt_to_ground_type = spec.type,
+        destroy = function(self)
+          self.valid = false
+        end
+      }
+      created_entities[#created_entities + 1] = entity
+      return entity
+    end
+  }
+  generic_entity = {
+    valid = true,
+    name = runtime_defs.get_generic_anchor_entity_name("item", "ingress"),
+    position = {x = -6, y = -7},
+    surface = surface,
+    force = player_force,
+    get_recipe = function()
+      return {name = runtime_defs.get_config_recipe_name("iron-ore", "ingress")}
+    end,
+    destroy = function()
+      generic_entity.valid = false
+    end
+  }
+
+  game = {
+    forces = {player = player_force},
+    surfaces = {["fes-bootstrap"] = surface},
+    players = {}
+  }
+  storage = {
+    bootstrap = {square_size = 12, surface_name = "fes-bootstrap", ingress_tier = 1},
+    starter_anchors = {layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION, anchors = {
+      {
+        kind = "item",
+        flow = "ingress",
+        side = "north",
+        position = {x = -6, y = -7},
+        direction = defines.direction.south,
+        entity = generic_entity,
+        entity_name = runtime_defs.get_generic_anchor_entity_name("item", "ingress"),
+        item_progress = {0, 0}
+      }
+    }}
+  }
+
+  assert_equal(anchor_runtime.handle_anchor_recipe_changed(generic_entity), true, "recipe selection should be accepted")
+
+  local anchor = storage.starter_anchors.anchors[1]
+  assert_equal(anchor.resource, "iron-ore", "selected recipe should configure the resource")
+  assert_equal(anchor.entity_name, runtime_defs.get_ingress_entity_name("iron-ore", 1), "configured anchors should use resource-specific entities")
+end)
+
 run_test("ingress tier research sync upgrades planet starter anchors", function()
   local player_force = {
     valid = true,

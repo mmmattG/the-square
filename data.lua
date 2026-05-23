@@ -269,7 +269,7 @@ local function build_parameterised_anchor_icons(icon)
   }
 end
 
-local function build_generic_anchor_item(name, icon, order)
+local function build_generic_anchor_item(name, icon, order, place_result)
   return {
     type = "item",
     name = name,
@@ -277,6 +277,7 @@ local function build_generic_anchor_item(name, icon, order)
     icons = build_parameterised_anchor_icons(icon),
     subgroup = "energy-pipe-distribution",
     order = order,
+    place_result = place_result,
     stack_size = 50
   }
 end
@@ -284,23 +285,35 @@ end
 local allow_anchor_on_out_of_map
 
 local function build_generic_anchor_entity(name, item_name, kind, flow)
-  local source
+  local anchor_source
 
   if kind == "fluid" and flow == "ingress" then
-    source = table.deepcopy(data.raw["offshore-pump"]["offshore-pump"])
+    anchor_source = table.deepcopy(data.raw["offshore-pump"]["offshore-pump"])
   elseif kind == "fluid" then
-    source = table.deepcopy(data.raw["pipe-to-ground"]["pipe-to-ground"])
+    anchor_source = table.deepcopy(data.raw["pipe-to-ground"]["pipe-to-ground"])
   else
-    source = table.deepcopy(data.raw["underground-belt"]["underground-belt"])
+    anchor_source = table.deepcopy(data.raw["underground-belt"]["underground-belt"])
   end
 
+  local source = table.deepcopy(data.raw["assembling-machine"]["assembling-machine-1"])
   source.name = name
   source.localised_description = {"entity-description.the-square-generic-anchor"}
-  source.icons = build_parameterised_anchor_icons(source.icon)
+  source.icons = build_parameterised_anchor_icons(anchor_source.icon)
   source.icon = nil
   source.minable = {mining_time = 0.1, result = item_name}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
+  source.crafting_categories = {"the-square-anchor-configuration"}
+  source.crafting_speed = 1
+  source.energy_source = {type = "void"}
+  source.energy_usage = "1W"
+  source.allowed_effects = {}
+  source.module_slots = 0
+  source.collision_box = anchor_source.collision_box
+  source.selection_box = anchor_source.selection_box
+  source.collision_mask = anchor_source.collision_mask
+  source.tile_width = nil
+  source.tile_height = nil
   allow_anchor_on_out_of_map(source)
 
   return source
@@ -607,10 +620,10 @@ prototypes[#prototypes + 1] = {
 prototypes[#prototypes + 1] = build_anchor_slot_proxy()
 prototypes[#prototypes + 1] = build_anchor_place_input()
 prototypes[#prototypes + 1] = build_anchor_frame_item()
-prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-ingress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-b[item-ingress-anchor]")
-prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-egress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-c[item-egress-anchor]")
-prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-fluid-ingress-anchor", "__base__/graphics/icons/offshore-pump.png", "z[the-square]-d[fluid-ingress-anchor]")
-prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-fluid-egress-anchor", "__base__/graphics/icons/pipe-to-ground.png", "z[the-square]-e[fluid-egress-anchor]")
+prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-ingress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-b[item-ingress-anchor]", "the-square-generic-item-ingress-anchor")
+prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-egress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-c[item-egress-anchor]", "the-square-generic-item-egress-anchor")
+prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-fluid-ingress-anchor", "__base__/graphics/icons/offshore-pump.png", "z[the-square]-d[fluid-ingress-anchor]", "the-square-generic-fluid-ingress-anchor")
+prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-fluid-egress-anchor", "__base__/graphics/icons/pipe-to-ground.png", "z[the-square]-e[fluid-egress-anchor]", "the-square-generic-fluid-egress-anchor")
 prototypes[#prototypes + 1] = build_generic_anchor_entity("the-square-generic-item-ingress-anchor", "the-square-item-ingress-anchor", "item", "ingress")
 prototypes[#prototypes + 1] = build_generic_anchor_entity("the-square-generic-item-egress-anchor", "the-square-item-egress-anchor", "item", "egress")
 prototypes[#prototypes + 1] = build_generic_anchor_entity("the-square-generic-fluid-ingress-anchor", "the-square-fluid-ingress-anchor", "fluid", "ingress")
