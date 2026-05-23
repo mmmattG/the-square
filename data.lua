@@ -248,6 +248,10 @@ local function egress_entity_name(resource, belt_tier_key)
   return "the-square-" .. resource .. "-egress-anchor-" .. belt_tier_key
 end
 
+local function generic_anchor_item_name(kind, flow)
+  return "the-square-" .. kind .. "-" .. flow .. "-anchor"
+end
+
 local function build_anchor_frame_item()
   return {
     type = "item",
@@ -406,7 +410,7 @@ local function build_ingress_entity(definition, belt_tier_key, belt_prototype_na
   source.localised_description = {"entity-description.the-square-ingress-anchor"}
   source.icon = definition.icon
   source.icon_size = 64
-  source.minable = {mining_time = 0.1, result = item_name}
+  source.minable = {mining_time = 0.1, result = generic_anchor_item_name(definition.kind, "ingress")}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
   allow_anchor_on_out_of_map(source)
@@ -476,7 +480,7 @@ local function build_egress_entity(definition, belt_tier_key, belt_prototype_nam
   source.localised_description = {"entity-description.the-square-egress-anchor"}
   source.icon = definition.icon
   source.icon_size = 64
-  source.minable = {mining_time = 0.1, result = item_name}
+  source.minable = {mining_time = 0.1, result = generic_anchor_item_name(definition.kind, "egress")}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
   allow_anchor_on_out_of_map(source)
