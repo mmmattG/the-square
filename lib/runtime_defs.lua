@@ -41,6 +41,18 @@ runtime_defs.CHECKERBOARD_TILE_NAMES = {
 runtime_defs.CHART_MARGIN = 1
 runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS = 8
 runtime_defs.ANCHOR_SLOT_PROXY_NAME = "the-square-anchor-slot-proxy"
+runtime_defs.GENERIC_ANCHOR_ITEMS = {
+  item_ingress = "the-square-item-ingress-anchor",
+  item_egress = "the-square-item-egress-anchor",
+  fluid_ingress = "the-square-fluid-ingress-anchor",
+  fluid_egress = "the-square-fluid-egress-anchor"
+}
+runtime_defs.GENERIC_ANCHOR_ENTITIES = {
+  item_ingress = "the-square-generic-item-ingress-anchor",
+  item_egress = "the-square-generic-item-egress-anchor",
+  fluid_ingress = "the-square-generic-fluid-ingress-anchor",
+  fluid_egress = "the-square-generic-fluid-egress-anchor"
+}
 runtime_defs.PLACE_MANAGED_ANCHOR_INPUT_NAME = "the-square-place-managed-anchor"
 runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH = 1
 runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION = 12
@@ -219,8 +231,25 @@ runtime_defs.INGRESS_TIER_DEFINITIONS = {
   }
 }
 
+local function get_generic_anchor_key(kind, flow)
+  return (kind or "item") .. "_" .. (flow or "ingress")
+end
+
+function runtime_defs.get_generic_anchor_item_name(kind, flow)
+  return runtime_defs.GENERIC_ANCHOR_ITEMS[get_generic_anchor_key(kind, flow)]
+end
+
+function runtime_defs.get_generic_anchor_entity_name(kind, flow)
+  return runtime_defs.GENERIC_ANCHOR_ENTITIES[get_generic_anchor_key(kind, flow)]
+end
+
+function runtime_defs.get_config_recipe_name(resource, flow)
+  return "the-square-configure-" .. resource .. "-" .. flow
+end
+
 function runtime_defs.get_ingress_item_name(resource)
-  return "the-square-" .. resource .. "-ingress"
+  local definition = runtime_defs.get_input_definition(resource)
+  return runtime_defs.get_generic_anchor_item_name(definition and definition.kind or "item", "ingress")
 end
 
 local function get_input_kind_for_resource(resource)
@@ -236,6 +265,10 @@ local function get_input_kind_for_resource(resource)
 end
 
 function runtime_defs.get_ingress_entity_name(resource, ingress_tier_level)
+  if not resource then
+    return runtime_defs.get_generic_anchor_entity_name("item", "ingress")
+  end
+
   if get_input_kind_for_resource(resource) ~= "item" then
     return "the-square-" .. resource .. "-ingress-anchor"
   end
@@ -308,7 +341,8 @@ function runtime_defs.get_line_definition(resource, planet_name)
 end
 
 function runtime_defs.get_egress_item_name(resource)
-  return "the-square-" .. resource .. "-egress"
+  local definition = runtime_defs.get_output_definition(resource)
+  return runtime_defs.get_generic_anchor_item_name(definition and definition.kind or "item", "egress")
 end
 
 local function get_output_kind_for_resource(resource)
@@ -324,6 +358,10 @@ local function get_output_kind_for_resource(resource)
 end
 
 function runtime_defs.get_egress_entity_name(resource, egress_tier_level)
+  if not resource then
+    return runtime_defs.get_generic_anchor_entity_name("item", "egress")
+  end
+
   if get_output_kind_for_resource(resource) ~= "item" then
     return "the-square-" .. resource .. "-egress-anchor"
   end

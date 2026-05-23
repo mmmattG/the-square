@@ -312,6 +312,28 @@ local function build_recipe(name, result, ingredients, energy_required)
   }
 end
 
+local function config_recipe_name(resource, flow)
+  return "the-square-configure-" .. resource .. "-" .. flow
+end
+
+local function build_config_recipe(definition, flow, planet_name)
+  return {
+    type = "recipe",
+    name = config_recipe_name(definition.resource, flow),
+    localised_name = {"recipe-name.the-square-configure-anchor", {"the-square-resource-name." .. definition.resource}},
+    category = "the-square-anchor-configuration",
+    enabled = true,
+    hidden = true,
+    hidden_in_factoriopedia = true,
+    allow_productivity = false,
+    allow_quality = false,
+    energy_required = 1,
+    ingredients = {},
+    results = {},
+    order = "z[the-square-configure]-" .. planet_name .. "-" .. flow .. "-" .. definition.resource
+  }
+end
+
 local function build_ingress_item(definition)
   return {
     type = "item",
@@ -596,6 +618,11 @@ prototypes[#prototypes + 1] = {
   order = "o[the-square]"
 }
 
+prototypes[#prototypes + 1] = {
+  type = "recipe-category",
+  name = "the-square-anchor-configuration"
+}
+
 prototypes[#prototypes + 1] = build_anchor_slot_proxy()
 prototypes[#prototypes + 1] = build_anchor_place_input()
 prototypes[#prototypes + 1] = build_anchor_frame_item()
@@ -663,6 +690,14 @@ for _, definition in ipairs(egress_resources) do
   else
     prototypes[#prototypes + 1] = build_egress_entity(definition)
   end
+end
+
+for _, definition in ipairs(ingress_resources) do
+  prototypes[#prototypes + 1] = build_config_recipe(definition, "ingress", "all")
+end
+
+for _, definition in ipairs(egress_resources) do
+  prototypes[#prototypes + 1] = build_config_recipe(definition, "egress", "all")
 end
 
 local starting_square_size = expansion_research.DEFAULT_STARTING_SQUARE_SIZE
