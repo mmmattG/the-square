@@ -1,8 +1,9 @@
 SHELL := /bin/sh
 
 LUA ?= $(shell command -v luajit 2>/dev/null || command -v lua 2>/dev/null)
+LUAC ?= $(shell command -v luac 2>/dev/null || command -v luac5.4 2>/dev/null || command -v luac5.3 2>/dev/null || command -v luac5.2 2>/dev/null)
 
-.PHONY: all build install test unit-test e2e-load-test e2e-test
+.PHONY: all build install test typecheck unit-test e2e-load-test e2e-test
 
 all: build install
 
@@ -13,6 +14,20 @@ install:
 	./scripts/install-mod.sh
 
 test: unit-test e2e-test
+
+typecheck:
+	@if [ -z "$(LUAC)" ] && [ -z "$(LUA)" ]; then \
+		echo "error: expected luac, luajit, or lua in PATH" >&2; \
+		exit 1; \
+	fi
+	@find . -path './node_modules' -prune -o -name '*.lua' -type f -print | while IFS= read -r file; do \
+		if [ -n "$(LUAC)" ]; then \
+			"$(LUAC)" -p "$$file" || exit $$?; \
+		else \
+			LUA_CHECK_FILE="$$file" "$(LUA)" -e 'assert(loadfile(os.getenv("LUA_CHECK_FILE")))' || exit $$?; \
+		fi; \
+	done
+	@echo "PASS lua syntax check"
 
 unit-test:
 	@if [ -z "$(LUA)" ]; then \
