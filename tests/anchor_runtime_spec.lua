@@ -773,6 +773,89 @@ run_test("ingress tier research sync keeps planet starter Managed Lines as minab
   assert_equal(storage.planets.fulgora.starter_anchors.anchors[1].entity, created_entities[1], "planet Managed Line state should point at the upgraded entity")
 end)
 
+run_test("Managed Line Placement Preview invalid cursor movement does not print placement errors", function()
+  rendering.drawn_sprites = {}
+  storage.bootstrap = {
+    square_size = 12,
+    expansion_points = 5000
+  }
+  storage.planets = nil
+  storage.anchor_preview_ghosts = nil
+  storage.starter_anchors = {
+    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = {
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", nil, nil)
+    }
+  }
+
+  local player = build_player()
+  player.index = 1
+  player.valid = true
+  player.surface = {name = "nauvis"}
+  player.selected = {
+    valid = true,
+    name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
+    position = {x = 0, y = -6}
+  }
+  player.cursor_position = {x = 50.2, y = 3.7}
+  player.cursor_stack = {
+    valid_for_read = true,
+    name = runtime_defs.get_ingress_item_name("iron-ore"),
+    count = 1
+  }
+
+  anchor_runtime.update_player_anchor_preview(player)
+
+  assert_equal(#rendering.drawn_sprites, 1, "invalid cursor movement should still draw a preview")
+  assert_equal(#player.get_messages(), 0, "passive preview updates should not print invalid placement errors")
+end)
+
+run_test("attempted invalid Managed Line placement still prints placement errors", function()
+  storage.bootstrap = {
+    square_size = 12,
+    expansion_points = 5000,
+    surface_name = "nauvis"
+  }
+  storage.planets = nil
+  storage.starter_anchors = {
+    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = {
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", nil, nil),
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("crude-oil"), "ingress", nil, nil),
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("crude-oil"), "ingress", "north", {x = -1, y = -7})
+    }
+  }
+
+  local player = build_player()
+  player.index = 1
+  player.valid = true
+  player.object_name = "LuaPlayer"
+  player.surface = {name = "nauvis"}
+
+  local invalid_edge_entity = {
+    valid = true,
+    name = runtime_defs.get_ingress_entity_name("iron-ore", 1),
+    position = {x = 0, y = 0},
+    surface = player.surface,
+    destroy = function(self) self.valid = false end
+  }
+  game.get_player = function() return player end
+
+  anchor_runtime.handle_entity_built({entity = invalid_edge_entity, player_index = 1})
+  assert_equal(player.get_messages()[1][1], "message.the-square-managed-line-invalid-edge", "invalid edge attempts should print an error")
+
+  local fluid_gap_entity = {
+    valid = true,
+    name = runtime_defs.get_ingress_entity_name("crude-oil", 1),
+    position = {x = 0, y = -7},
+    surface = player.surface,
+    destroy = function(self) self.valid = false end
+  }
+
+  anchor_runtime.handle_entity_built({entity = fluid_gap_entity, player_index = 1})
+  assert_equal(player.get_messages()[2][1], "message.the-square-managed-line-fluid-gap-required", "fluid gap attempts should print an error")
+end)
+
 run_test("Managed Line Placement Preview follows cursor and stays visible with invalid tint", function()
   rendering.drawn_sprites = {}
   storage.bootstrap = {
