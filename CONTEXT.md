@@ -43,7 +43,7 @@ The current unlocked playable area on one **Planet**.
 _Avoid_: Base, arena, map
 
 **Boundary**:
-The outer edge of a **Planet**'s **Square** where managed lines may be placed.
+The outer edge of a **Planet**'s **Square** where **Managed Lines** may be placed.
 _Avoid_: Border zone, wall
 
 **Void**:
@@ -72,13 +72,13 @@ _Avoid_: Global expansion, empire growth
 The **Planet**-local currency earned from **Ring** growth and spent on local managed-line capacity.
 _Avoid_: Global points, universal currency
 
-**Anchor Tier**:
-The current throughput level shared by a **Planet**'s owned managed anchors, including ingress and matching egress tiers.
-_Avoid_: Ingress tier, belt tier, pipe tier, lane tier
+**Managed Line Tier**:
+The current throughput level shared by a **Planet**'s owned **Managed Lines**, including ingress and matching egress tiers.
+_Avoid_: Anchor tier, ingress tier, belt tier, pipe tier, lane tier
 
-**Anchor Upgrade**:
-A global research step that raises the throughput of owned managed anchors without changing ownership or placement rules. Turbo Anchors are the Space Age final tier for both ingress and egress.
-_Avoid_: Ingress upgrade, output upgrade
+**Managed Line Upgrade**:
+A global research step that raises the throughput of owned **Managed Lines** without changing ownership or placement rules. Turbo Managed Lines are the Space Age final tier for both ingress and egress.
+_Avoid_: Anchor upgrade, ingress upgrade, output upgrade
 
 **Difficulty Preset**:
 A named package of tuning values that changes harshness without changing core rules.
@@ -107,20 +107,20 @@ A **Managed Line** that sends a specific local support resource out of the **Squ
 _Avoid_: Output line, export line
 
 **Anchor**:
-The single **Boundary** tile where a **Managed Line** is currently placed.
-_Avoid_: Port tile, input tile
+A physical **Boundary** slot on the anchor ring where a **Managed Line** can be placed.
+_Avoid_: Managed Line, port, connector
 
 **Starter Layout**:
-The authored initial placement of a **Planet**'s pre-owned free anchors.
+The authored initial placement of a **Planet**'s pre-owned free **Managed Lines** into anchor slots.
 _Avoid_: Default spread, generated layout
 
 **Stashed Line**:
 An owned **Managed Line** with no current **Anchor** on the map.
 _Avoid_: Disabled line, hidden line
 
-**Anchor Shift**:
-The automatic outward movement of a placed **Managed Line** after a **Ring** is added.
-_Avoid_: Auto-move, border slide
+**Managed Line Shift**:
+The automatic outward movement of a placed **Managed Line** from one anchor slot to the next after a **Ring** is added.
+_Avoid_: Anchor shift, auto-move, border slide
 
 ### Resource Model
 

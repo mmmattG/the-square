@@ -51,7 +51,7 @@ run_test("Space Age planet defaults match the expected matrix", function()
     assert_equal(config.floor_tile_name, planet_expectation.tile, planet_name .. " should use its thematic tile")
     assert_equal(resource_names(defs.get_input_definitions(planet_name)), planet_expectation.ingress, planet_name .. " ingress defaults changed")
     assert_equal(resource_names(defs.get_output_definitions(planet_name)), planet_expectation.egress, planet_name .. " egress defaults changed")
-    assert_equal(#anchors, #defs.get_input_definitions(planet_name) + #defs.get_output_definitions(planet_name), planet_name .. " starter anchors should match default lines")
+    assert_equal(#anchors, #defs.get_input_definitions(planet_name) + #defs.get_output_definitions(planet_name), planet_name .. " starter Managed Lines should match default lines")
   end
 end)
 
@@ -72,7 +72,7 @@ run_test("anchor presentation maps item and fluid ingress/egress behavior", func
   assert_equal(defs.get_anchor_presentation("egress", "fluid"), "underground-pipe")
 end)
 
-run_test("Gleba ingresses and egresses use normal item-anchor cadence", function()
+run_test("Gleba ingresses and egresses use normal item Managed Line cadence", function()
   local inserted = {}
   local removed = {}
   local function entity()

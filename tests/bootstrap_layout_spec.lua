@@ -63,11 +63,11 @@ run_test("anchor side detection still targets the ingress ring", function()
   assert_equal(
     bootstrap_layout.get_anchor_side_for_position(square_size, {x = 0, y = -7}),
     "north",
-    "starter anchors should still snap to the north ring"
+    "starter Managed Lines should still snap to the north ring"
   )
   assert_equal(
     bootstrap_layout.get_anchor_side_for_position(square_size, {x = 6, y = 0}),
     "east",
-    "starter anchors should still snap to the east ring"
+    "starter Managed Lines should still snap to the east ring"
   )
 end)

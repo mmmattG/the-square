@@ -247,7 +247,7 @@ run_test("placing crude oil ingress unlocks oil processing once prerequisites ar
   assert_equal(
     force.technologies["oil-processing"].researched,
     false,
-    "mined anchors should be unconfigured and not unlock oil processing until reconfigured"
+    "mined Managed Lines should be unconfigured and not unlock oil processing until reconfigured"
   )
   assert_equal(#force.get_played_sounds(), 0, "unconfigured replacement should not play the research-complete sound")
 end)
@@ -400,7 +400,7 @@ run_test("placing uranium ore ingress unlocks uranium processing once prerequisi
   assert_equal(
     force.technologies["uranium-processing"].researched,
     false,
-    "mined anchors should be unconfigured and not unlock uranium processing until reconfigured"
+    "mined Managed Lines should be unconfigured and not unlock uranium processing until reconfigured"
   )
   assert_equal(#force.get_played_sounds(), 0, "unconfigured replacement should not play the research-complete sound")
 end)
@@ -492,7 +492,7 @@ run_test("placing non-uranium ingress does not unlock uranium processing", funct
   assert_equal(#force.get_played_sounds(), 0, "non-uranium placement should not play the research-complete sound")
 end)
 
-run_test("placed generic anchors stay unconfigured and operable", function()
+run_test("placed generic Managed Lines stay unconfigured and operable", function()
   local player_force = {valid = true, technologies = {}}
   local created_entities = {}
   local surface = {
@@ -538,13 +538,13 @@ run_test("placed generic anchors stay unconfigured and operable", function()
   anchor_runtime.ensure_starter_anchors()
 
   local anchor = storage.starter_anchors.anchors[1]
-  assert_equal(anchor.resource, nil, "new generic anchors should not configure a resource during placement")
-  assert_equal(anchor.entity_name, runtime_defs.get_generic_anchor_entity_name("fluid", "ingress"), "unconfigured anchors should spawn the matching generic entity")
+  assert_equal(anchor.resource, nil, "new generic Managed Lines should not configure a resource during placement")
+  assert_equal(anchor.entity_name, runtime_defs.get_generic_anchor_entity_name("fluid", "ingress"), "unconfigured Managed Lines should spawn the matching generic entity")
   assert_equal(anchor.entity.name, runtime_defs.get_generic_anchor_entity_name("fluid", "ingress"), "placement should recreate an unconfigured generic entity")
-  assert_equal(anchor.entity.operable, true, "unconfigured generic anchors should stay operable so clicking opens configuration")
+  assert_equal(anchor.entity.operable, true, "unconfigured generic Managed Lines should stay operable so clicking opens configuration")
 end)
 
-run_test("existing generic item anchors do not require underground belt fields", function()
+run_test("existing generic item Managed Lines do not require underground belt fields", function()
   local player_force = {valid = true, technologies = {}}
   local generic_entity = setmetatable({
     valid = true,
@@ -597,10 +597,10 @@ run_test("existing generic item anchors do not require underground belt fields",
 
   anchor_runtime.ensure_starter_anchors()
 
-  assert_equal(storage.starter_anchors.anchors[1].entity, generic_entity, "existing generic item anchor should be reused without underground-belt access")
+  assert_equal(storage.starter_anchors.anchors[1].entity, generic_entity, "existing generic item Managed Line should be reused without underground-belt access")
 end)
 
-run_test("choosing an anchor recipe configures the anchor for its minable base entity", function()
+run_test("choosing a Managed Line recipe configures the Managed Line for its minable base entity", function()
   local player_force = {valid = true, technologies = {}}
   local created_entities = {}
   local generic_entity
@@ -671,11 +671,11 @@ run_test("choosing an anchor recipe configures the anchor for its minable base e
 
   local anchor = storage.starter_anchors.anchors[1]
   assert_equal(anchor.resource, "iron-ore", "selected recipe should configure the resource")
-  assert_equal(anchor.entity_name, runtime_defs.get_ingress_entity_name("iron-ore", 1), "configured anchors should use the minable base entity instead of a top overlay")
-  assert_equal(generic_entity.active, false, "selected recipes should stop crafting before the generic anchor is replaced")
+  assert_equal(anchor.entity_name, runtime_defs.get_ingress_entity_name("iron-ore", 1), "configured Managed Lines should use the minable base entity instead of a top overlay")
+  assert_equal(generic_entity.active, false, "selected recipes should stop crafting before the generic Managed Line is replaced")
 end)
 
-run_test("ingress tier research sync keeps planet starter anchors as minable base entities", function()
+run_test("ingress tier research sync keeps planet starter Managed Lines as minable base entities", function()
   local player_force = {
     valid = true,
     technologies = {
@@ -751,7 +751,7 @@ run_test("ingress tier research sync keeps planet starter anchors as minable bas
 
   assert_equal(anchor_runtime.sync_ingress_tier_from_research(player_force), true, "research sync should update the stored tier")
   assert_equal(storage.bootstrap.ingress_tier, 3, "red ingress research should set tier 3")
-  assert_equal(destroyed_yellow, true, "legacy planet ingress anchor should be destroyed")
-  assert_equal(created_entities[1].name, runtime_defs.get_ingress_entity_name("scrap", 3), "planet ingress anchor should be recreated as the upgraded minable base entity")
-  assert_equal(storage.planets.fulgora.starter_anchors.anchors[1].entity, created_entities[1], "planet anchor state should point at the upgraded entity")
+  assert_equal(destroyed_yellow, true, "legacy planet ingress Managed Line should be destroyed")
+  assert_equal(created_entities[1].name, runtime_defs.get_ingress_entity_name("scrap", 3), "planet ingress Managed Line should be recreated as the upgraded minable base entity")
+  assert_equal(storage.planets.fulgora.starter_anchors.anchors[1].entity, created_entities[1], "planet Managed Line state should point at the upgraded entity")
 end)

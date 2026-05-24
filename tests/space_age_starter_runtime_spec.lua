@@ -24,20 +24,20 @@ local function run_test(name, fn)
   io.stdout:write("PASS " .. name .. "\n")
 end
 
-run_test("non-Nauvis planets receive configured starter anchors in isolated storage", function()
+run_test("non-Nauvis planets receive configured starter Managed Lines in isolated storage", function()
   local vulcanus = anchor_runtime.ensure_planet_starter_anchor_state("vulcanus")
   local gleba = anchor_runtime.ensure_planet_starter_anchor_state("gleba")
 
   assert_equal(#vulcanus.anchors, 5, "Vulcanus should get five free starter lines")
   assert_equal(#gleba.anchors, 6, "Gleba should get four ingresses and two egresses")
-  assert_equal(storage.starter_anchors, nil, "planet starter creation should not mutate Nauvis anchors")
-  assert_equal(storage.planets.vulcanus.starter_anchors, vulcanus, "Vulcanus anchors should live under Vulcanus state")
-  assert_equal(storage.planets.gleba.starter_anchors, gleba, "Gleba anchors should live under Gleba state")
-  assert_equal(vulcanus.anchors[1].entity_name, defs.get_ingress_entity_name(vulcanus.anchors[1].resource, 1), "positioned starter ingresses should spawn minable base anchors")
-  assert_equal(vulcanus.anchors[1].item_name, defs.get_generic_anchor_item_name(vulcanus.anchors[1].kind, "ingress"), "starter ingresses should still mine to generic anchor items")
+  assert_equal(storage.starter_anchors, nil, "planet starter creation should not mutate Nauvis Managed Lines")
+  assert_equal(storage.planets.vulcanus.starter_anchors, vulcanus, "Vulcanus Managed Lines should live under Vulcanus state")
+  assert_equal(storage.planets.gleba.starter_anchors, gleba, "Gleba Managed Lines should live under Gleba state")
+  assert_equal(vulcanus.anchors[1].entity_name, defs.get_ingress_entity_name(vulcanus.anchors[1].resource, 1), "positioned starter ingresses should spawn minable base Managed Lines")
+  assert_equal(vulcanus.anchors[1].item_name, defs.get_generic_anchor_item_name(vulcanus.anchors[1].kind, "ingress"), "starter ingresses should still mine to generic Managed Line items")
 end)
 
-run_test("planet starter pumping only uses planet-local anchors", function()
+run_test("planet starter pumping only uses planet-local Managed Lines", function()
   storage.planets = {
     fulgora = {
       square_size = 17,
@@ -98,7 +98,7 @@ run_test("planet starter pumping only uses planet-local anchors", function()
   assert_equal(storage.removed, "yumako-seed", "Gleba egress should drain seed items")
 end)
 
-run_test("generic configured item anchors do not crash the pump loop", function()
+run_test("generic configured item Managed Lines do not crash the pump loop", function()
   storage = {
     bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
     starter_anchors = {anchors = {
@@ -225,7 +225,7 @@ run_test("one Gleba seed budgets fifty matching fruit", function()
   assert_equal(counts.inserted.yumako, 50, "one yumako seed should budget fifty yumako fruit")
 end)
 
-run_test("Gleba fruit ingresses and seed egresses use normal anchor rates", function()
+run_test("Gleba fruit ingresses and seed egresses use normal Managed Line rates", function()
   local counts = {inserted = {}, removed = {}}
 
   local function belt_entity(kind)

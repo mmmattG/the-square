@@ -79,7 +79,7 @@ local function install_game(surfaces)
   }
 end
 
-run_test("Planet Square expands Nauvis through one interface and preserves Anchor Shift stubs", function()
+run_test("Planet Square expands Nauvis through one interface and preserves Managed Line Shift stubs", function()
   local surface = make_surface("nauvis")
   install_game({nauvis = surface})
   storage = {
@@ -98,7 +98,7 @@ run_test("Planet Square expands Nauvis through one interface and preserves Ancho
   assert_equal(surface.map_gen_settings.width, 11, "surface dimensions should be resized")
 end)
 
-run_test("Planet Square expands a non-Nauvis Planet with the same Anchor Shift stubs", function()
+run_test("Planet Square expands a non-Nauvis Planet with the same Managed Line Shift stubs", function()
   local vulcanus = make_surface("vulcanus")
   install_game({vulcanus = vulcanus})
   storage = {
@@ -130,7 +130,7 @@ run_test("Planet Square expands a non-Nauvis Planet with the same Anchor Shift s
   assert_equal(vulcanus.created_entities[2].name, "pipe", "fluid ingress should leave a pipe stub")
 end)
 
-run_test("Planet Square expansion leaves egress belt stubs instead of extra egress anchors", function()
+run_test("Planet Square expansion leaves egress belt stubs instead of extra egress Managed Lines", function()
   local gleba = make_surface("gleba")
   install_game({gleba = gleba})
   storage = {
@@ -152,11 +152,11 @@ run_test("Planet Square expansion leaves egress belt stubs instead of extra egre
 
   planet_square.apply_square_expansion("gleba")
 
-  assert_equal(gleba.created_entities[1].name, "transport-belt", "item egress should leave a belt stub, not an egress anchor")
+  assert_equal(gleba.created_entities[1].name, "transport-belt", "item egress should leave a belt stub, not an egress Managed Line")
   assert_equal(storage.planets.gleba.starter_anchors.anchors[1].position.y, 4, "egress Managed Lines should shift outward")
 end)
 
-run_test("Planet Square expansion leaves turbo belt stubs at turbo anchor tier", function()
+run_test("Planet Square expansion leaves turbo belt stubs at turbo Managed Line tier", function()
   local gleba = make_surface("gleba")
   install_game({gleba = gleba})
   storage = {

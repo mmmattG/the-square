@@ -76,7 +76,7 @@ run_test("Planet Square runtime expands one Planet-local Square through one inte
   assert_equal(result.square_size, 7, "runtime should grow the Planet Square")
   assert_equal(storage.planets.vulcanus.expansion_research_levels, 1, "runtime should advance Planet Progression")
   assert_equal(refreshed, true, "runtime should own expansion GUI refresh")
-  assert_equal(ensured_planet, "vulcanus", "runtime should pass Managed Line adapter through for Anchor Shift repair")
+  assert_equal(ensured_planet, "vulcanus", "runtime should pass Managed Line adapter through for Managed Line Shift repair")
 end)
 
 run_test("Planet Square runtime handles Square Expansion research without bootstrap_runtime", function()

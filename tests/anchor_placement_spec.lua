@@ -23,7 +23,7 @@ local function run_test(name, fn)
   io.stdout:write("PASS " .. name .. "\n")
 end
 
-run_test("Anchor placement check owns Boundary and fluid gap rules", function()
+run_test("Managed Line placement check owns Boundary and fluid gap rules", function()
   local anchor = {kind = "fluid", flow = "ingress"}
   local starter_anchors = {
     anchors = {
@@ -33,10 +33,10 @@ run_test("Anchor placement check owns Boundary and fluid gap rules", function()
   }
 
   local ok, reason = anchor_placement.check(anchor, {x = 0, y = -7}, 12, starter_anchors)
-  assert_equal(ok, false, "adjacent fluid Anchor should be rejected")
+  assert_equal(ok, false, "adjacent fluid Managed Line should be rejected")
   assert_equal(reason, "fluid-gap-required", "fluid gap rejection should be explicit")
 
   ok, reason = anchor_placement.check(anchor, {x = 2, y = -7}, 12, starter_anchors)
-  assert_equal(ok, true, "spaced fluid Anchor should be allowed")
+  assert_equal(ok, true, "spaced fluid Managed Line should be allowed")
   assert_equal(reason, nil, "allowed placement should have no reason")
 end)

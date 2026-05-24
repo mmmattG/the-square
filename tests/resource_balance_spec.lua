@@ -48,8 +48,8 @@ end)
 run_test("multiple uranium lines share one sulfuric acid budget", function()
   local allocation = resource_balance.allocate_shared_budget(6, {4, 4})
 
-  assert_equal(allocation.allocations[1], 4, "the first anchor should consume only part of the shared pool")
-  assert_equal(allocation.allocations[2], 2, "the second anchor should receive only the leftover shared pool")
+  assert_equal(allocation.allocations[1], 4, "the first Managed Line should consume only part of the shared pool")
+  assert_equal(allocation.allocations[2], 2, "the second Managed Line should receive only the leftover shared pool")
   assert_equal(allocation.remaining_budget, 0, "the shared pool should be spent once")
 end)
 

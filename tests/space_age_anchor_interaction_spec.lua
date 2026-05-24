@@ -48,7 +48,7 @@ local function make_clearable_stack(name)
   return stack
 end
 
-run_test("Vulcanus anchors can be picked up and placed using planet-local state", function()
+run_test("Vulcanus Managed Lines can be picked up and placed using planet-local state", function()
   local created = {}
   local surface = {
     name = "vulcanus",
@@ -85,7 +85,7 @@ run_test("Vulcanus anchors can be picked up and placed using planet-local state"
 
   anchor_runtime.handle_anchor_mined(anchor.entity)
 
-  assert_equal(anchor.position, nil, "mining a Vulcanus anchor should stash the planet-local anchor")
+  assert_equal(anchor.position, nil, "mining a Vulcanus Managed Line should stash the planet-local line")
 
   local player = {
     valid = true,
@@ -98,7 +98,7 @@ run_test("Vulcanus anchors can be picked up and placed using planet-local state"
 
   anchor_runtime.handle_managed_anchor_slot_click(player)
 
-  assert_equal(anchor.position.x, 1, "placing should assign the Vulcanus anchor to the selected slot")
+  assert_equal(anchor.position.x, 1, "placing should assign the Vulcanus Managed Line to the selected anchor slot")
   assert_equal(anchor.position.y, -9, "placing should use the Vulcanus square bounds")
   assert_equal(player.cursor_stack.valid_for_read, false, "placing should consume the cursor item")
 end)
