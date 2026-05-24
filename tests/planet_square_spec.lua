@@ -14,7 +14,7 @@ settings = {
     ["the-square-background-tile"] = {value = "grass-1"}
   },
   startup = {
-    ["the-square-starting-square-size"] = {value = 7},
+    ["the-square-nauvis-starting-square-size"] = {value = 7},
     ["the-square-vulcanus-starting-square-size"] = {value = 5}
   }
 }

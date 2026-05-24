@@ -199,14 +199,6 @@ script.on_event(defs.OPEN_MANAGED_ANCHOR_INPUT_NAME, function(event)
 end)
 
 script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
-  if event.setting == defs.SETTING_STARTING_SQUARE_SIZE then
-    if storage.bootstrap then
-      bootstrap_runtime.notify_square_size_change_applies_to_new_saves()
-    end
-
-    return
-  end
-
   if event.setting == defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION then
     managed_line_runtime.apply_logistic_network_setting_to_all_forces()
     return

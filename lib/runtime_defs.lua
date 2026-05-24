@@ -9,7 +9,7 @@ runtime_defs.SURFACE_NAME = "nauvis"
 runtime_defs.LEGACY_SURFACE_NAME = "fes-bootstrap"
 runtime_defs.BASE_SCREENSHOT_MARGIN_TILES = 2
 runtime_defs.BASE_SCREENSHOT_DIRECTORY = "the-square"
-runtime_defs.SETTING_STARTING_SQUARE_SIZE = "the-square-starting-square-size"
+runtime_defs.SETTING_NAUVIS_STARTING_SQUARE_SIZE = "the-square-nauvis-starting-square-size"
 runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH = "the-square-expansion-tiles-per-research"
 runtime_defs.SETTING_LINE_PURCHASE_COST = "the-square-line-purchase-cost"
 runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "the-square-enable-logistic-network-automation"
@@ -20,7 +20,6 @@ runtime_defs.SETTING_DEV_MODE = "the-square-dev-mode"
 runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG = "the-square-ingress-placement-debug"
 runtime_defs.SETTING_CLIFF_EXPLOSIVE_BUTTON = "the-square-cliff-explosive-button"
 runtime_defs.LEGACY_SETTING_NAMES = {
-  [runtime_defs.SETTING_STARTING_SQUARE_SIZE] = "fes-starting-square-size",
   [runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH] = "fes-expansion-tiles-per-research",
   [runtime_defs.SETTING_LINE_PURCHASE_COST] = "fes-line-purchase-cost",
   [runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION] = "fes-enable-logistic-network-automation",
@@ -487,7 +486,7 @@ local function get_setting_value(scope, setting_name, default_value)
 end
 
 function runtime_defs.get_square_size()
-  return get_setting_value(settings.global, runtime_defs.SETTING_STARTING_SQUARE_SIZE, 7)
+  return get_setting_value(settings.startup, runtime_defs.SETTING_NAUVIS_STARTING_SQUARE_SIZE, 7)
 end
 
 function runtime_defs.get_expansion_tiles_per_research()

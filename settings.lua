@@ -1,15 +1,6 @@
 data:extend({
   {
     type = "int-setting",
-    name = "the-square-starting-square-size",
-    setting_type = "runtime-global",
-    default_value = 7,
-    minimum_value = 4,
-    maximum_value = 255,
-    order = "a"
-  },
-  {
-    type = "int-setting",
     name = "the-square-nauvis-starting-square-size",
     setting_type = "startup",
     default_value = 7,

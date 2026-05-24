@@ -11,11 +11,11 @@ defines = {
 
 settings = {
   global = {
-    ["the-square-starting-square-size"] = {value = 9},
     ["the-square-expansion-tiles-per-research"] = {value = 2},
     ["the-square-background-tile"] = {value = "grass-1"}
   },
   startup = {
+    ["the-square-nauvis-starting-square-size"] = {value = 9},
     ["the-square-vulcanus-starting-square-size"] = {value = 11}
   }
 }
@@ -111,10 +111,11 @@ run_test("Space Age planet configs default to 17x17 thematic squares", function(
   end
 
   local nauvis_config = planet_config.get("nauvis")
-  assert_equal(nauvis_config.square_size, 9, "Nauvis should keep using the existing compatibility default path")
+  assert_equal(nauvis_config.square_size, 7, "Nauvis should default through its planet startup square size")
   assert_equal(nauvis_config.floor_tile_name, nil, "Nauvis should keep using the legacy background tile path")
 
   settings.startup = {
+    ["the-square-nauvis-starting-square-size"] = {value = 9},
     ["the-square-vulcanus-starting-square-size"] = {value = 11}
   }
 end)
@@ -177,6 +178,7 @@ run_test("Space Age Planet Instance migrates accidental Nauvis-sized planet stat
   assert_equal(fulgora:get_surface_size(), 19, "migrated surface size should match the planet square")
 
   settings.startup = {
+    ["the-square-nauvis-starting-square-size"] = {value = 9},
     ["the-square-vulcanus-starting-square-size"] = {value = 11}
   }
 end)

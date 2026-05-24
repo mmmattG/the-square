@@ -20,11 +20,11 @@ If you need to force a specific runtime, override `LUA` directly:
 make test LUA=lua
 ```
 
-The starting square size is a per-save map setting (`runtime-global` in Factorio terms). Set it when creating a run. Changing it after the bootstrap surface already exists does not resize the current save.
+The Nauvis starting square size is a startup setting. Set it before creating a run. Changing it after the bootstrap surface already exists does not resize the current save.
 
 `Tiles per research pack` is also a startup setting. It defaults to `7`, which means each required science pack in square-expansion research pays for about seven newly unlocked tiles.
 
-Because square-expansion technologies are generated in the data stage, their precomputed finite costs and infinite count formula use the default starting square size of `7` even if a save overrides the map setting. That mismatch is acceptable in practice because the ring costs quickly converge toward the same values as the square grows.
+Because square-expansion technologies are generated in the data stage, their precomputed finite costs and infinite count formula use the default Nauvis starting square size of `7` even if a save overrides the startup setting. That mismatch is acceptable in practice because the ring costs quickly converge toward the same values as the square grows.
 
 `Ingress and egress line cost` is a per-save map setting. It defaults to `1000` expansion points for each additional owned ingress or egress line.
 
