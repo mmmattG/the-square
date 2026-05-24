@@ -58,19 +58,11 @@ _Avoid_: Expansion layer, band
 The repeatable **Planet**-local research line that unlocks one new **Ring**.
 _Avoid_: Growth meter, expansion tick
 
-**Expansion Reward**:
-The **Planet**-local **Expansion Points** awarded for one new **Ring**.
-_Avoid_: Tile payout, ring payout
-
 **Planet-Local Expansion**:
 A square growth event that affects only the current **Planet**.
 _Avoid_: Global expansion, empire growth
 
 ### Economy And Throughput
-
-**Expansion Points**:
-The **Planet**-local currency earned from **Ring** growth and spent on local managed-line capacity.
-_Avoid_: Global points, universal currency
 
 **Managed Line Tier**:
 The current throughput level shared by a **Planet**'s owned **Managed Lines**, including ingress and matching egress tiers.
@@ -181,7 +173,6 @@ _Avoid_: Regression, accidental break
 - A **Challenge Variant** may support both **Vanilla-First Support** and **Space Age-Aware Support** without becoming a separate product.
 - One **Planet** owns exactly one local **Square**, one **Planet Config**, and one **Planet Progression**.
 - One completed **Square Expansion** adds exactly one **Ring** to one **Planet**.
-- An **Expansion Reward** becomes **Expansion Points** for that same **Planet** only.
 - A **Difficulty Preset** changes tuning such as starting size and pacing without changing the invariant Square rules.
 - A **Starter Layout** places a **Planet**'s initial **Managed Lines** on its **Boundary**.
 - A **Placement Preview** may show where one **Stashed Line** would occupy one **Anchor**, but it is not a placed **Managed Line**.

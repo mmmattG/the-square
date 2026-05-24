@@ -192,12 +192,10 @@ function planet_square.apply_square_expansion(planet_name, options)
   local next_square_size = previous_square_size + 2
   local next_expansion_level = planet:get_completed_square_expansion_levels() + 1
   local next_surface_size = get_target_surface_size(next_square_size)
-  local newly_unlocked_tiles = defs.get_next_expansion_tile_reward(previous_square_size)
   local managed_lines = planet:get_managed_lines()
 
   planet:set_square_size(next_square_size)
   planet:set_completed_square_expansion_levels(next_expansion_level)
-  -- Expansion Points were retired; expansion research grows the square but no longer awards currency.
 
   local bootstrap = planet:get_bootstrap_storage()
   bootstrap.expansions_completed = next_expansion_level
@@ -224,9 +222,7 @@ function planet_square.apply_square_expansion(planet_name, options)
     previous_square_size = previous_square_size,
     square_size = next_square_size,
     surface_size = next_surface_size,
-    expansion_research_levels = next_expansion_level,
-    awarded_expansion_points = newly_unlocked_tiles,
-    expansion_points = planet:get_expansion_points()
+    expansion_research_levels = next_expansion_level
   }
 end
 

@@ -54,15 +54,6 @@ data:extend({
     order = "b"
   },
   {
-    type = "int-setting",
-    name = "the-square-line-purchase-cost",
-    setting_type = "runtime-global",
-    default_value = 1000,
-    minimum_value = 1,
-    maximum_value = 1000000,
-    order = "c"
-  },
-  {
     type = "bool-setting",
     name = "the-square-enable-logistic-network-automation",
     setting_type = "runtime-global",

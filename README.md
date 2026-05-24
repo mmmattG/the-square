@@ -26,13 +26,11 @@ The Nauvis starting square size is a startup setting. Set it before creating a r
 
 Because square-expansion technologies are generated in the data stage, their precomputed finite costs and infinite count formula use the default Nauvis starting square size of `7` even if a save overrides the startup setting. That mismatch is acceptable in practice because the ring costs quickly converge toward the same values as the square grows.
 
-`Ingress and egress line cost` is a per-save map setting. It defaults to `1000` expansion points for each additional owned ingress or egress line.
-
 `Enable logistic network automation` is also a per-save map setting. It is off by default, which blocks `active provider`, `buffer`, `requester`, and `storage` chests while still allowing passive providers, roboports, and logistic/construction bots.
 
 `Background tile` is a per-save map setting under `Mod settings -> Map`. It repaints the square floor uniformly, with curated dry tiles plus lab tiles and a special checkerboard option. Water, concrete, and stone-brick style tiles are intentionally excluded.
 
-Square growth is now driven directly by research. Each completed level of `Square expansion` immediately expands the map by one ring and awards expansion points for the newly unlocked tiles.
+Square growth is now driven directly by research. Each completed level of `Square expansion` immediately expands the map by one ring.
 
 Research now includes custom expanding-square technologies:
 

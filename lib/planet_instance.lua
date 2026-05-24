@@ -30,7 +30,6 @@ local function ensure_bootstrap_defaults(bootstrap)
     clear_managed_line_entity_refs(bootstrap)
   end
   bootstrap.surface_size = target_surface_size
-  bootstrap.expansion_points = bootstrap.expansion_points or 0
   bootstrap.expansions_completed = bootstrap.expansions_completed or 0
   bootstrap.ingress_tier = bootstrap.ingress_tier or 1
   bootstrap.expansion_research_levels = bootstrap.expansion_research_levels or 0
@@ -72,7 +71,6 @@ local function ensure_planet_defaults(planet_name, state)
 
   state.surface_size = defs.get_surface_size(state.square_size)
   state.floor_tile_name = state.floor_tile_name or config.floor_tile_name
-  state.expansion_points = state.expansion_points or 0
   state.expansions_completed = state.expansions_completed or 0
   state.expansion_research_levels = state.expansion_research_levels or 0
 
@@ -174,14 +172,6 @@ end
 
 function planet_methods:get_floor_tile_name()
   return self.state.floor_tile_name
-end
-
-function planet_methods:get_expansion_points()
-  return self.state.expansion_points or 0
-end
-
-function planet_methods:add_expansion_points(amount)
-  self.state.expansion_points = self:get_expansion_points() + amount
 end
 
 function planet_methods:get_completed_square_expansion_levels()

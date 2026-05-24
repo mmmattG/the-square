@@ -14,11 +14,7 @@ local function get_expanded_planet_message(result)
     result.square_size,
     "x",
     result.square_size,
-    ". Awarded ",
-    result.awarded_expansion_points,
-    " expansion points (total: ",
-    result.expansion_points,
-    ")."
+    "."
   }
 end
 

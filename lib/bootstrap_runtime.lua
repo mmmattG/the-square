@@ -348,16 +348,6 @@ function bootstrap_runtime.teleport_player_to_square(player)
   bootstrap_runtime.chart_play_area(player.force, surface, bootstrap.surface_size or bootstrap.square_size)
 end
 
-function bootstrap_runtime.add_expansion_points(amount)
-  local nauvis = planet_instance.ensure_nauvis()
-
-  if not nauvis then
-    return
-  end
-
-  nauvis:add_expansion_points(amount)
-end
-
 function bootstrap_runtime.expand_planet_square(planet_name, player, gui_runtime, anchor_runtime)
   local planet_square_runtime = require("lib.planet_square_runtime")
 

@@ -829,17 +829,6 @@ function anchor_runtime.can_purchase_line(resource)
   return true, nil, nil
 end
 
-local function spend_expansion_points(amount)
-  local bootstrap = storage.bootstrap
-
-  if not bootstrap or (bootstrap.expansion_points or 0) < amount then
-    return false
-  end
-
-  bootstrap.expansion_points = bootstrap.expansion_points - amount
-  return true
-end
-
 function anchor_runtime.sync_anchor_tiers_from_research(force)
   local bootstrap = storage.bootstrap
 
@@ -917,7 +906,6 @@ function anchor_runtime.purchase_managed_line_for_resource(player, resource)
   local bootstrap = storage.bootstrap
   local definition, flow = defs.get_line_definition(resource)
   local item_name = get_shop_item_name(resource)
-  local line_purchase_cost = defs.get_line_purchase_cost()
 
   if not bootstrap or not definition or not item_name then
     return
@@ -937,19 +925,9 @@ function anchor_runtime.purchase_managed_line_for_resource(player, resource)
     return
   end
 
-  if not spend_expansion_points(line_purchase_cost) then
-    if player and player.valid then
-      player.print({"message.the-square-shop-not-enough-points", line_purchase_cost})
-    end
-
-    return
-  end
-
   grant_managed_line(player, bootstrap, definition, flow, item_name, {
     "message.the-square-shop-purchased-line",
-    {"item-name." .. item_name},
-    line_purchase_cost,
-    bootstrap.expansion_points
+    {"item-name." .. item_name}
   })
 
   if resource == "uranium-ore" and not anchor_runtime.is_resource_unlocked("sulfuric-acid") then

@@ -83,7 +83,7 @@ run_test("Planet Square expands Nauvis through one interface and preserves Manag
   local surface = make_surface("nauvis")
   install_game({nauvis = surface})
   storage = {
-    bootstrap = {square_size = 7, surface_size = 9, surface_name = "nauvis", expansion_points = 0, expansion_research_levels = 0},
+    bootstrap = {square_size = 7, surface_size = 9, surface_name = "nauvis", expansion_research_levels = 0},
     starter_anchors = {
       anchors = {{kind = "item", flow = "ingress", side = "north", position = {x = 0, y = -4}, entity_name = "iron-ore-ingress"}}
     }
@@ -92,7 +92,6 @@ run_test("Planet Square expands Nauvis through one interface and preserves Manag
   local result = planet_square.apply_square_expansion("nauvis")
 
   assert_equal(result.square_size, 9, "Nauvis should grow by one Ring")
-  assert_equal(storage.bootstrap.expansion_points, 0, "Nauvis should not receive retired Expansion Points")
   assert_equal(storage.starter_anchors.anchors[1].position.y, -5, "Managed Lines should shift outward")
   assert_equal(surface.created_entities[1].name, "transport-belt", "Nauvis expansion should leave trailing ingress stubs")
   assert_equal(surface.map_gen_settings.width, 11, "surface dimensions should be resized")
@@ -102,14 +101,13 @@ run_test("Planet Square expands a non-Nauvis Planet with the same Managed Line S
   local vulcanus = make_surface("vulcanus")
   install_game({vulcanus = vulcanus})
   storage = {
-    bootstrap = {square_size = 7, surface_size = 9, surface_name = "nauvis", expansion_points = 5},
+    bootstrap = {square_size = 7, surface_size = 9, surface_name = "nauvis"},
     planets = {
       vulcanus = {
         square_size = 5,
         surface_size = 7,
         surface_name = "vulcanus",
         floor_tile_name = "volcanic-ash-soil",
-        expansion_points = 1,
         starter_anchors = {
           anchors = {
             {kind = "item", flow = "ingress", side = "north", position = {x = 0, y = -3}, entity_name = "the-square-coal-ingress-anchor"},
@@ -123,8 +121,6 @@ run_test("Planet Square expands a non-Nauvis Planet with the same Managed Line S
   local result = planet_square.apply_square_expansion("vulcanus")
 
   assert_equal(result.square_size, 7, "Planet-local square should grow by one Ring")
-  assert_equal(storage.planets.vulcanus.expansion_points, 1, "Planet should not receive retired Expansion Points")
-  assert_equal(storage.bootstrap.expansion_points, 5, "Nauvis points should be unchanged")
   assert_equal(storage.planets.vulcanus.starter_anchors.anchors[1].position.y, -4, "Planet Managed Lines should shift outward")
   assert_equal(vulcanus.created_entities[1].name, "transport-belt", "item ingress should leave a normal belt stub")
   assert_equal(vulcanus.created_entities[2].name, "pipe", "fluid ingress should leave a pipe stub")
@@ -140,7 +136,6 @@ run_test("Planet Square expansion leaves egress belt stubs instead of extra egre
         surface_size = 7,
         surface_name = "gleba",
         floor_tile_name = "lowland-cream-cauliflower",
-        expansion_points = 0,
         starter_anchors = {
           anchors = {
             {kind = "item", flow = "egress", side = "south", position = {x = 0, y = 3}, entity_name = "the-square-yumako-seed-egress-anchor"}
@@ -167,7 +162,6 @@ run_test("Planet Square expansion leaves turbo belt stubs at turbo Managed Line 
         surface_size = 7,
         surface_name = "gleba",
         floor_tile_name = "lowland-cream-cauliflower",
-        expansion_points = 0,
         starter_anchors = {
           anchors = {
             {kind = "item", flow = "ingress", side = "north", position = {x = 0, y = -3}, entity_name = "the-square-yumako-ingress-anchor-turbo"},

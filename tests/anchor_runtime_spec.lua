@@ -13,17 +13,13 @@ settings = {
   global = {
     ["the-square-background-tile"] = {
       value = "grass-1"
-    },
-    ["the-square-line-purchase-cost"] = {
-      value = 1000
     }
   }
 }
 
 storage = {
   bootstrap = {
-    square_size = 12,
-    expansion_points = 5000
+    square_size = 12
   }
 }
 
@@ -153,8 +149,6 @@ local function build_force_with_uranium_processing(prerequisites_researched)
 end
 
 run_test("uranium purchase also grants one sulfuric acid egress line", function()
-  storage.bootstrap.expansion_points = 5000
-
   local player = build_player()
   local crude_oil_definition = runtime_defs.get_input_definition("crude-oil")
 
@@ -167,7 +161,6 @@ run_test("uranium purchase also grants one sulfuric acid egress line", function(
 
   anchor_runtime.purchase_managed_line_for_resource(player, "uranium-ore")
 
-  assert_equal(storage.bootstrap.expansion_points, 4000, "uranium purchase should only spend one line cost")
   assert_equal(anchor_runtime.get_owned_line_counts("uranium-ore").owned, 1, "uranium should be owned after purchase")
   assert_equal(
     anchor_runtime.get_owned_line_counts("sulfuric-acid").owned,
@@ -776,8 +769,7 @@ end)
 run_test("Managed Line Placement Preview invalid cursor movement does not print placement errors", function()
   rendering.drawn_sprites = {}
   storage.bootstrap = {
-    square_size = 12,
-    expansion_points = 5000
+    square_size = 12
   }
   storage.planets = nil
   storage.anchor_preview_ghosts = nil
@@ -813,7 +805,6 @@ end)
 run_test("attempted invalid Managed Line placement still prints placement errors", function()
   storage.bootstrap = {
     square_size = 12,
-    expansion_points = 5000,
     surface_name = "nauvis"
   }
   storage.planets = nil
@@ -859,8 +850,7 @@ end)
 run_test("Managed Line Placement Preview tolerates Factorio players without cursor_position", function()
   rendering.drawn_sprites = {}
   storage.bootstrap = {
-    square_size = 12,
-    expansion_points = 5000
+    square_size = 12
   }
   storage.planets = nil
   storage.anchor_preview_ghosts = nil
@@ -899,8 +889,7 @@ end)
 run_test("Managed Line Placement Preview follows cursor and stays visible with invalid tint", function()
   rendering.drawn_sprites = {}
   storage.bootstrap = {
-    square_size = 12,
-    expansion_points = 5000
+    square_size = 12
   }
   storage.planets = nil
   storage.anchor_preview_ghosts = nil
