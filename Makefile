@@ -20,7 +20,7 @@ typecheck:
 		echo "error: expected luac, luajit, or lua in PATH" >&2; \
 		exit 1; \
 	fi
-	@find . -path './node_modules' -prune -o -name '*.lua' -type f -print | while IFS= read -r file; do \
+	@find . -name '*.lua' -type f -print | while IFS= read -r file; do \
 		if [ -n "$(LUAC)" ]; then \
 			"$(LUAC)" -p "$$file" || exit $$?; \
 		else \
