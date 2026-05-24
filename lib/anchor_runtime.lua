@@ -715,6 +715,22 @@ local function destroy_player_anchor_preview(player_index)
   preview_ghosts[player_index] = nil
 end
 
+local function get_player_cursor_position(player)
+  local ok, cursor_position = pcall(function()
+    return player.cursor_position
+  end)
+
+  if ok and cursor_position then
+    return cursor_position
+  end
+
+  if player.position then
+    return {x = player.position.x, y = player.position.y}
+  end
+
+  return nil
+end
+
 function anchor_runtime.update_player_anchor_preview(player)
   if not (player and player.valid) then
     return
@@ -734,7 +750,7 @@ function anchor_runtime.update_player_anchor_preview(player)
     return
   end
 
-  local cursor_position = player.cursor_position or (player.position and {x = player.position.x, y = player.position.y})
+  local cursor_position = get_player_cursor_position(player)
   local tile_position = defs.snap_entity_position_to_tile(cursor_position)
 
   if not tile_position then

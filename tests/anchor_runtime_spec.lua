@@ -856,6 +856,46 @@ run_test("attempted invalid Managed Line placement still prints placement errors
   assert_equal(player.get_messages()[2][1], "message.the-square-managed-line-fluid-gap-required", "fluid gap attempts should print an error")
 end)
 
+run_test("Managed Line Placement Preview tolerates Factorio players without cursor_position", function()
+  rendering.drawn_sprites = {}
+  storage.bootstrap = {
+    square_size = 12,
+    expansion_points = 5000
+  }
+  storage.planets = nil
+  storage.anchor_preview_ghosts = nil
+  storage.starter_anchors = {
+    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = {
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", nil, nil)
+    }
+  }
+
+  local player = build_player()
+  player.index = 1
+  player.valid = true
+  player.surface = {name = "nauvis"}
+  player.cursor_stack = {
+    valid_for_read = true,
+    name = runtime_defs.get_ingress_item_name("iron-ore"),
+    count = 1
+  }
+
+  setmetatable(player, {
+    __index = function(_, key)
+      if key == "cursor_position" then
+        error("LuaPlayer doesn't contain key cursor_position")
+      end
+    end
+  })
+
+  anchor_runtime.update_player_anchor_preview(player)
+
+  assert_equal(#rendering.drawn_sprites, 1, "preview should fall back to player position when cursor_position is unavailable")
+  assert_equal(rendering.drawn_sprites[1].args.target.x, 0.5, "fallback preview should snap to player tile x")
+  assert_equal(rendering.drawn_sprites[1].args.target.y, 0.5, "fallback preview should snap to player tile y")
+end)
+
 run_test("Managed Line Placement Preview follows cursor and stays visible with invalid tint", function()
   rendering.drawn_sprites = {}
   storage.bootstrap = {
