@@ -118,6 +118,10 @@ _Avoid_: Default spread, generated layout
 An owned **Managed Line** with no current **Anchor** on the map.
 _Avoid_: Disabled line, hidden line
 
+**Placement Preview**:
+A player-local visual indication of where a **Stashed Line** would be placed from the cursor, including invalid locations.
+_Avoid_: Ghost, ghost entity, bot ghost
+
 **Managed Line Shift**:
 The automatic outward movement of a placed **Managed Line** from one anchor slot to the next after a **Ring** is added.
 _Avoid_: Anchor shift, auto-move, border slide
@@ -180,6 +184,7 @@ _Avoid_: Regression, accidental break
 - An **Expansion Reward** becomes **Expansion Points** for that same **Planet** only.
 - A **Difficulty Preset** changes tuning such as starting size and pacing without changing the invariant Square rules.
 - A **Starter Layout** places a **Planet**'s initial **Managed Lines** on its **Boundary**.
+- A **Placement Preview** may show where one **Stashed Line** would occupy one **Anchor**, but it is not a placed **Managed Line**.
 - A **Native Free Resource** enters through an **Ingress Line**; a **Cultivated Resource** stays inside the **Square**.
 - A **Support Material Dependency** is satisfied by an **Opt-In Egress Resource** through an **Egress Line**.
 - **Planet-Local Logistics** never replace **Vanilla Rocket Logistics**.
@@ -207,3 +212,4 @@ _Avoid_: Regression, accidental break
 - "free resources" was too vague; use **Native Free Resource** for planet-native raw ingress and **Cultivated Resource** for resources that must stay in-square.
 - "imports" was ambiguous between local external sourcing and interplanetary shipping; use **External Sourcing** for ingress and **Vanilla Rocket Logistics** for off-planet movement.
 - "egress" risked meaning any export; use **Egress Line** only for **Planet**-local support-material rules, not for interplanetary trade.
+- "ghost" conflicts with Factorio ghost entities that construction bots can build; use **Placement Preview** for the player-local visual aid while placing **Stashed Lines**.
