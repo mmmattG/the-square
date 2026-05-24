@@ -1,4 +1,12 @@
 {
+  "scripts": {
+    "build": "make build",
+    "install:mod": "make install",
+    "test": "make test",
+    "test:unit": "make unit-test",
+    "test:e2e": "make e2e-test",
+    "test:e2e:load": "make e2e-load-test"
+  },
   "devDependencies": {
     "@ai-hero/sandcastle": "^0.5.11"
   }
