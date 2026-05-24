@@ -6,6 +6,7 @@ local managed_line_state = require("lib.managed_line_state")
 local anchor_identity = require("lib.anchor_identity")
 local anchor_placement = require("lib.anchor_placement")
 local managed_line_placement = require("lib.managed_line_placement")
+local placement_preview = require("lib.placement_preview")
 
 local anchor_runtime = {}
 
@@ -727,19 +728,21 @@ function anchor_runtime.update_player_anchor_preview(player)
     return
   end
 
-  local proxy = get_selected_anchor_slot_proxy(player)
   local anchor = get_cursor_managed_anchor(player, starter_anchors)
 
-  if not (proxy and anchor) then
+  if not anchor then
     return
   end
 
-  local tile_position = defs.snap_entity_position_to_tile(proxy.position)
+  local cursor_position = player.cursor_position or (player.position and {x = player.position.x, y = player.position.y})
+  local tile_position = defs.snap_entity_position_to_tile(cursor_position)
+
+  if not tile_position then
+    return
+  end
+
   local ok, _, side = anchor_placement.check(anchor, tile_position, planet:get_square_size(), starter_anchors)
-
-  if not ok then
-    return
-  end
+  side = side or placement_preview.infer_side(tile_position)
 
   storage.anchor_preview_ghosts = storage.anchor_preview_ghosts or {}
   storage.anchor_preview_ghosts[player.index] = rendering.draw_sprite({
@@ -747,7 +750,8 @@ function anchor_runtime.update_player_anchor_preview(player)
     target = {x = tile_position.x + 0.5, y = tile_position.y + 0.5},
     surface = player.surface,
     players = {player.index},
-    tint = {r = 1, g = 1, b = 1, a = 0.45},
+    tint = ok and {r = 1, g = 1, b = 1, a = 0.45} or {r = 1, g = 0, b = 0, a = 0.45},
+    orientation = side and defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, side) or nil,
     x_scale = 0.9,
     y_scale = 0.9,
     render_layer = "object"

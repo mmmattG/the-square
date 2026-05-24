@@ -32,6 +32,23 @@ game = {
   players = {}
 }
 
+rendering = {
+  drawn_sprites = {},
+  draw_sprite = function(args)
+    local sprite = {
+      valid = true,
+      args = args,
+      destroy = function(self)
+        self.valid = false
+      end
+    }
+
+    rendering.drawn_sprites[#rendering.drawn_sprites + 1] = sprite
+
+    return sprite
+  end
+}
+
 local anchor_runtime = require("lib.anchor_runtime")
 local runtime_defs = require("lib.runtime_defs")
 
@@ -754,4 +771,48 @@ run_test("ingress tier research sync keeps planet starter Managed Lines as minab
   assert_equal(destroyed_yellow, true, "legacy planet ingress Managed Line should be destroyed")
   assert_equal(created_entities[1].name, runtime_defs.get_ingress_entity_name("scrap", 3), "planet ingress Managed Line should be recreated as the upgraded minable base entity")
   assert_equal(storage.planets.fulgora.starter_anchors.anchors[1].entity, created_entities[1], "planet Managed Line state should point at the upgraded entity")
+end)
+
+run_test("Managed Line Placement Preview follows cursor and stays visible with invalid tint", function()
+  rendering.drawn_sprites = {}
+  storage.bootstrap = {
+    square_size = 12,
+    expansion_points = 5000
+  }
+  storage.planets = nil
+  storage.anchor_preview_ghosts = nil
+  storage.starter_anchors = {
+    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = {
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", nil, nil)
+    }
+  }
+
+  local player = build_player()
+  player.index = 1
+  player.valid = true
+  player.surface = {name = "nauvis"}
+  player.selected = {
+    valid = true,
+    name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
+    position = {x = 0, y = -6}
+  }
+  player.cursor_position = {x = 50.2, y = 3.7}
+  player.cursor_stack = {
+    valid_for_read = true,
+    name = runtime_defs.get_ingress_item_name("iron-ore"),
+    count = 1
+  }
+
+  anchor_runtime.update_player_anchor_preview(player)
+
+  assert_equal(#rendering.drawn_sprites, 1, "one preview should be drawn")
+  local args = rendering.drawn_sprites[1].args
+
+  assert_equal(args.target.x, 50.5, "preview should snap to the cursor tile x")
+  assert_equal(args.target.y, 3.5, "preview should snap to the cursor tile y")
+  assert_equal(args.tint.r, 1, "invalid preview should be red")
+  assert_equal(args.tint.g, 0, "invalid preview should not include green tint")
+  assert_equal(args.tint.b, 0, "invalid preview should not include blue tint")
+  assert_equal(args.sprite, "entity/" .. runtime_defs.get_ingress_entity_name("iron-ore", 1), "preview should use current-tier sprite")
 end)
