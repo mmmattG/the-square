@@ -3,7 +3,7 @@ SHELL := /bin/sh
 LUA ?= $(shell command -v luajit 2>/dev/null || command -v lua 2>/dev/null)
 LUAC ?= $(shell command -v luac 2>/dev/null || command -v luac5.4 2>/dev/null || command -v luac5.3 2>/dev/null || command -v luac5.2 2>/dev/null)
 
-.PHONY: all build install test typecheck unit-test e2e-load-test e2e-test
+.PHONY: all build install test typecheck unit-test e2e-load-test e2e-test e2e-screenshot-test
 
 all: build install
 
@@ -73,6 +73,22 @@ e2e-test: e2e-load-test
 	else \
 		status=$$?; \
 		echo "FAIL e2e create default world test" >&2; \
+		cat $$tmp >&2; \
+		rm -f $$tmp; \
+		exit $$status; \
+	fi
+
+# Runs Factorio with graphics and writes a rendered gameplay screenshot artifact.
+# Set E2E_SCREENSHOT_PATH=/path/to/world.png to override the default build/e2e-world.png.
+e2e-screenshot-test:
+	@tmp=$$(mktemp); \
+	if ./scripts/e2e-create-default-world-screenshot.sh >$$tmp 2>&1; then \
+		cat $$tmp; \
+		rm -f $$tmp; \
+		echo "PASS e2e screenshot test"; \
+	else \
+		status=$$?; \
+		echo "FAIL e2e screenshot test" >&2; \
 		cat $$tmp >&2; \
 		rm -f $$tmp; \
 		exit $$status; \
