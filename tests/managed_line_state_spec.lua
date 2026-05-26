@@ -28,8 +28,9 @@ run_test("same Managed Line state seam ensures and reads Nauvis and Proof Planet
 
   assert_equal(managed_line_state.get("nauvis"), nauvis_lines, "Nauvis lines should be readable through the seam")
   assert_equal(managed_line_state.get("vulcanus"), vulcanus_lines, "Proof Planet lines should be readable through the seam")
-  assert_equal(#nauvis_lines.anchors, 6, "Nauvis starter Managed Lines should stay unchanged")
-  assert_equal(#vulcanus_lines.anchors, 5, "Proof Planet starter Managed Lines should stay unchanged")
+  assert_equal(#nauvis_lines.anchors, 3, "Nauvis should start with three stashed Managed Lines")
+  assert_equal(#vulcanus_lines.anchors, 0, "Proof Planet should not start with free Managed Lines")
+  assert_equal(nauvis_lines.anchors[1].position, nil, "Nauvis starter Managed Lines should not be placed")
 end)
 
 run_test("seam returns nil for unsupported planets without creating Managed Lines", function()

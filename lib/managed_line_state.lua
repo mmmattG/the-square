@@ -89,7 +89,7 @@ function managed_line_state.ensure(planet_name)
 
   bootstrap.starter_anchors = bootstrap.starter_anchors or {
     layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = bootstrap_runtime.build_starter_anchor_layout(planet:get_square_size(), planet_name)
+    anchors = bootstrap_runtime.build_initial_managed_line_state(planet_name).anchors
   }
   if is_legacy_aliased_state then
     storage.starter_anchors = bootstrap.starter_anchors

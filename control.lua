@@ -21,6 +21,7 @@ local function handle_player_join_or_respawn(event)
 
   if player then
     bootstrap_runtime.teleport_player_to_square(player)
+    bootstrap_runtime.grant_initial_managed_line_inventory(player)
     gui_runtime.sync_dev_gui(player)
     gui_runtime.sync_screenshot_gui(player)
     gui_runtime.sync_shop_gui(player, managed_line_runtime)

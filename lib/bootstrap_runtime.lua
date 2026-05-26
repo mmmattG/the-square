@@ -136,6 +136,45 @@ function bootstrap_runtime.build_starter_anchor_layout(square_size, planet_name)
   return anchors
 end
 
+local function build_stashed_managed_anchor(kind, flow)
+  return {
+    kind = kind,
+    flow = flow,
+    item_name = defs.get_generic_anchor_item_name(kind, flow),
+    entity_name = defs.get_generic_anchor_entity_name(kind, flow),
+    item_progress = {0, 0}
+  }
+end
+
+function bootstrap_runtime.build_initial_managed_line_state(planet_name)
+  local anchors = {}
+
+  if planet_name == "nauvis" then
+    anchors[#anchors + 1] = build_stashed_managed_anchor("fluid", "ingress")
+    anchors[#anchors + 1] = build_stashed_managed_anchor("item", "ingress")
+    anchors[#anchors + 1] = build_stashed_managed_anchor("item", "ingress")
+  end
+
+  return {
+    layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = anchors
+  }
+end
+
+function bootstrap_runtime.grant_initial_managed_line_inventory(player)
+  if storage.initial_managed_line_inventory_granted then
+    return
+  end
+
+  if not (player and player.valid and player.insert) then
+    return
+  end
+
+  player.insert({name = defs.get_generic_anchor_item_name("fluid", "ingress"), count = 1})
+  player.insert({name = defs.get_generic_anchor_item_name("item", "ingress"), count = 2})
+  storage.initial_managed_line_inventory_granted = true
+end
+
 local function call_freeplay(interface_name, value)
   if remote.interfaces.freeplay and remote.interfaces.freeplay[interface_name] then
     remote.call("freeplay", interface_name, value)
@@ -373,10 +412,7 @@ function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
   call_freeplay("set_skip_intro", true)
   call_freeplay("set_disable_crashsite", true)
 
-  storage.starter_anchors = {
-    layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = bootstrap_runtime.build_starter_anchor_layout(defs.get_square_size())
-  }
+  storage.starter_anchors = bootstrap_runtime.build_initial_managed_line_state("nauvis")
 
   local surface = bootstrap_runtime.ensure_bootstrap_surface(anchor_runtime)
   game.forces.player.set_spawn_position({x = 0, y = 0}, surface)

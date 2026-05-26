@@ -26,6 +26,7 @@ settings = {
 }
 
 local bootstrap_runtime = require("lib.bootstrap_runtime")
+local defs = require("lib.runtime_defs")
 
 local function assert_equal(actual, expected, message)
   if actual ~= expected then
@@ -55,6 +56,35 @@ run_test("generated chunks outside managed surface are painted void", function()
   for _, tile in ipairs(tiles) do
     assert_equal(tile.name, "out-of-map", "outside managed area should be void")
   end
+end)
+
+run_test("new worlds start with stashed Nauvis Managed Lines only", function()
+  local nauvis_lines = bootstrap_runtime.build_initial_managed_line_state("nauvis")
+  local vulcanus_lines = bootstrap_runtime.build_initial_managed_line_state("vulcanus")
+
+  assert_equal(#nauvis_lines.anchors, 3, "Nauvis should start with three owned Managed Lines")
+  assert_equal(#vulcanus_lines.anchors, 0, "other planets should not start with owned Managed Lines")
+  assert_equal(nauvis_lines.anchors[1].position, nil, "initial Managed Lines should start stashed")
+  assert_equal(nauvis_lines.anchors[1].item_name, defs.get_generic_anchor_item_name("fluid", "ingress"), "first starter item should be a fluid ingress")
+  assert_equal(nauvis_lines.anchors[2].item_name, defs.get_generic_anchor_item_name("item", "ingress"), "second starter item should be an item ingress")
+end)
+
+run_test("initial Managed Line inventory is granted once", function()
+  storage = {}
+  local inserted = {}
+  local player = {
+    valid = true,
+    insert = function(stack)
+      inserted[stack.name] = (inserted[stack.name] or 0) + stack.count
+      return stack.count
+    end
+  }
+
+  bootstrap_runtime.grant_initial_managed_line_inventory(player)
+  bootstrap_runtime.grant_initial_managed_line_inventory(player)
+
+  assert_equal(inserted[defs.get_generic_anchor_item_name("fluid", "ingress")], 1, "player should receive one fluid ingress")
+  assert_equal(inserted[defs.get_generic_anchor_item_name("item", "ingress")], 2, "player should receive two item ingresses")
 end)
 
 run_test("generated chunks on supported Space Age planet surfaces are routed through planet state", function()

@@ -887,7 +887,7 @@ local function grant_managed_line(player, bootstrap, definition, flow, item_name
 
   storage.starter_anchors = storage.starter_anchors or {
     layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = bootstrap_runtime.build_starter_anchor_layout(bootstrap.square_size)
+    anchors = {}
   }
   storage.starter_anchors.anchors[#storage.starter_anchors.anchors + 1] = defs.create_managed_anchor(definition, flow, nil, nil)
 

@@ -24,17 +24,15 @@ local function run_test(name, fn)
   io.stdout:write("PASS " .. name .. "\n")
 end
 
-run_test("non-Nauvis planets receive configured starter Managed Lines in isolated storage", function()
+run_test("non-Nauvis planets start without free Managed Lines in isolated storage", function()
   local vulcanus = anchor_runtime.ensure_planet_starter_anchor_state("vulcanus")
   local gleba = anchor_runtime.ensure_planet_starter_anchor_state("gleba")
 
-  assert_equal(#vulcanus.anchors, 5, "Vulcanus should get five free starter lines")
-  assert_equal(#gleba.anchors, 6, "Gleba should get four ingresses and two egresses")
+  assert_equal(#vulcanus.anchors, 0, "Vulcanus should not get free starter lines")
+  assert_equal(#gleba.anchors, 0, "Gleba should not get free starter lines")
   assert_equal(storage.starter_anchors, nil, "planet starter creation should not mutate Nauvis Managed Lines")
   assert_equal(storage.planets.vulcanus.starter_anchors, vulcanus, "Vulcanus Managed Lines should live under Vulcanus state")
   assert_equal(storage.planets.gleba.starter_anchors, gleba, "Gleba Managed Lines should live under Gleba state")
-  assert_equal(vulcanus.anchors[1].entity_name, defs.get_ingress_entity_name(vulcanus.anchors[1].resource, 1), "positioned starter ingresses should spawn minable base Managed Lines")
-  assert_equal(vulcanus.anchors[1].item_name, defs.get_generic_anchor_item_name(vulcanus.anchors[1].kind, "ingress"), "starter ingresses should still mine to generic Managed Line items")
 end)
 
 run_test("planet starter pumping only uses planet-local Managed Lines", function()
