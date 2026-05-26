@@ -5,8 +5,6 @@ local planet_instance = require("lib.planet_instance")
 local managed_line_state = require("lib.managed_line_state")
 local anchor_identity = require("lib.anchor_identity")
 local anchor_placement = require("lib.anchor_placement")
-local managed_line_placement = require("lib.managed_line_placement")
-local placement_preview = require("lib.placement_preview")
 
 local anchor_runtime = {}
 
@@ -81,6 +79,10 @@ local function get_required_underground_belt_type(anchor)
   end
 
   return "output"
+end
+
+local function get_config_proxy_entity_name(kind, flow)
+  return anchor_identity.get_config_proxy_entity_name(kind or "item", flow or "ingress")
 end
 
 local function get_planet_name_for_surface_name(surface_name)
@@ -274,7 +276,9 @@ local function ensure_anchor_entity(surface, anchor)
     return nil
   end
 
-  anchor.entity_name = defs.get_anchor_entity_name_for_current_tier(anchor)
+  if not anchor_identity.is_config_proxy_entity_name(anchor.entity_name) then
+    anchor.entity_name = defs.get_anchor_entity_name_for_current_tier(anchor)
+  end
 
   local entity = anchor.entity
 
@@ -288,7 +292,7 @@ local function ensure_anchor_entity(surface, anchor)
     end
   end
 
-  if entity and entity.valid then
+  if entity and entity.valid and entity.destroy then
     entity.destroy({raise_destroy = false})
     anchor.entity = nil
   end
@@ -655,38 +659,6 @@ local function reject_reserved_ring_placement(entity, actor, message)
   entity.destroy({raise_destroy = false})
 end
 
-local function get_cursor_managed_anchor(player, starter_anchors)
-  if not (player and player.valid and player.cursor_stack and player.cursor_stack.valid_for_read) then
-    return nil, nil
-  end
-
-  local item_name = player.cursor_stack.name
-  local anchor = find_matching_stashed_anchor(item_name, starter_anchors)
-  if not anchor then
-    return nil, nil
-  end
-
-  return anchor, item_name
-end
-
-local function consume_cursor_item(player, item_name)
-  if not (player and player.valid and player.cursor_stack and player.cursor_stack.valid_for_read) then
-    return false
-  end
-
-  if player.cursor_stack.name ~= item_name then
-    return false
-  end
-
-  if player.cursor_stack.count > 1 then
-    player.cursor_stack.count = player.cursor_stack.count - 1
-  else
-    player.cursor_stack.clear()
-  end
-
-  return true
-end
-
 local function get_selected_anchor_slot_proxy(player)
   if not (player and player.valid and player.selected and player.selected.valid) then
     return nil
@@ -697,87 +669,6 @@ local function get_selected_anchor_slot_proxy(player)
   end
 
   return player.selected
-end
-
-local function destroy_player_anchor_preview(player_index)
-  local preview_ghosts = storage.anchor_preview_ghosts
-
-  if not preview_ghosts then
-    return
-  end
-
-  local ghost = preview_ghosts[player_index]
-
-  if ghost and ghost.valid then
-    ghost.destroy()
-  end
-
-  preview_ghosts[player_index] = nil
-end
-
-local function get_player_cursor_position(player)
-  local ok, cursor_position = pcall(function()
-    return player.cursor_position
-  end)
-
-  if ok and cursor_position then
-    return cursor_position
-  end
-
-  if player.position then
-    return {x = player.position.x, y = player.position.y}
-  end
-
-  return nil
-end
-
-function anchor_runtime.update_player_anchor_preview(player)
-  if not (player and player.valid) then
-    return
-  end
-
-  destroy_player_anchor_preview(player.index)
-
-  local starter_anchors, planet = get_anchor_state_for_surface(player.surface)
-
-  if not (starter_anchors and planet) then
-    return
-  end
-
-  local anchor = get_cursor_managed_anchor(player, starter_anchors)
-
-  if not anchor then
-    return
-  end
-
-  local cursor_position = get_player_cursor_position(player)
-  local tile_position = defs.snap_entity_position_to_tile(cursor_position)
-
-  if not tile_position then
-    return
-  end
-
-  local ok, _, side = anchor_placement.check(anchor, tile_position, planet:get_square_size(), starter_anchors)
-  side = side or placement_preview.infer_side(tile_position)
-
-  storage.anchor_preview_ghosts = storage.anchor_preview_ghosts or {}
-  storage.anchor_preview_ghosts[player.index] = rendering.draw_sprite({
-    sprite = "entity/" .. defs.get_anchor_entity_name_for_current_tier(anchor),
-    target = {x = tile_position.x + 0.5, y = tile_position.y + 0.5},
-    surface = player.surface,
-    players = {player.index},
-    tint = ok and {r = 1, g = 1, b = 1, a = 0.45} or {r = 1, g = 0, b = 0, a = 0.45},
-    orientation = side and defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, side) or nil,
-    x_scale = 0.9,
-    y_scale = 0.9,
-    render_layer = "object"
-  })
-end
-
-function anchor_runtime.update_all_player_anchor_previews()
-  for _, player in pairs(game.players) do
-    anchor_runtime.update_player_anchor_preview(player)
-  end
 end
 
 function anchor_runtime.get_owned_line_counts(resource)
@@ -956,69 +847,66 @@ local function get_anchor_placement_rejection_message(reason)
     or {"message.the-square-managed-line-invalid-edge"}
 end
 
+local function consume_player_inventory_item(player, item_name)
+  if not (player and player.valid and item_name) then
+    return false
+  end
+
+  if player.get_item_count and player.get_item_count(item_name) < 1 then
+    return false
+  end
+
+  if player.remove_item then
+    return player.remove_item({name = item_name, count = 1}) == 1
+  end
+
+  return false
+end
+
+local function find_matching_stashed_configurable_anchor(definition, flow, starter_anchors)
+  if not (definition and flow and starter_anchors) then
+    return nil
+  end
+
+  for _, candidate in ipairs(starter_anchors.anchors) do
+    if not candidate.position
+      and candidate.kind == definition.kind
+      and candidate.flow == flow
+      and (not candidate.resource or candidate.resource == definition.resource)
+    then
+      return candidate
+    end
+  end
+
+  return nil
+end
+
+local function remove_anchor_from_set(anchor, starter_anchors)
+  if not (anchor and starter_anchors) then
+    return
+  end
+
+  for index, candidate in ipairs(starter_anchors.anchors) do
+    if candidate == anchor then
+      table.remove(starter_anchors.anchors, index)
+      return
+    end
+  end
+end
+
 local function handle_managed_anchor_built(entity, actor, gui_runtime)
   if not (entity and entity.valid) then
     return
   end
 
-  local starter_anchors, planet, planet_name = get_anchor_state_for_surface(entity.surface)
+  local starter_anchors, planet = get_anchor_state_for_surface(entity.surface)
 
   if not (starter_anchors and planet) then
     reject_anchor_placement(entity, actor, {"message.the-square-managed-line-invalid-surface"})
     return
   end
 
-  if actor and actor.valid and actor.object_name == "LuaPlayer" and gui_runtime then
-    gui_runtime.print_ingress_placement_debug(actor, planet:get_square_size(), entity.position)
-  end
-
-  local anchor_position = defs.snap_entity_position_to_tile(entity.position)
-  local side = defs.get_anchor_side_for_position(planet:get_square_size(), anchor_position)
-
-  if not side then
-    reject_anchor_placement(entity, actor, {"message.the-square-managed-line-invalid-edge"})
-    return
-  end
-
-  local anchor = find_matching_stashed_anchor(entity.name, starter_anchors)
-
-  if not anchor and anchor_identity.is_generic_entity_name(entity.name) then
-    local kind, flow = anchor_identity.get_generic_kind_flow(entity.name)
-    anchor = {
-      kind = kind,
-      flow = flow,
-      item_name = defs.get_generic_anchor_item_name(kind, flow),
-      entity_name = entity.name,
-      item_progress = {0, 0}
-    }
-    starter_anchors.anchors[#starter_anchors.anchors + 1] = anchor
-  end
-
-  if not anchor then
-    reject_anchor_placement(entity, actor, {"message.the-square-managed-line-unowned"})
-    return
-  end
-
-  managed_line_placement.place_built_entity({
-    entity = entity,
-    actor = actor,
-    anchor = anchor,
-    side = side,
-    position = anchor_position,
-    square_size = planet:get_square_size(),
-    starter_anchors = starter_anchors,
-    callbacks = {
-      reject = function(rejected_entity, rejected_actor, reason)
-        reject_anchor_placement(rejected_entity, rejected_actor, get_anchor_placement_rejection_message(reason))
-      end,
-      after_assign = function(placed_anchor, force, placement_actor)
-        run_anchor_placement_effects(placed_anchor, force, placement_actor, "build event")
-      end,
-      after_placement = function()
-        anchor_runtime.ensure_planet_starter_anchors(planet_name)
-      end
-    }
-  })
+  reject_anchor_placement(entity, actor, {"message.the-square-managed-line-use-anchor-slot"})
 end
 
 function anchor_runtime.handle_managed_anchor_slot_click(player)
@@ -1038,35 +926,39 @@ function anchor_runtime.handle_managed_anchor_slot_click(player)
     return
   end
 
-  local anchor, item_name = get_cursor_managed_anchor(player, starter_anchors)
+  local tile_position = defs.snap_entity_position_to_tile(proxy.position)
+  local side = defs.get_anchor_side_for_position(planet:get_square_size(), tile_position)
 
-  if not (anchor and item_name) then
+  if not side then
+    player.print({"message.the-square-managed-line-invalid-edge"})
     return
   end
 
-  local tile_position = defs.snap_entity_position_to_tile(proxy.position)
-
-  managed_line_placement.place_from_slot({
-    player = player,
-    anchor = anchor,
-    item_name = item_name,
+  local config_proxy_name = get_config_proxy_entity_name("item", "ingress")
+  local entity = player.surface.create_entity({
+    name = config_proxy_name,
     position = tile_position,
-    square_size = planet:get_square_size(),
-    starter_anchors = starter_anchors,
-    callbacks = {
-      reject_slot = function(rejected_player, reason)
-        rejected_player.print(get_anchor_placement_rejection_message(reason))
-      end,
-      consume_cursor_item = consume_cursor_item,
-      after_assign = function(placed_anchor, force, placement_actor)
-        run_anchor_placement_effects(placed_anchor, force, placement_actor, "anchor slot")
-      end,
-      after_placement = function()
-        anchor_runtime.ensure_planet_starter_anchors(planet_name)
-        anchor_runtime.update_player_anchor_preview(player)
-      end
-    }
+    direction = defs.get_anchor_direction_for_side("ingress", "item", side),
+    force = game.forces and game.forces.player or player.force
   })
+
+  if not (entity and entity.valid) then
+    return
+  end
+
+  local anchor = {
+    side = side,
+    position = tile_position,
+    direction = entity.direction,
+    entity = entity,
+    entity_name = config_proxy_name,
+    item_progress = {0, 0}
+  }
+
+  starter_anchors.anchors[#starter_anchors.anchors + 1] = anchor
+  configure_source_anchor_entity(entity, entity.direction)
+  player.opened = entity
+  anchor_runtime.ensure_planet_starter_anchors(planet_name)
 end
 
 function anchor_runtime.handle_anchor_mined(entity)
@@ -1142,7 +1034,7 @@ function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
     return false
   end
 
-  local starter_anchors, _, planet_name = get_anchor_state_for_surface(entity.surface)
+  local starter_anchors, planet, planet_name = get_anchor_state_for_surface(entity.surface)
   local anchor = find_anchor_by_entity(entity, starter_anchors)
     or find_anchor_by_entity_name_and_position(entity.name, entity.position, starter_anchors)
 
@@ -1160,9 +1052,14 @@ function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
   local resource, flow = defs.parse_config_recipe_name(recipe.name)
   local definition = defs.get_config_definition(resource, flow, planet_name)
 
-  if not definition or flow ~= anchor.flow or definition.kind ~= anchor.kind then
+  local is_fresh_slot_configuration = anchor_identity.is_config_proxy_entity_name(entity.name)
+    and not anchor.resource
+
+  if not definition
+    or (not is_fresh_slot_configuration and (flow ~= anchor.flow or definition.kind ~= anchor.kind))
+  then
     if entity.set_recipe then
-      entity.set_recipe(entity, anchor.resource and defs.get_config_recipe_name(anchor.resource, anchor.flow) or nil)
+      entity.set_recipe(anchor.resource and defs.get_config_recipe_name(anchor.resource, anchor.flow) or nil)
     end
     if actor and actor.valid and actor.print then
       actor.print({"message.the-square-managed-line-invalid-configuration"})
@@ -1170,9 +1067,61 @@ function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
     return false
   end
 
+  local placement_anchor = is_fresh_slot_configuration and {
+    kind = definition.kind,
+    flow = flow
+  } or anchor
+  local ok, reason, side = anchor_placement.check(
+    placement_anchor,
+    anchor.position,
+    planet and planet:get_square_size() or storage.bootstrap and storage.bootstrap.square_size,
+    starter_anchors
+  )
+
+  if not ok then
+    if entity.set_recipe then
+      entity.set_recipe(nil)
+    end
+    if actor and actor.valid and actor.print then
+      actor.print(get_anchor_placement_rejection_message(reason))
+    end
+    if entity.active ~= nil then
+      entity.active = false
+    end
+    return false
+  end
+
+  if is_fresh_slot_configuration then
+    local item_name = defs.get_generic_anchor_item_name(definition.kind, flow)
+
+    if not consume_player_inventory_item(actor, item_name) then
+      if entity.set_recipe then
+        entity.set_recipe(nil)
+      end
+      if actor and actor.valid and actor.print then
+        actor.print({"message.the-square-managed-line-missing-inventory", {"item-name." .. item_name}})
+      end
+      if entity.active ~= nil then
+        entity.active = false
+      end
+      return false
+    end
+
+    local stashed_anchor = find_matching_stashed_configurable_anchor(definition, flow, starter_anchors)
+
+    if stashed_anchor and stashed_anchor ~= anchor then
+      remove_anchor_from_set(anchor, starter_anchors)
+      anchor = stashed_anchor
+      anchor.entity = entity
+      anchor.position = entity.position and defs.snap_entity_position_to_tile(entity.position) or anchor.position
+    end
+  end
+
   anchor.resource = resource
   anchor.kind = definition.kind
   anchor.flow = flow
+  anchor.side = side
+  anchor.direction = defs.get_anchor_direction_for_side(flow, definition.kind, side)
   anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind, anchor.flow)
   anchor.entity_name = defs.get_anchor_entity_name_for_current_tier(anchor)
   anchor.item_progress = {0, 0}

@@ -48,14 +48,32 @@ local function make_clearable_stack(name)
   return stack
 end
 
-run_test("Vulcanus Managed Lines can be picked up and placed using planet-local state", function()
+local function give_player_item(player, item_name)
+  player.item_counts = player.item_counts or {}
+  player.item_counts[item_name] = (player.item_counts[item_name] or 0) + 1
+end
+
+run_test("Vulcanus anchor slots open a Managed Line configuration menu using planet-local state", function()
   local created = {}
   local surface = {
     name = "vulcanus",
     find_entities_filtered = function() return {} end,
     create_entity = function(entity)
       created[#created + 1] = entity
-      return {valid = true, name = entity.name, position = entity.position, surface = surface}
+      local created_entity
+      created_entity = {
+        valid = true,
+        name = entity.name,
+        position = entity.position,
+        direction = entity.direction,
+        force = entity.force,
+        surface = surface,
+        active = true,
+        destroy = function(self) self.valid = false end,
+        get_recipe = function(self) return self.recipe end,
+        set_recipe = function(recipe_name) created_entity.recipe = recipe_name and {name = recipe_name} or nil end
+      }
+      return created_entity
     end
   }
   game.surfaces.vulcanus = surface
@@ -87,20 +105,30 @@ run_test("Vulcanus Managed Lines can be picked up and placed using planet-local 
 
   assert_equal(anchor.position, nil, "mining a Vulcanus Managed Line should stash the planet-local line")
 
-  local player = {
+  local player
+  local messages = {}
+  player = {
     valid = true,
     surface = surface,
     force = game.forces.player,
     selected = {valid = true, name = runtime_defs.ANCHOR_SLOT_PROXY_NAME, position = {x = 1, y = -9}},
-    cursor_stack = make_clearable_stack(anchor.item_name),
-    print = function() end
+    get_item_count = function(item_name)
+      return player.item_counts and player.item_counts[item_name] or 0
+    end,
+    remove_item = function(stack)
+      local available = player.get_item_count(stack.name)
+      local removed = math.min(available, stack.count or 1)
+      player.item_counts[stack.name] = available - removed
+      return removed
+    end,
+    print = function(message) messages[#messages + 1] = message end
   }
 
+  give_player_item(player, runtime_defs.get_generic_anchor_item_name("item", "ingress"))
   anchor_runtime.handle_managed_anchor_slot_click(player)
-
-  assert_equal(anchor.position.x, 1, "placing should assign the Vulcanus Managed Line to the selected anchor slot")
-  assert_equal(anchor.position.y, -9, "placing should use the Vulcanus square bounds")
-  assert_equal(player.cursor_stack.valid_for_read, false, "placing should consume the cursor item")
+  assert_equal(player.opened ~= nil, true, "slot click should open a configuration menu")
+  assert_equal(player.opened.position.x, 1, "configuration proxy should use the selected Vulcanus anchor slot")
+  assert_equal(player.opened.position.y, -9, "configuration proxy should use the Vulcanus square bounds")
 end)
 
 run_test("Space Age item ingress mining matches centered entity positions after reload", function()

@@ -76,10 +76,6 @@ function managed_line_runtime.apply_logistic_network_setting_to_force(force)
   return anchor_runtime.apply_logistic_network_setting_to_force(force)
 end
 
-function managed_line_runtime.update_all_player_previews()
-  return anchor_runtime.update_all_player_anchor_previews()
-end
-
 function managed_line_runtime.get_owned_line_counts(resource)
   return anchor_runtime.get_owned_line_counts(resource)
 end

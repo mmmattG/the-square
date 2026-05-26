@@ -55,7 +55,7 @@ local function assert_equal(actual, expected, message)
 end
 
 local function run_test(name, fn)
-  local ok, err = pcall(fn)
+  local ok, err = xpcall(fn, debug.traceback)
 
   if not ok then
     io.stderr:write("FAIL " .. name .. "\n" .. err .. "\n")
@@ -67,19 +67,59 @@ end
 
 local function build_player()
   local inventory = {}
+  local item_counts = {}
   local messages = {}
+  local player
+  local function create_entity(_, spec)
+    spec = spec or _
+    local entity
+    entity = {
+      valid = true,
+      name = spec.name,
+      position = spec.position,
+      direction = spec.direction,
+      force = spec.force,
+      active = true,
+      surface = player.surface,
+      destroy = function(self)
+        self.valid = false
+      end,
+      get_recipe = function(self)
+        return self.recipe
+      end,
+      set_recipe = function(recipe_name)
+        entity.recipe = recipe_name and {name = recipe_name} or nil
+      end
+    }
+    return entity
+  end
 
-  return {
+  player = {
     valid = true,
     force = {},
     position = {x = 0, y = 0},
     surface = {
+      name = "fes-bootstrap",
+      create_entity = create_entity,
+      find_entities_filtered = function()
+        return {}
+      end,
       spill_item_stack = function(_, _, _, _, _)
       end
     },
     insert = function(stack)
       inventory[#inventory + 1] = stack.name
+      item_counts[stack.name] = (item_counts[stack.name] or 0) + (stack.count or 1)
       return stack.count
+    end,
+    get_item_count = function(item_name)
+      return item_counts[item_name] or 0
+    end,
+    remove_item = function(stack)
+      local available = item_counts[stack.name] or 0
+      local removed = math.min(available, stack.count or 1)
+      item_counts[stack.name] = available - removed
+      return removed
     end,
     print = function(message)
       messages[#messages + 1] = message
@@ -91,6 +131,42 @@ local function build_player()
       return messages
     end
   }
+
+  return player
+end
+
+local function configure_selected_slot(player, resource, flow)
+  storage.bootstrap.square_size = storage.bootstrap.square_size or 12
+  local definition = flow == "egress" and runtime_defs.get_output_definition(resource) or runtime_defs.get_input_definition(resource)
+  player.insert({name = runtime_defs.get_generic_anchor_item_name(definition.kind, flow), count = 1})
+  player.surface.create_entity = player.surface.create_entity or function(_, spec)
+    spec = spec or _
+    local entity
+    entity = {
+      valid = true,
+      name = spec.name,
+      position = spec.position,
+      direction = spec.direction,
+      force = spec.force,
+      surface = player.surface,
+      active = true,
+      recipe = nil,
+      destroy = function(self) self.valid = false end,
+      get_recipe = function(self) return self.recipe end,
+      set_recipe = function(recipe_name) entity.recipe = recipe_name and {name = recipe_name} or nil end
+    }
+    return entity
+  end
+  player.surface.find_entities_filtered = player.surface.find_entities_filtered or function()
+    return {}
+  end
+  anchor_runtime.handle_managed_anchor_slot_click(player)
+  assert_equal(player.opened ~= nil, true, "slot click should open a Managed Line configuration menu")
+  player.opened.recipe = {name = runtime_defs.get_config_recipe_name(resource, flow)}
+  local configured = anchor_runtime.handle_anchor_recipe_changed(player.opened, player)
+  local message = player.get_messages()[#player.get_messages()]
+  assert_equal(configured, true, "recipe selection should configure the selected anchor slot: " .. tostring(message and message[1] or message))
+  return configured
 end
 
 local function build_force_with_oil_processing(prerequisites_researched)
@@ -222,7 +298,7 @@ run_test("placing crude oil ingress unlocks oil processing once prerequisites ar
     }
   }
 
-  anchor_runtime.handle_managed_anchor_slot_click(player)
+  player.opened = nil
 
   assert_equal(
     force.technologies["oil-processing"].researched,
@@ -252,7 +328,7 @@ run_test("placing crude oil ingress unlocks oil processing once prerequisites ar
   force.technologies["fluid-handling"].researched = true
   force.technologies["oil-gathering"].researched = true
 
-  anchor_runtime.handle_managed_anchor_slot_click(player)
+  player.opened = nil
 
   assert_equal(
     force.technologies["oil-processing"].researched,
@@ -293,13 +369,15 @@ run_test("placing crude oil ingress unlocks oil processing immediately when prer
     }
   }
 
-  anchor_runtime.handle_managed_anchor_slot_click(player)
+  configure_selected_slot(player, "crude-oil", "ingress")
 
   assert_equal(
     force.technologies["oil-processing"].researched,
     true,
     "crude oil placement should unlock oil processing immediately when prerequisites are already researched"
   )
+  assert_equal(anchor_runtime.get_owned_line_counts("crude-oil").owned, 1, "placing a purchased line should not duplicate ownership")
+  assert_equal(anchor_runtime.get_owned_line_counts("crude-oil").placed, 1, "placing a purchased line should move the stashed ownership record")
   assert_equal(#force.get_played_sounds(), 1, "immediate unlock should play the research-complete sound once")
   assert_equal(
     force.get_played_sounds()[1].path,
@@ -339,7 +417,7 @@ run_test("placing non-crude ingress does not unlock oil processing", function()
     }
   }
 
-  anchor_runtime.handle_managed_anchor_slot_click(player)
+  configure_selected_slot(player, "iron-ore", "ingress")
 
   assert_equal(force.technologies["oil-processing"].researched, false, "only crude oil placement should unlock oil processing")
   assert_equal(#force.get_played_sounds(), 0, "non-crude placement should not play the research-complete sound")
@@ -376,7 +454,7 @@ run_test("placing uranium ore ingress unlocks uranium processing once prerequisi
     }
   }
 
-  anchor_runtime.handle_managed_anchor_slot_click(player)
+  player.opened = nil
 
   assert_equal(
     force.technologies["uranium-processing"].researched,
@@ -405,7 +483,7 @@ run_test("placing uranium ore ingress unlocks uranium processing once prerequisi
 
   force.technologies["sulfur-processing"].researched = true
 
-  anchor_runtime.handle_managed_anchor_slot_click(player)
+  player.opened = nil
 
   assert_equal(
     force.technologies["uranium-processing"].researched,
@@ -446,7 +524,7 @@ run_test("placing uranium ore ingress unlocks uranium processing immediately whe
     }
   }
 
-  anchor_runtime.handle_managed_anchor_slot_click(player)
+  configure_selected_slot(player, "uranium-ore", "ingress")
 
   assert_equal(
     force.technologies["uranium-processing"].researched,
@@ -492,7 +570,7 @@ run_test("placing non-uranium ingress does not unlock uranium processing", funct
     }
   }
 
-  anchor_runtime.handle_managed_anchor_slot_click(player)
+  configure_selected_slot(player, "iron-ore", "ingress")
 
   assert_equal(
     force.technologies["uranium-processing"].researched,
@@ -685,6 +763,51 @@ run_test("choosing a Managed Line recipe configures the Managed Line for its min
   assert_equal(generic_entity.active, false, "selected recipes should stop crafting before the generic Managed Line is replaced")
 end)
 
+run_test("anchor slot configuration fails when matching Managed Line item is missing", function()
+  storage.bootstrap = {square_size = 12, surface_name = "fes-bootstrap"}
+  storage.planets = nil
+  storage.starter_anchors = {
+    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = {}
+  }
+
+  local player = build_player()
+  player.surface = {name = "fes-bootstrap"}
+  player.selected = {
+    valid = true,
+    name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
+    position = {x = -6, y = -7}
+  }
+  player.surface.create_entity = function(_, spec)
+    spec = spec or _
+    local entity
+    entity = {
+      valid = true,
+      name = spec.name,
+      position = spec.position,
+      direction = spec.direction,
+      force = spec.force,
+      surface = player.surface,
+      active = true,
+      recipe = nil,
+      destroy = function(self) self.valid = false end,
+      get_recipe = function(self) return self.recipe end,
+      set_recipe = function(recipe_name) entity.recipe = recipe_name and {name = recipe_name} or nil end
+    }
+    return entity
+  end
+  player.surface.find_entities_filtered = function()
+    return {}
+  end
+
+  anchor_runtime.handle_managed_anchor_slot_click(player)
+  player.opened.recipe = {name = runtime_defs.get_config_recipe_name("iron-ore", "ingress")}
+
+  assert_equal(anchor_runtime.handle_anchor_recipe_changed(player.opened, player), false, "missing inventory should reject placement")
+  assert_equal(player.get_messages()[1][1], "message.the-square-managed-line-missing-inventory", "missing inventory should explain the failure")
+  assert_equal(anchor_runtime.get_owned_line_counts("iron-ore").owned, 0, "failed placement should not create owned lines")
+end)
+
 run_test("ingress tier research sync keeps planet starter Managed Lines as minable base entities", function()
   local player_force = {
     valid = true,
@@ -766,43 +889,7 @@ run_test("ingress tier research sync keeps planet starter Managed Lines as minab
   assert_equal(storage.planets.fulgora.starter_anchors.anchors[1].entity, created_entities[1], "planet Managed Line state should point at the upgraded entity")
 end)
 
-run_test("Managed Line Placement Preview invalid cursor movement does not print placement errors", function()
-  rendering.drawn_sprites = {}
-  storage.bootstrap = {
-    square_size = 12
-  }
-  storage.planets = nil
-  storage.anchor_preview_ghosts = nil
-  storage.starter_anchors = {
-    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = {
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", nil, nil)
-    }
-  }
-
-  local player = build_player()
-  player.index = 1
-  player.valid = true
-  player.surface = {name = "nauvis"}
-  player.selected = {
-    valid = true,
-    name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
-    position = {x = 0, y = -6}
-  }
-  player.cursor_position = {x = 50.2, y = 3.7}
-  player.cursor_stack = {
-    valid_for_read = true,
-    name = runtime_defs.get_ingress_item_name("iron-ore"),
-    count = 1
-  }
-
-  anchor_runtime.update_player_anchor_preview(player)
-
-  assert_equal(#rendering.drawn_sprites, 1, "invalid cursor movement should still draw a preview")
-  assert_equal(#player.get_messages(), 0, "passive preview updates should not print invalid placement errors")
-end)
-
-run_test("attempted invalid Managed Line placement still prints placement errors", function()
+run_test("direct Managed Line placement tells players to use anchor slots", function()
   storage.bootstrap = {
     square_size = 12,
     surface_name = "nauvis"
@@ -833,7 +920,7 @@ run_test("attempted invalid Managed Line placement still prints placement errors
   game.get_player = function() return player end
 
   anchor_runtime.handle_entity_built({entity = invalid_edge_entity, player_index = 1})
-  assert_equal(player.get_messages()[1][1], "message.the-square-managed-line-invalid-edge", "invalid edge attempts should print an error")
+  assert_equal(player.get_messages()[1][1], "message.the-square-managed-line-use-anchor-slot", "direct placement attempts should point players at anchor slots")
 
   local fluid_gap_entity = {
     valid = true,
@@ -844,87 +931,5 @@ run_test("attempted invalid Managed Line placement still prints placement errors
   }
 
   anchor_runtime.handle_entity_built({entity = fluid_gap_entity, player_index = 1})
-  assert_equal(player.get_messages()[2][1], "message.the-square-managed-line-fluid-gap-required", "fluid gap attempts should print an error")
-end)
-
-run_test("Managed Line Placement Preview tolerates Factorio players without cursor_position", function()
-  rendering.drawn_sprites = {}
-  storage.bootstrap = {
-    square_size = 12
-  }
-  storage.planets = nil
-  storage.anchor_preview_ghosts = nil
-  storage.starter_anchors = {
-    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = {
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", nil, nil)
-    }
-  }
-
-  local player = build_player()
-  player.index = 1
-  player.valid = true
-  player.surface = {name = "nauvis"}
-  player.cursor_stack = {
-    valid_for_read = true,
-    name = runtime_defs.get_ingress_item_name("iron-ore"),
-    count = 1
-  }
-
-  setmetatable(player, {
-    __index = function(_, key)
-      if key == "cursor_position" then
-        error("LuaPlayer doesn't contain key cursor_position")
-      end
-    end
-  })
-
-  anchor_runtime.update_player_anchor_preview(player)
-
-  assert_equal(#rendering.drawn_sprites, 1, "preview should fall back to player position when cursor_position is unavailable")
-  assert_equal(rendering.drawn_sprites[1].args.target.x, 0.5, "fallback preview should snap to player tile x")
-  assert_equal(rendering.drawn_sprites[1].args.target.y, 0.5, "fallback preview should snap to player tile y")
-end)
-
-run_test("Managed Line Placement Preview follows cursor and stays visible with invalid tint", function()
-  rendering.drawn_sprites = {}
-  storage.bootstrap = {
-    square_size = 12
-  }
-  storage.planets = nil
-  storage.anchor_preview_ghosts = nil
-  storage.starter_anchors = {
-    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = {
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", nil, nil)
-    }
-  }
-
-  local player = build_player()
-  player.index = 1
-  player.valid = true
-  player.surface = {name = "nauvis"}
-  player.selected = {
-    valid = true,
-    name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
-    position = {x = 0, y = -6}
-  }
-  player.cursor_position = {x = 50.2, y = 3.7}
-  player.cursor_stack = {
-    valid_for_read = true,
-    name = runtime_defs.get_ingress_item_name("iron-ore"),
-    count = 1
-  }
-
-  anchor_runtime.update_player_anchor_preview(player)
-
-  assert_equal(#rendering.drawn_sprites, 1, "one preview should be drawn")
-  local args = rendering.drawn_sprites[1].args
-
-  assert_equal(args.target.x, 50.5, "preview should snap to the cursor tile x")
-  assert_equal(args.target.y, 3.5, "preview should snap to the cursor tile y")
-  assert_equal(args.tint.r, 1, "invalid preview should be red")
-  assert_equal(args.tint.g, 0, "invalid preview should not include green tint")
-  assert_equal(args.tint.b, 0, "invalid preview should not include blue tint")
-  assert_equal(args.sprite, "entity/" .. runtime_defs.get_ingress_entity_name("iron-ore", 1), "preview should use current-tier sprite")
+  assert_equal(player.get_messages()[2][1], "message.the-square-managed-line-use-anchor-slot", "all direct Managed Line placement should be rejected")
 end)

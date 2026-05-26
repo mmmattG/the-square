@@ -270,5 +270,4 @@ end)
 
 script.on_nth_tick(defs.ITEM_ANCHOR_INTERVAL_TICKS, function()
   managed_line_runtime.ensure_all()
-  managed_line_runtime.update_all_player_previews()
 end)
