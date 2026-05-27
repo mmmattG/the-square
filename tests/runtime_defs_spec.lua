@@ -98,10 +98,10 @@ run_test("screenshot alt mode defaults to the runtime-global toggle", function()
 end)
 
 run_test("item egress entity names follow researched belt tiers", function()
-  assert_equal(runtime_defs.get_egress_entity_name("yumako-seed", 1), "the-square-yumako-seed-egress-anchor")
-  assert_equal(runtime_defs.get_egress_entity_name("yumako-seed", 3), "the-square-yumako-seed-egress-anchor-red")
-  assert_equal(runtime_defs.get_egress_entity_name("yumako-seed", 5), "the-square-yumako-seed-egress-anchor-turbo")
-  assert_equal(runtime_defs.get_egress_entity_name("sulfuric-acid", 5), "the-square-sulfuric-acid-egress-anchor")
+  assert_equal(runtime_defs.get_egress_entity_name("yumako-seed", 1), "the-square-item-egress-managed-anchor")
+  assert_equal(runtime_defs.get_egress_entity_name("yumako-seed", 3), "the-square-item-egress-managed-anchor-red")
+  assert_equal(runtime_defs.get_egress_entity_name("yumako-seed", 5), "the-square-item-egress-managed-anchor-turbo")
+  assert_equal(runtime_defs.get_egress_entity_name("sulfuric-acid", 5), "the-square-fluid-egress-managed-anchor")
 end)
 
 run_test("fluid Managed Line items stay tierless", function()
@@ -128,7 +128,7 @@ run_test("Managed Line tier research includes the Space Age-only final tier", fu
 
   assert_equal(runtime_defs.get_ingress_tier_level_for_force(force), 5)
   assert_equal(runtime_defs.get_egress_tier_level_for_force(force), 5)
-  assert_equal(runtime_defs.get_ingress_entity_name("scrap", 5), "the-square-scrap-ingress-anchor-turbo")
+  assert_equal(runtime_defs.get_ingress_entity_name("scrap", 5), "the-square-item-ingress-managed-anchor-turbo")
 end)
 
 run_test("late resource configuration unlocks follow vanilla research", function()

@@ -249,20 +249,10 @@ local tips_and_tricks_items = {
   }
 }
 
-local function ingress_entity_name(resource, belt_tier_key)
-  if not belt_tier_key or belt_tier_key == "yellow" then
-    return "the-square-" .. resource .. "-ingress-anchor"
-  end
+local function active_anchor_entity_name(kind, flow, belt_tier_key)
+  local suffix = belt_tier_key and belt_tier_key ~= "yellow" and "-" .. belt_tier_key or ""
 
-  return "the-square-" .. resource .. "-ingress-anchor-" .. belt_tier_key
-end
-
-local function egress_entity_name(resource, belt_tier_key)
-  if not belt_tier_key or belt_tier_key == "yellow" then
-    return "the-square-" .. resource .. "-egress-anchor"
-  end
-
-  return "the-square-" .. resource .. "-egress-anchor-" .. belt_tier_key
+  return "the-square-" .. kind .. "-" .. flow .. "-managed-anchor" .. suffix
 end
 
 local function generic_anchor_item_name(kind, flow)
@@ -532,16 +522,18 @@ allow_anchor_on_out_of_map = function(source)
   make_anchor_lightning_safe(source)
 end
 
-local function build_ingress_entity(definition, belt_tier_key, belt_prototype_name)
-  local source = definition.kind == "fluid"
+local function build_ingress_entity(kind, belt_tier_key, belt_prototype_name)
+  local source = kind == "fluid"
     and table.deepcopy(data.raw["offshore-pump"]["offshore-pump"])
     or table.deepcopy(data.raw["underground-belt"][belt_prototype_name or "underground-belt"])
-  local item_name = generic_anchor_item_name_for_tier(definition.kind, "ingress", {key = belt_tier_key})
+  local item_name = generic_anchor_item_name_for_tier(kind, "ingress", {key = belt_tier_key})
 
-  source.name = ingress_entity_name(definition.resource, belt_tier_key)
-  source.localised_name = {"entity-name." .. generic_anchor_entity_name(definition.kind, "ingress")}
+  source.name = active_anchor_entity_name(kind, "ingress", belt_tier_key)
+  source.localised_name = {"entity-name." .. generic_anchor_entity_name(kind, "ingress")}
   source.localised_description = {"entity-description.the-square-ingress-anchor"}
-  source.icon = definition.icon
+  source.icon = kind == "fluid"
+    and "__base__/graphics/icons/offshore-pump.png"
+    or ((data.raw.item[belt_prototype_name or "underground-belt"] or {}).icon or "__base__/graphics/icons/underground-belt.png")
   source.icon_size = 64
   source.minable = {mining_time = 0.1, result = item_name}
   source.placeable_by = {item = item_name, count = 1}
@@ -644,16 +636,18 @@ local function build_anchor_open_input()
   }
 end
 
-local function build_egress_entity(definition, belt_tier_key, belt_prototype_name)
-  local source = definition.kind == "item"
+local function build_egress_entity(kind, belt_tier_key, belt_prototype_name)
+  local source = kind == "item"
     and table.deepcopy(data.raw["underground-belt"][belt_prototype_name or "underground-belt"])
     or table.deepcopy(data.raw["pipe-to-ground"]["pipe-to-ground"])
-  local item_name = generic_anchor_item_name_for_tier(definition.kind, "egress", {key = belt_tier_key})
+  local item_name = generic_anchor_item_name_for_tier(kind, "egress", {key = belt_tier_key})
 
-  source.name = egress_entity_name(definition.resource, belt_tier_key)
-  source.localised_name = {"entity-name." .. generic_anchor_entity_name(definition.kind, "egress")}
+  source.name = active_anchor_entity_name(kind, "egress", belt_tier_key)
+  source.localised_name = {"entity-name." .. generic_anchor_entity_name(kind, "egress")}
   source.localised_description = {"entity-description.the-square-egress-anchor"}
-  source.icon = definition.icon
+  source.icon = kind == "item"
+    and ((data.raw.item[belt_prototype_name or "underground-belt"] or {}).icon or "__base__/graphics/icons/underground-belt.png")
+    or "__base__/graphics/icons/pipe-to-ground.png"
   source.icon_size = 64
   source.minable = {mining_time = 0.1, result = item_name}
   source.placeable_by = {item = item_name, count = 1}
@@ -942,33 +936,25 @@ for _, tier in ipairs(managed_line_item_tiers) do
   end
 end
 
-for _, definition in ipairs(ingress_resources) do
-  if definition.kind == "item" then
-    for _, belt_tier in ipairs(item_ingress_belt_tiers) do
-      prototypes[#prototypes + 1] = build_ingress_entity(
-        definition,
-        belt_tier.key,
-        belt_tier.prototype_name
-      )
-    end
-  else
-    prototypes[#prototypes + 1] = build_ingress_entity(definition)
-  end
+for _, belt_tier in ipairs(item_ingress_belt_tiers) do
+  prototypes[#prototypes + 1] = build_ingress_entity(
+    "item",
+    belt_tier.key,
+    belt_tier.prototype_name
+  )
 end
 
-for _, definition in ipairs(egress_resources) do
-  if definition.kind == "item" then
-    for _, belt_tier in ipairs(item_egress_belt_tiers) do
-      prototypes[#prototypes + 1] = build_egress_entity(
-        definition,
-        belt_tier.key,
-        belt_tier.prototype_name
-      )
-    end
-  else
-    prototypes[#prototypes + 1] = build_egress_entity(definition)
-  end
+prototypes[#prototypes + 1] = build_ingress_entity("fluid")
+
+for _, belt_tier in ipairs(item_egress_belt_tiers) do
+  prototypes[#prototypes + 1] = build_egress_entity(
+    "item",
+    belt_tier.key,
+    belt_tier.prototype_name
+  )
 end
+
+prototypes[#prototypes + 1] = build_egress_entity("fluid")
 
 for _, definition in ipairs(ingress_resources) do
   prototypes[#prototypes + 1] = build_config_recipe(definition, "ingress", "all")

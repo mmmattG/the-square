@@ -282,6 +282,17 @@ function runtime_defs.get_generic_anchor_entity_name(kind, flow)
   return runtime_defs.GENERIC_ANCHOR_ENTITIES[get_generic_anchor_key(kind, flow)]
 end
 
+function runtime_defs.get_active_anchor_entity_name(kind, flow, tier_level)
+  local suffix = ""
+
+  if kind == "item" then
+    local tier_key = runtime_defs.get_managed_line_item_tier_key(tier_level)
+    suffix = tier_key and tier_key ~= "yellow" and "-" .. tier_key or ""
+  end
+
+  return "the-square-" .. kind .. "-" .. flow .. "-managed-anchor" .. suffix
+end
+
 function runtime_defs.get_managed_line_item_tier_key(tier_level)
   for _, tier in ipairs(runtime_defs.MANAGED_LINE_ITEM_TIERS) do
     if tier.tier_level == tier_level then
@@ -409,12 +420,20 @@ function runtime_defs.get_ingress_entity_name(resource, ingress_tier_level)
   end
 
   if get_input_kind_for_resource(resource) ~= "item" then
-    return "the-square-" .. resource .. "-ingress-anchor"
+    return runtime_defs.get_active_anchor_entity_name("fluid", "ingress")
+  end
+
+  return runtime_defs.get_active_anchor_entity_name("item", "ingress", ingress_tier_level)
+end
+
+local function get_legacy_ingress_entity_name(resource, ingress_tier_level)
+  if not resource then
+    return nil
   end
 
   local belt_tier_key = runtime_defs.ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER[ingress_tier_level or 1] or "yellow"
 
-  if belt_tier_key == "yellow" then
+  if get_input_kind_for_resource(resource) ~= "item" or belt_tier_key == "yellow" then
     return "the-square-" .. resource .. "-ingress-anchor"
   end
 
@@ -426,8 +445,16 @@ function runtime_defs.is_ingress_entity_name_for_resource(resource, entity_name)
     return true
   end
 
+  if entity_name == get_legacy_ingress_entity_name(resource, 1) then
+    return true
+  end
+
   for tier_level = 2, runtime_defs.MAX_INGRESS_TIER do
     if entity_name == runtime_defs.get_ingress_entity_name(resource, tier_level) then
+      return true
+    end
+
+    if entity_name == get_legacy_ingress_entity_name(resource, tier_level) then
       return true
     end
   end
@@ -502,12 +529,20 @@ function runtime_defs.get_egress_entity_name(resource, egress_tier_level)
   end
 
   if get_output_kind_for_resource(resource) ~= "item" then
-    return "the-square-" .. resource .. "-egress-anchor"
+    return runtime_defs.get_active_anchor_entity_name("fluid", "egress")
+  end
+
+  return runtime_defs.get_active_anchor_entity_name("item", "egress", egress_tier_level)
+end
+
+local function get_legacy_egress_entity_name(resource, egress_tier_level)
+  if not resource then
+    return nil
   end
 
   local belt_tier_key = runtime_defs.ITEM_EGRESS_BELT_TIER_BY_EGRESS_TIER[egress_tier_level or 1] or "yellow"
 
-  if belt_tier_key == "yellow" then
+  if get_output_kind_for_resource(resource) ~= "item" or belt_tier_key == "yellow" then
     return "the-square-" .. resource .. "-egress-anchor"
   end
 
@@ -519,8 +554,16 @@ function runtime_defs.is_egress_entity_name_for_resource(resource, entity_name)
     return true
   end
 
+  if entity_name == get_legacy_egress_entity_name(resource, 1) then
+    return true
+  end
+
   for tier_level = 2, runtime_defs.MAX_EGRESS_TIER do
     if entity_name == runtime_defs.get_egress_entity_name(resource, tier_level) then
+      return true
+    end
+
+    if entity_name == get_legacy_egress_entity_name(resource, tier_level) then
       return true
     end
   end
