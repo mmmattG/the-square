@@ -104,6 +104,19 @@ run_test("item egress entity names follow researched belt tiers", function()
   assert_equal(runtime_defs.get_egress_entity_name("sulfuric-acid", 5), "the-square-sulfuric-acid-egress-anchor")
 end)
 
+run_test("fluid Managed Line items stay tierless", function()
+  assert_equal(
+    runtime_defs.get_generic_anchor_item_name_for_tier("fluid", "ingress", 3),
+    "the-square-fluid-ingress-anchor",
+    "fluid ingress should keep one item tier"
+  )
+  assert_equal(
+    runtime_defs.get_generic_anchor_item_name_for_tier("fluid", "egress", 5),
+    "the-square-fluid-egress-anchor",
+    "fluid egress should keep one item tier"
+  )
+end)
+
 run_test("Managed Line tier research includes the Space Age-only final tier", function()
   local force = {
     valid = true,

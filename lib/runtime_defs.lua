@@ -263,6 +263,10 @@ function runtime_defs.get_generic_anchor_item_name_for_tier(kind, flow, tier_lev
     return nil
   end
 
+  if kind == "fluid" then
+    return base_name
+  end
+
   local tier_key = runtime_defs.get_managed_line_item_tier_key(tier_level)
 
   if not tier_key or tier_key == "yellow" then

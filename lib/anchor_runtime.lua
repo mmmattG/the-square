@@ -987,7 +987,7 @@ local function add_anchor_config_category_tabs(parent, selected_category)
   end
 end
 
-local function add_anchor_config_resource_grid(parent, definitions, flow, kind, anchor, force)
+local function add_anchor_config_resource_grid(parent, definitions, flow, kind, anchor, force, selected_tier_level)
   local table_element = parent.add({
     type = "table",
     column_count = 10
@@ -1001,7 +1001,9 @@ local function add_anchor_config_resource_grid(parent, definitions, flow, kind, 
         or defs.is_config_definition_unlocked(definition, flow, force)
       )
     then
-      local selected = anchor.resource == definition.resource and anchor.flow == flow
+      local selected = anchor.resource == definition.resource
+        and anchor.flow == flow
+        and (kind == "fluid" or (anchor.tier_level or 1) == (selected_tier_level or 1))
       local sprite_prefix = definition.kind == "fluid" and "fluid/" or "item/"
       local button = table_element.add({
         type = "sprite-button",
@@ -1095,8 +1097,11 @@ local function open_anchor_config_gui(player, anchor, planet_name, category_name
     and defs.get_output_definitions(planet_name)
     or defs.get_input_definitions(planet_name)
 
-  add_anchor_config_resource_grid(frame, definitions, category.flow, category.kind, anchor, player.force)
-  add_anchor_config_tier_selector(frame, player, tier_level)
+  add_anchor_config_resource_grid(frame, definitions, category.flow, category.kind, anchor, player.force, tier_level)
+
+  if category.kind == "item" then
+    add_anchor_config_tier_selector(frame, player, tier_level)
+  end
 
   player.opened = frame
 
@@ -1485,6 +1490,10 @@ function anchor_runtime.handle_anchor_config_gui_click(player, element)
   if not ok then
     player.print(get_anchor_placement_rejection_message(reason))
     return true
+  end
+
+  if definition.kind == "fluid" then
+    selected_tier_level = 1
   end
 
   local is_fresh_anchor_configuration = not anchor.resource

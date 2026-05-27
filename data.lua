@@ -146,8 +146,10 @@ local function get_managed_line_tier_recipe_names(tier_key)
 
   for _, kind in ipairs({"item", "fluid"}) do
     for _, flow in ipairs({"ingress", "egress"}) do
-      local base_name = "the-square-" .. kind .. "-" .. flow .. "-anchor"
-      names[#names + 1] = tier_key == "yellow" and base_name or base_name .. "-" .. tier_key
+      if kind == "item" or tier_key == "yellow" then
+        local base_name = "the-square-" .. kind .. "-" .. flow .. "-anchor"
+        names[#names + 1] = tier_key == "yellow" and base_name or base_name .. "-" .. tier_key
+      end
     end
   end
 
@@ -268,6 +270,10 @@ end
 local function generic_anchor_item_name_for_tier(kind, flow, tier)
   local base_name = generic_anchor_item_name(kind, flow)
 
+  if kind == "fluid" then
+    return base_name
+  end
+
   if not tier or tier.key == "yellow" then
     return base_name
   end
@@ -305,6 +311,10 @@ local function build_parameterised_anchor_icons(icon)
 end
 
 local function build_tiered_managed_line_icons(tier, kind, flow, fallback_icon)
+  if kind == "fluid" then
+    return build_parameterised_anchor_icons(fallback_icon)
+  end
+
   local icon = fallback_icon
   local icon_size = 64
 
@@ -333,7 +343,7 @@ local function build_generic_anchor_item(name, icon, order, place_result, tier, 
   return {
     type = "item",
     name = name,
-    localised_name = tier
+    localised_name = tier and kind == "item"
       and {"item-name.the-square-tiered-generic-anchor", {"the-square-managed-line-tier." .. tier.key}, {"item-name." .. generic_anchor_item_name(kind, flow)}}
       or nil,
     localised_description = {"item-description.the-square-generic-anchor"},
@@ -849,18 +859,20 @@ local generic_anchor_item_definitions = {
 for _, tier in ipairs(managed_line_item_tiers) do
   if is_managed_line_item_tier_available(tier) then
     for _, definition in ipairs(generic_anchor_item_definitions) do
-      local item_name = generic_anchor_item_name_for_tier(definition.kind, definition.flow, tier)
-      local order_suffix = tier.key == "yellow" and definition.order or definition.order .. "-" .. tier.key
+      if definition.kind ~= "fluid" or tier.key == "yellow" then
+        local item_name = generic_anchor_item_name_for_tier(definition.kind, definition.flow, tier)
+        local order_suffix = tier.key == "yellow" and definition.order or definition.order .. "-" .. tier.key
 
-      prototypes[#prototypes + 1] = build_generic_anchor_item(
-        item_name,
-        definition.icon,
-        "z[the-square]-" .. order_suffix,
-        tier.key == "yellow" and definition.place_result or nil,
-        tier,
-        definition.kind,
-        definition.flow
-      )
+        prototypes[#prototypes + 1] = build_generic_anchor_item(
+          item_name,
+          definition.icon,
+          "z[the-square]-" .. order_suffix,
+          tier.key == "yellow" and definition.place_result or nil,
+          tier,
+          definition.kind,
+          definition.flow
+        )
+      end
     end
   end
 end
@@ -876,50 +888,52 @@ prototypes[#prototypes + 1] = build_recipe("the-square-anchor-frame", "the-squar
 for _, tier in ipairs(managed_line_item_tiers) do
   if is_managed_line_item_tier_available(tier) then
     for _, definition in ipairs(generic_anchor_item_definitions) do
-      local item_name = generic_anchor_item_name_for_tier(definition.kind, definition.flow, tier)
-      local ingredients
+      if definition.kind ~= "fluid" or tier.key == "yellow" then
+        local item_name = generic_anchor_item_name_for_tier(definition.kind, definition.flow, tier)
+        local ingredients
 
-      if tier.key == "yellow" then
-        if definition.kind == "item" then
-          ingredients = {
-            {type = "item", name = "the-square-anchor-frame", amount = tier.anchor_frames},
-            {type = "item", name = "transport-belt", amount = 50},
-            {type = "item", name = "underground-belt", amount = 5}
-          }
-        elseif definition.flow == "ingress" then
-          ingredients = {
-            {type = "item", name = "the-square-anchor-frame", amount = tier.anchor_frames},
-            {type = "item", name = "pipe", amount = 50},
-            {type = "item", name = "offshore-pump", amount = 1}
-          }
+        if tier.key == "yellow" then
+          if definition.kind == "item" then
+            ingredients = {
+              {type = "item", name = "the-square-anchor-frame", amount = tier.anchor_frames},
+              {type = "item", name = "transport-belt", amount = 50},
+              {type = "item", name = "underground-belt", amount = 5}
+            }
+          elseif definition.flow == "ingress" then
+            ingredients = {
+              {type = "item", name = "the-square-anchor-frame", amount = tier.anchor_frames},
+              {type = "item", name = "pipe", amount = 50},
+              {type = "item", name = "offshore-pump", amount = 1}
+            }
+          else
+            ingredients = {
+              {type = "item", name = "the-square-anchor-frame", amount = tier.anchor_frames},
+              {type = "item", name = "pipe", amount = 50},
+              {type = "item", name = "pipe-to-ground", amount = 1}
+            }
+          end
         else
           ingredients = {
-            {type = "item", name = "the-square-anchor-frame", amount = tier.anchor_frames},
-            {type = "item", name = "pipe", amount = 50},
-            {type = "item", name = "pipe-to-ground", amount = 1}
+            {type = "item", name = generic_anchor_item_name_for_tier(definition.kind, definition.flow, {key = tier.previous_key}), amount = 1},
+            {type = "item", name = "the-square-anchor-frame", amount = tier.anchor_frames}
           }
-        end
-      else
-        ingredients = {
-          {type = "item", name = generic_anchor_item_name_for_tier(definition.kind, definition.flow, {key = tier.previous_key}), amount = 1},
-          {type = "item", name = "the-square-anchor-frame", amount = tier.anchor_frames}
-        }
 
-        ingredients[#ingredients + 1] = {type = "item", name = tier.item_belt, amount = 50}
-        ingredients[#ingredients + 1] = {type = "item", name = tier.underground_belt, amount = 5}
+          ingredients[#ingredients + 1] = {type = "item", name = tier.item_belt, amount = 50}
+          ingredients[#ingredients + 1] = {type = "item", name = tier.underground_belt, amount = 5}
 
-        if definition.kind ~= "item" and definition.flow == "ingress" then
-          ingredients[#ingredients + 1] = {type = "item", name = "pipe", amount = 50}
-          ingredients[#ingredients + 1] = {type = "item", name = "pump", amount = 1}
-        elseif definition.kind ~= "item" then
-          ingredients[#ingredients + 1] = {type = "item", name = "pipe", amount = 50}
-          ingredients[#ingredients + 1] = {type = "item", name = "pipe-to-ground", amount = 5}
+          if definition.kind ~= "item" and definition.flow == "ingress" then
+            ingredients[#ingredients + 1] = {type = "item", name = "pipe", amount = 50}
+            ingredients[#ingredients + 1] = {type = "item", name = "pump", amount = 1}
+          elseif definition.kind ~= "item" then
+            ingredients[#ingredients + 1] = {type = "item", name = "pipe", amount = 50}
+            ingredients[#ingredients + 1] = {type = "item", name = "pipe-to-ground", amount = 5}
+          end
         end
+
+        local recipe = build_recipe(item_name, item_name, ingredients, 5)
+        recipe.enabled = tier.key == "yellow"
+        prototypes[#prototypes + 1] = recipe
       end
-
-      local recipe = build_recipe(item_name, item_name, ingredients, 5)
-      recipe.enabled = tier.key == "yellow"
-      prototypes[#prototypes + 1] = recipe
     end
   end
 end

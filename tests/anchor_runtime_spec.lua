@@ -71,7 +71,9 @@ local function build_player()
   local messages = {}
   local player
   local function make_gui_parent()
-    local parent = {}
+    local parent = {
+      children = {}
+    }
     parent.add = function(_, spec)
       spec = spec or _
       local child = make_gui_parent()
@@ -89,6 +91,7 @@ local function build_player()
       if child.name then
         parent[child.name] = child
       end
+      parent.children[#parent.children + 1] = child
       return child
     end
     return parent
@@ -257,6 +260,26 @@ local function build_force_with_uranium_processing(prerequisites_researched)
   }
 end
 
+local function find_gui_child(parent, name)
+  if not parent then
+    return nil
+  end
+
+  if parent.name == name then
+    return parent
+  end
+
+  for _, child in ipairs(parent.children or {}) do
+    local match = find_gui_child(child, name)
+
+    if match then
+      return match
+    end
+  end
+
+  return nil
+end
+
 run_test("uranium purchase also grants one sulfuric acid egress line", function()
   local player = build_player()
   local crude_oil_definition = runtime_defs.get_input_definition("crude-oil")
@@ -317,6 +340,56 @@ run_test("swapping anchor line type refunds the previous Managed Line item", fun
   assert_equal(anchor.resource, "water", "anchor should switch to the selected fluid ingress")
   assert_equal(player.get_item_count(runtime_defs.get_generic_anchor_item_name("fluid", "ingress")), 0, "new fluid line item should be consumed")
   assert_equal(player.get_item_count(runtime_defs.get_generic_anchor_item_name("item", "ingress")), 1, "previous item line should be refunded")
+end)
+
+run_test("same item resource can be reselected when the selected tier differs", function()
+  storage.bootstrap = {square_size = 12, surface_name = "fes-bootstrap"}
+  storage.planets = nil
+  storage.starter_anchors = {
+    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = {
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", "north", {x = -6, y = -7}, 1)
+    }
+  }
+
+  local player = build_player()
+  player.force = {
+    valid = true,
+    technologies = {
+      ["the-square-ingress-red"] = {researched = true}
+    }
+  }
+  player.surface = {name = "fes-bootstrap"}
+  player.insert({name = runtime_defs.get_generic_anchor_item_name_for_tier("item", "ingress", 3), count = 1})
+
+  anchor_runtime.handle_anchor_gui_opened({
+    valid = true,
+    name = runtime_defs.get_ingress_entity_name("iron-ore", 1),
+    position = {x = -6, y = -7},
+    surface = player.surface
+  }, player)
+
+  assert_equal(anchor_runtime.handle_anchor_config_gui_click(player, {
+    valid = true,
+    name = runtime_defs.ANCHOR_CONFIG_TIER_BUTTON_PREFIX .. "red"
+  }), true, "red tier click should be handled")
+
+  local frame = player.gui.screen[runtime_defs.ANCHOR_CONFIG_FRAME_NAME]
+  local iron_button = find_gui_child(frame, runtime_defs.ANCHOR_CONFIG_BUTTON_PREFIX .. "pick__ingress__iron-ore")
+
+  assert_equal(iron_button ~= nil, true, "iron ore should still be present in the resource grid")
+  assert_equal(iron_button.enabled, true, "same resource should stay enabled when the selected tier is different")
+
+  assert_equal(anchor_runtime.handle_anchor_config_gui_click(player, {
+    valid = true,
+    name = runtime_defs.ANCHOR_CONFIG_BUTTON_PREFIX .. "pick__ingress__iron-ore"
+  }), true, "same-resource tier upgrade should be handled")
+
+  local anchor = storage.starter_anchors.anchors[1]
+  assert_equal(anchor.resource, "iron-ore", "anchor should keep the selected item resource")
+  assert_equal(anchor.tier_level, 3, "anchor should move to the selected tier")
+  assert_equal(player.get_item_count(runtime_defs.get_generic_anchor_item_name_for_tier("item", "ingress", 3)), 0, "new tier line item should be consumed")
+  assert_equal(player.get_item_count(runtime_defs.get_generic_anchor_item_name_for_tier("item", "ingress", 1)), 1, "previous tier line item should be refunded")
 end)
 
 run_test("swapping anchor line type is cancelled when previous Managed Line cannot be refunded", function()
