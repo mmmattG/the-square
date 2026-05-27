@@ -536,14 +536,14 @@ local function build_ingress_entity(definition, belt_tier_key, belt_prototype_na
   local source = definition.kind == "fluid"
     and table.deepcopy(data.raw["offshore-pump"]["offshore-pump"])
     or table.deepcopy(data.raw["underground-belt"][belt_prototype_name or "underground-belt"])
-  local item_name = generic_anchor_item_name(definition.kind, "ingress")
+  local item_name = generic_anchor_item_name_for_tier(definition.kind, "ingress", {key = belt_tier_key})
 
   source.name = ingress_entity_name(definition.resource, belt_tier_key)
   source.localised_name = {"entity-name." .. generic_anchor_entity_name(definition.kind, "ingress")}
   source.localised_description = {"entity-description.the-square-ingress-anchor"}
   source.icon = definition.icon
   source.icon_size = 64
-  source.minable = {mining_time = 0.1, result = generic_anchor_item_name(definition.kind, "ingress")}
+  source.minable = {mining_time = 0.1, result = item_name}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
   allow_anchor_on_out_of_map(source)
@@ -648,14 +648,14 @@ local function build_egress_entity(definition, belt_tier_key, belt_prototype_nam
   local source = definition.kind == "item"
     and table.deepcopy(data.raw["underground-belt"][belt_prototype_name or "underground-belt"])
     or table.deepcopy(data.raw["pipe-to-ground"]["pipe-to-ground"])
-  local item_name = generic_anchor_item_name(definition.kind, "egress")
+  local item_name = generic_anchor_item_name_for_tier(definition.kind, "egress", {key = belt_tier_key})
 
   source.name = egress_entity_name(definition.resource, belt_tier_key)
   source.localised_name = {"entity-name." .. generic_anchor_entity_name(definition.kind, "egress")}
   source.localised_description = {"entity-description.the-square-egress-anchor"}
   source.icon = definition.icon
   source.icon_size = 64
-  source.minable = {mining_time = 0.1, result = generic_anchor_item_name(definition.kind, "egress")}
+  source.minable = {mining_time = 0.1, result = item_name}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
   allow_anchor_on_out_of_map(source)

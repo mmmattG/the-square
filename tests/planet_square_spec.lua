@@ -85,7 +85,16 @@ run_test("Planet Square expands Nauvis through one interface and preserves Manag
   storage = {
     bootstrap = {square_size = 7, surface_size = 9, surface_name = "nauvis", expansion_research_levels = 0},
     starter_anchors = {
-      anchors = {{kind = "item", flow = "ingress", side = "north", position = {x = 0, y = -4}, entity_name = "iron-ore-ingress"}}
+      anchors = {
+        {
+          resource = "iron-ore",
+          kind = "item",
+          flow = "ingress",
+          side = "north",
+          position = {x = 0, y = -4},
+          entity_name = "iron-ore-ingress"
+        }
+      }
     }
   }
 
@@ -110,8 +119,22 @@ run_test("Planet Square expands a non-Nauvis Planet with the same Managed Line S
         floor_tile_name = "volcanic-ash-soil",
         starter_anchors = {
           anchors = {
-            {kind = "item", flow = "ingress", side = "north", position = {x = 0, y = -3}, entity_name = "the-square-coal-ingress-anchor"},
-            {kind = "fluid", flow = "ingress", side = "west", position = {x = -3, y = 0}, entity_name = "the-square-lava-ingress-anchor"}
+            {
+              resource = "coal",
+              kind = "item",
+              flow = "ingress",
+              side = "north",
+              position = {x = 0, y = -3},
+              entity_name = "the-square-coal-ingress-anchor"
+            },
+            {
+              resource = "lava",
+              kind = "fluid",
+              flow = "ingress",
+              side = "west",
+              position = {x = -3, y = 0},
+              entity_name = "the-square-lava-ingress-anchor"
+            }
           }
         }
       }
@@ -138,7 +161,14 @@ run_test("Planet Square expansion leaves egress belt stubs instead of extra egre
         floor_tile_name = "lowland-cream-cauliflower",
         starter_anchors = {
           anchors = {
-            {kind = "item", flow = "egress", side = "south", position = {x = 0, y = 3}, entity_name = "the-square-yumako-seed-egress-anchor"}
+            {
+              resource = "yumako-seed",
+              kind = "item",
+              flow = "egress",
+              side = "south",
+              position = {x = 0, y = 3},
+              entity_name = "the-square-yumako-seed-egress-anchor"
+            }
           }
         }
       }
@@ -149,6 +179,24 @@ run_test("Planet Square expansion leaves egress belt stubs instead of extra egre
 
   assert_equal(gleba.created_entities[1].name, "transport-belt", "item egress should leave a belt stub, not an egress Managed Line")
   assert_equal(storage.planets.gleba.starter_anchors.anchors[1].position.y, 4, "egress Managed Lines should shift outward")
+end)
+
+run_test("Planet Square expansion does not leave belt stubs for deleted Managed Lines", function()
+  local surface = make_surface("nauvis")
+  install_game({nauvis = surface})
+  storage = {
+    bootstrap = {square_size = 7, surface_size = 9, surface_name = "nauvis", expansion_research_levels = 0},
+    starter_anchors = {
+      anchors = {
+        {side = "north", position = {x = 0, y = -4}, item_progress = {0, 0}}
+      }
+    }
+  }
+
+  planet_square.apply_square_expansion("nauvis")
+
+  assert_equal(#surface.created_entities, 0, "deleted Managed Line slots should not leave trailing belt stubs")
+  assert_equal(storage.starter_anchors.anchors[1].position.y, -5, "empty anchor slots should still shift outward")
 end)
 
 run_test("Planet Square expansion leaves turbo belt stubs at turbo Managed Line tier", function()
@@ -164,8 +212,22 @@ run_test("Planet Square expansion leaves turbo belt stubs at turbo Managed Line 
         floor_tile_name = "lowland-cream-cauliflower",
         starter_anchors = {
           anchors = {
-            {kind = "item", flow = "ingress", side = "north", position = {x = 0, y = -3}, entity_name = "the-square-yumako-ingress-anchor-turbo"},
-            {kind = "item", flow = "egress", side = "south", position = {x = 0, y = 3}, entity_name = "the-square-yumako-seed-egress-anchor-turbo"}
+            {
+              resource = "yumako",
+              kind = "item",
+              flow = "ingress",
+              side = "north",
+              position = {x = 0, y = -3},
+              entity_name = "the-square-yumako-ingress-anchor-turbo"
+            },
+            {
+              resource = "yumako-seed",
+              kind = "item",
+              flow = "egress",
+              side = "south",
+              position = {x = 0, y = 3},
+              entity_name = "the-square-yumako-seed-egress-anchor-turbo"
+            }
           }
         }
       }

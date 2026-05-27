@@ -136,7 +136,7 @@ local function leave_trailing_stubs_for_expansion(surface, managed_lines)
   end
 
   for _, anchor in ipairs(managed_lines.anchors) do
-    if anchor.position then
+    if anchor.position and anchor.resource then
       leave_trailing_ingress_stub(surface, anchor)
     end
   end
