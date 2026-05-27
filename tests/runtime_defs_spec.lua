@@ -117,3 +117,35 @@ run_test("Managed Line tier research includes the Space Age-only final tier", fu
   assert_equal(runtime_defs.get_egress_tier_level_for_force(force), 5)
   assert_equal(runtime_defs.get_ingress_entity_name("scrap", 5), "the-square-scrap-ingress-anchor-turbo")
 end)
+
+run_test("late resource configuration unlocks follow vanilla research", function()
+  local force = {
+    valid = true,
+    technologies = {
+      ["oil-gathering"] = {researched = true},
+      ["oil-processing"] = {researched = true},
+      ["uranium-mining"] = {researched = true}
+    }
+  }
+
+  assert_equal(
+    runtime_defs.is_config_definition_unlocked(runtime_defs.get_input_definition("crude-oil"), "ingress", force),
+    true,
+    "oil gathering plus oil processing should unlock crude oil ingress configuration"
+  )
+  assert_equal(
+    runtime_defs.is_config_definition_unlocked(runtime_defs.get_input_definition("uranium-ore"), "ingress", force),
+    true,
+    "uranium mining should unlock uranium ingress configuration"
+  )
+  assert_equal(
+    runtime_defs.is_config_definition_unlocked(runtime_defs.get_input_definition("sulfuric-acid", "vulcanus"), "ingress", force),
+    true,
+    "uranium mining should unlock sulfuric acid ingress configuration"
+  )
+  assert_equal(
+    runtime_defs.is_config_definition_unlocked(runtime_defs.get_output_definition("sulfuric-acid"), "egress", force),
+    true,
+    "uranium mining should unlock sulfuric acid egress configuration"
+  )
+end)

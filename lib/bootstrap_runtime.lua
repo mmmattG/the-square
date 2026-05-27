@@ -140,7 +140,8 @@ local function build_stashed_managed_anchor(kind, flow)
   return {
     kind = kind,
     flow = flow,
-    item_name = defs.get_generic_anchor_item_name(kind, flow),
+    tier_level = 1,
+    item_name = defs.get_generic_anchor_item_name_for_tier(kind, flow, 1),
     entity_name = defs.get_generic_anchor_entity_name(kind, flow),
     item_progress = {0, 0}
   }

@@ -81,7 +81,7 @@ local function get_trailing_entity_name(anchor)
     return "pipe"
   end
 
-  local tier_level = anchor.flow == "egress" and defs.get_current_egress_tier_level() or defs.get_current_ingress_tier_level()
+  local tier_level = anchor.tier_level or (anchor.flow == "egress" and defs.get_current_egress_tier_level() or defs.get_current_ingress_tier_level())
   local tier_map = anchor.flow == "egress" and defs.ITEM_EGRESS_BELT_TIER_BY_EGRESS_TIER or defs.ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER
   local belt_tier_key = tier_map[tier_level] or "yellow"
 

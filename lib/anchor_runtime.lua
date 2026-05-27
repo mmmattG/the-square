@@ -715,14 +715,14 @@ function anchor_runtime.is_resource_unlocked(resource)
   return anchor_runtime.get_owned_line_counts(resource).owned > 0
 end
 
-function anchor_runtime.can_purchase_line(resource)
-  local definition = defs.get_input_definition(resource) or defs.get_output_definition(resource)
+function anchor_runtime.can_purchase_line(resource, force)
+  local definition, flow = defs.get_line_definition(resource)
 
   if not definition then
     return false, "message.the-square-shop-resource-unknown", nil
   end
 
-  if anchor_runtime.is_resource_unlocked(resource) or definition.starter_side then
+  if anchor_runtime.is_resource_unlocked(resource) or defs.is_config_definition_unlocked(definition, flow, force) then
     return true, nil, nil
   end
 
@@ -815,7 +815,7 @@ function anchor_runtime.purchase_managed_line_for_resource(player, resource)
     return
   end
 
-  local can_purchase, message_key, message_resource = anchor_runtime.can_purchase_line(resource)
+  local can_purchase, message_key, message_resource = anchor_runtime.can_purchase_line(resource, player and player.force)
 
   if not can_purchase then
     if player and player.valid then
@@ -908,12 +908,13 @@ local function destroy_anchor_config_gui(player)
   end
 end
 
-local function remember_open_anchor_config(player, planet_name, anchor, category)
+local function remember_open_anchor_config(player, planet_name, anchor, category, tier_level)
   storage.anchor_config_open = storage.anchor_config_open or {}
   storage.anchor_config_open[player.index or player.player_index or 1] = {
     planet_name = planet_name,
     position_key = anchor.position and defs.get_position_key(anchor.position) or nil,
-    category = category or "ingress_item"
+    category = category or "ingress_item",
+    tier_level = tier_level or anchor.tier_level or 1
   }
 end
 
@@ -922,25 +923,25 @@ local ANCHOR_CONFIG_CATEGORIES = {
     flow = "ingress",
     kind = "item",
     caption = {"gui.the-square-anchor-config-ingress-item"},
-    sprite = "item/the-square-item-ingress-anchor"
+    sprite = "item/underground-belt"
   },
   ingress_fluid = {
     flow = "ingress",
     kind = "fluid",
     caption = {"gui.the-square-anchor-config-ingress-fluid"},
-    sprite = "item/the-square-fluid-ingress-anchor"
+    sprite = "item/offshore-pump"
   },
   egress_fluid = {
     flow = "egress",
     kind = "fluid",
     caption = {"gui.the-square-anchor-config-egress-fluid"},
-    sprite = "item/the-square-fluid-egress-anchor"
+    sprite = "item/pipe-to-ground"
   },
   egress_item = {
     flow = "egress",
     kind = "item",
     caption = {"gui.the-square-anchor-config-egress-item"},
-    sprite = "item/the-square-item-egress-anchor"
+    sprite = "item/underground-belt"
   }
 }
 
@@ -986,15 +987,20 @@ local function add_anchor_config_category_tabs(parent, selected_category)
   end
 end
 
-local function add_anchor_config_resource_grid(parent, definitions, flow, kind, anchor)
+local function add_anchor_config_resource_grid(parent, definitions, flow, kind, anchor, force)
   local table_element = parent.add({
     type = "table",
     column_count = 10
   })
   local added = false
-
   for _, definition in ipairs(definitions) do
-    if definition.kind == kind then
+    if definition.kind == kind
+      and (
+        anchor.resource == definition.resource
+        or anchor_runtime.is_resource_unlocked(definition.resource)
+        or defs.is_config_definition_unlocked(definition, flow, force)
+      )
+    then
       local selected = anchor.resource == definition.resource and anchor.flow == flow
       local sprite_prefix = definition.kind == "fluid" and "fluid/" or "item/"
       local button = table_element.add({
@@ -1030,15 +1036,46 @@ local function add_anchor_config_resource_grid(parent, definitions, flow, kind, 
   end
 end
 
-local function open_anchor_config_gui(player, anchor, planet_name, category_name)
+local function add_anchor_config_tier_selector(parent, player, selected_tier_level)
+  local tiers = defs.get_researched_managed_line_item_tiers(player and player.force)
+
+  if #tiers <= 1 then
+    return
+  end
+
+  local flow = parent.add({
+    type = "flow",
+    direction = "horizontal"
+  })
+
+  for _, tier in ipairs(tiers) do
+    local button = flow.add({
+      type = "button",
+      name = defs.ANCHOR_CONFIG_TIER_BUTTON_PREFIX .. tier.key,
+      caption = {"the-square-managed-line-tier." .. tier.key}
+    })
+
+    if button.style then
+      button.style.width = 80
+      button.style.height = 32
+    end
+
+    if tier.tier_level == selected_tier_level then
+      button.enabled = false
+    end
+  end
+end
+
+local function open_anchor_config_gui(player, anchor, planet_name, category_name, tier_level)
   if not (player and player.valid and player.gui and player.gui.screen and anchor and anchor.position) then
     return false
   end
 
   category_name = category_name or get_anchor_config_category_for_anchor(anchor)
+  tier_level = tier_level or anchor.tier_level or 1
 
   destroy_anchor_config_gui(player)
-  remember_open_anchor_config(player, planet_name, anchor, category_name)
+  remember_open_anchor_config(player, planet_name, anchor, category_name, tier_level)
 
   local frame = player.gui.screen.add({
     type = "frame",
@@ -1058,7 +1095,8 @@ local function open_anchor_config_gui(player, anchor, planet_name, category_name
     and defs.get_output_definitions(planet_name)
     or defs.get_input_definitions(planet_name)
 
-  add_anchor_config_resource_grid(frame, definitions, category.flow, category.kind, anchor)
+  add_anchor_config_resource_grid(frame, definitions, category.flow, category.kind, anchor, player.force)
+  add_anchor_config_tier_selector(frame, player, tier_level)
 
   player.opened = frame
 
@@ -1084,18 +1122,19 @@ local function clear_anchor_managed_line(anchor)
   anchor.entity = nil
 end
 
-local function configure_anchor_managed_line(anchor, definition, flow, side)
+local function configure_anchor_managed_line(anchor, definition, flow, side, tier_level)
   anchor.resource = definition.resource
   anchor.kind = definition.kind
   anchor.flow = flow
   anchor.side = side
   anchor.direction = defs.get_anchor_direction_for_side(flow, definition.kind, side)
-  anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind, anchor.flow)
+  anchor.tier_level = tier_level or anchor.tier_level or 1
+  anchor.item_name = defs.get_generic_anchor_item_name_for_tier(anchor.kind, anchor.flow, anchor.tier_level)
   anchor.entity_name = defs.get_anchor_entity_name_for_current_tier(anchor)
   anchor.item_progress = {0, 0}
 end
 
-local function find_matching_stashed_configurable_anchor(definition, flow, starter_anchors)
+local function find_matching_stashed_configurable_anchor(definition, flow, starter_anchors, tier_level)
   if not (definition and flow and starter_anchors) then
     return nil
   end
@@ -1104,6 +1143,7 @@ local function find_matching_stashed_configurable_anchor(definition, flow, start
     if not candidate.position
       and candidate.kind == definition.kind
       and candidate.flow == flow
+      and (candidate.tier_level or 1) == (tier_level or 1)
       and (not candidate.resource or candidate.resource == definition.resource)
     then
       return candidate
@@ -1275,7 +1315,7 @@ function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
   end
 
   if is_fresh_slot_configuration then
-    local item_name = defs.get_generic_anchor_item_name(definition.kind, flow)
+    local item_name = defs.get_generic_anchor_item_name_for_tier(definition.kind, flow, anchor.tier_level or 1)
 
     if not consume_player_inventory_item(actor, item_name) then
       if entity.set_recipe then
@@ -1290,7 +1330,7 @@ function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
       return false
     end
 
-    local stashed_anchor = find_matching_stashed_configurable_anchor(definition, flow, starter_anchors)
+    local stashed_anchor = find_matching_stashed_configurable_anchor(definition, flow, starter_anchors, anchor.tier_level or 1)
 
     if stashed_anchor and stashed_anchor ~= anchor then
       remove_anchor_from_set(anchor, starter_anchors)
@@ -1305,7 +1345,8 @@ function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
   anchor.flow = flow
   anchor.side = side
   anchor.direction = defs.get_anchor_direction_for_side(flow, definition.kind, side)
-  anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind, anchor.flow)
+  anchor.tier_level = anchor.tier_level or 1
+  anchor.item_name = defs.get_generic_anchor_item_name_for_tier(anchor.kind, anchor.flow, anchor.tier_level)
   anchor.entity_name = defs.get_anchor_entity_name_for_current_tier(anchor)
   anchor.item_progress = {0, 0}
   if entity.active ~= nil then
@@ -1356,6 +1397,12 @@ local function parse_anchor_config_button_name(name)
     return "category", category, nil
   end
 
+  local tier_key = string.match(name, "^" .. defs.ANCHOR_CONFIG_TIER_BUTTON_PREFIX .. "(.+)$")
+
+  if tier_key then
+    return "tier", tier_key, nil
+  end
+
   local flow, resource = string.match(name, "^" .. defs.ANCHOR_CONFIG_BUTTON_PREFIX .. "pick__(%w+)__(.+)$")
 
   if flow then
@@ -1371,6 +1418,10 @@ local function parse_anchor_config_button_name(name)
   return nil, nil, nil
 end
 
+local function get_open_anchor_config_for_player(player)
+  return storage.anchor_config_open and storage.anchor_config_open[player.index or player.player_index or 1] or nil
+end
+
 function anchor_runtime.handle_anchor_config_gui_click(player, element)
   if not (player and player.valid and element and element.valid) then
     return false
@@ -1383,11 +1434,27 @@ function anchor_runtime.handle_anchor_config_gui_click(player, element)
   end
 
   local action, value, resource = parse_anchor_config_button_name(element.name)
+  local open_config = get_open_anchor_config_for_player(player) or {}
+  local selected_tier_level = open_config.tier_level or anchor.tier_level or 1
 
   if action == "category" then
     if ANCHOR_CONFIG_CATEGORIES[value] then
-      open_anchor_config_gui(player, anchor, planet_name, value)
+      open_anchor_config_gui(player, anchor, planet_name, value, selected_tier_level)
       return true
+    end
+
+    return false
+  end
+
+  if action == "tier" then
+    local tier = defs.get_managed_line_item_tier_by_key(value)
+    local researched_tiers = defs.get_researched_managed_line_item_tiers(player.force)
+
+    for _, researched_tier in ipairs(researched_tiers) do
+      if researched_tier.key == tier.key then
+        open_anchor_config_gui(player, anchor, planet_name, open_config.category, tier.tier_level)
+        return true
+      end
     end
 
     return false
@@ -1421,8 +1488,8 @@ function anchor_runtime.handle_anchor_config_gui_click(player, element)
   end
 
   local is_fresh_anchor_configuration = not anchor.resource
-  local previous_item_name = anchor.resource and defs.get_generic_anchor_item_name(anchor.kind, anchor.flow) or nil
-  local next_item_name = defs.get_generic_anchor_item_name(definition.kind, flow)
+  local previous_item_name = anchor.resource and (anchor.item_name or defs.get_generic_anchor_item_name_for_tier(anchor.kind, anchor.flow, anchor.tier_level)) or nil
+  local next_item_name = defs.get_generic_anchor_item_name_for_tier(definition.kind, flow, selected_tier_level)
   local is_line_type_change = anchor.resource and previous_item_name ~= next_item_name
 
   if is_line_type_change and not can_player_receive_item(player, previous_item_name) then
@@ -1438,7 +1505,7 @@ function anchor_runtime.handle_anchor_config_gui_click(player, element)
   end
 
   if is_fresh_anchor_configuration then
-    local stashed_anchor = find_matching_stashed_configurable_anchor(definition, flow, starter_anchors)
+    local stashed_anchor = find_matching_stashed_configurable_anchor(definition, flow, starter_anchors, selected_tier_level)
 
     if stashed_anchor and stashed_anchor ~= anchor then
       local position = anchor.position
@@ -1462,7 +1529,7 @@ function anchor_runtime.handle_anchor_config_gui_click(player, element)
     anchor.entity = nil
   end
 
-  configure_anchor_managed_line(anchor, definition, flow, side)
+  configure_anchor_managed_line(anchor, definition, flow, side, selected_tier_level)
   local force = player.force or game and game.forces and game.forces.player
   try_unlock_oil_processing(anchor, force, player)
   try_unlock_uranium_processing(anchor, force, player)

@@ -12,7 +12,7 @@ function anchor_placement.stash(anchor)
   anchor.side = nil
   anchor.resource = nil
   anchor.item_progress = {0, 0}
-  anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind, anchor.flow)
+  anchor.item_name = defs.get_generic_anchor_item_name_for_tier(anchor.kind, anchor.flow, anchor.tier_level or 1)
   anchor.entity_name = defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
   anchor.entity = nil
 end

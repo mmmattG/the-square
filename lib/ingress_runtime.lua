@@ -125,7 +125,7 @@ local function get_active_uranium_anchors(ingress_tier, starter_anchors)
       and entity
       and entity.valid
     then
-      local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
+      local emission = get_item_anchor_emissions(anchor, defs.get_effective_ingress_tier_for_anchor(anchor), 1)
       local requested_count = (emission.lane_emissions[1] or 0) + (emission.lane_emissions[2] or 0)
 
       if requested_count > 0 then
@@ -147,7 +147,6 @@ local function get_active_uranium_budget_per_interval(uranium_anchors, starter_a
     return 0
   end
 
-  local ingress_tier = defs.get_current_ingress_tier()
   local mining_productivity_bonus = get_mining_productivity_bonus()
   local total_capacity = 0
 
@@ -181,7 +180,7 @@ local function get_active_uranium_budget_per_interval(uranium_anchors, starter_a
       sulfuric_acid_egressed = sulfuric_acid_egressed + drain_fluid_anchor(
         entity,
         anchor.resource,
-        math.min(ingress_tier.fluid_amount_per_interval, remaining_needed)
+        math.min(defs.get_effective_ingress_tier_for_anchor(anchor).fluid_amount_per_interval, remaining_needed)
       )
     end
   end
@@ -223,7 +222,7 @@ local function drain_gleba_seed_budgets(starter_anchors, ingress_tier, planet_na
     local fruit = throughput_policy.get_gleba_fruit_for_seed_anchor(anchor)
 
     if fruit and anchor.flow == "egress" and anchor.kind == "item" and entity and entity.valid then
-      local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
+      local emission = get_item_anchor_emissions(anchor, defs.get_effective_ingress_tier_for_anchor(anchor), 1)
       local drained_seeds = drain_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
         + drain_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
 
@@ -256,7 +255,7 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
             uranium_anchor_index = uranium_anchor_index + 1
           elseif throughput_policy.should_gate_gleba_fruit(planet_name, anchor) then
             local available = (anchor.gleba_fruit_budget or 0) + (gleba_fruit_budgets[anchor.resource] or 0)
-            local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
+            local emission = get_item_anchor_emissions(anchor, defs.get_effective_ingress_tier_for_anchor(anchor), 1)
 
             if available > 0 then
               local lane_one_inserted = pump_item_anchor(entity, anchor.resource, 1, math.min(emission.lane_emissions[1] or 0, available))
@@ -267,7 +266,7 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
 
             anchor.gleba_fruit_budget = available
           else
-            local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
+            local emission = get_item_anchor_emissions(anchor, defs.get_effective_ingress_tier_for_anchor(anchor), 1)
 
             pump_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
             pump_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
@@ -276,20 +275,20 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
           if entity.insert_fluid then
             pcall(entity.insert_fluid, {
               name = anchor.resource,
-              amount = ingress_tier.fluid_amount_per_interval
+              amount = defs.get_effective_ingress_tier_for_anchor(anchor).fluid_amount_per_interval
             })
           end
         end
       elseif anchor.flow == "egress" then
         if anchor.kind == "item" then
           if not throughput_policy.should_skip_regular_egress(planet_name, anchor, uranium_context) then
-            local emission = get_item_anchor_emissions(anchor, ingress_tier, 1)
+            local emission = get_item_anchor_emissions(anchor, defs.get_effective_ingress_tier_for_anchor(anchor), 1)
 
             drain_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
             drain_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
           end
         elseif not throughput_policy.should_skip_regular_egress(planet_name, anchor, uranium_context) then
-          drain_fluid_anchor(entity, anchor.resource, ingress_tier.fluid_amount_per_interval)
+          drain_fluid_anchor(entity, anchor.resource, defs.get_effective_ingress_tier_for_anchor(anchor).fluid_amount_per_interval)
         end
       end
     end

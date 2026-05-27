@@ -27,7 +27,7 @@ local function normalize_anchor(anchor, square_size)
 
   anchor.flow = anchor.flow or "ingress"
   anchor.item_progress = anchor.item_progress or {0, 0}
-  anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind or "item", anchor.flow)
+  anchor.item_name = defs.get_generic_anchor_item_name_for_tier(anchor.kind or "item", anchor.flow, anchor.tier_level or 1)
   if anchor.position then
     anchor.entity_name = defs.get_anchor_entity_name_for_current_tier(anchor)
   else
@@ -46,12 +46,13 @@ local function migrate_legacy_nauvis_state(bootstrap)
 
   for _, anchor in ipairs(migrated_anchors) do
     anchor.flow = anchor.flow or "ingress"
+    anchor.tier_level = anchor.tier_level or 1
     anchor.item_progress = anchor.item_progress or {0, 0}
     anchor.direction = anchor.side and defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side) or nil
     anchor.item_name = anchor.item_name or (
       anchor.flow == "egress"
-        and defs.get_egress_item_name(anchor.resource)
-        or defs.get_ingress_item_name(anchor.resource)
+        and defs.get_generic_anchor_item_name_for_tier(anchor.kind or "item", "egress", anchor.tier_level)
+        or defs.get_generic_anchor_item_name_for_tier(anchor.kind or "item", "ingress", anchor.tier_level)
     )
     anchor.entity_name = anchor.entity_name or (
       anchor.flow == "egress"

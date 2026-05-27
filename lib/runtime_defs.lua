@@ -63,8 +63,25 @@ runtime_defs.CLIFF_EXPLOSIVE_BUTTON_NAME = "the_square_cliff_explosive_button"
 runtime_defs.SHOP_FRAME_NAME = "the_square_shop_frame"
 runtime_defs.ANCHOR_CONFIG_FRAME_NAME = "the_square_anchor_config_frame"
 runtime_defs.ANCHOR_CONFIG_BUTTON_PREFIX = "the_square_anchor_config_pick__"
+runtime_defs.ANCHOR_CONFIG_TIER_BUTTON_PREFIX = "the_square_anchor_config_tier__"
 runtime_defs.MAX_INGRESS_TIER = 5
 runtime_defs.MAX_EGRESS_TIER = 5
+runtime_defs.MANAGED_LINE_ITEM_TIERS = {
+  {key = "yellow", label = "Yellow", tier_level = 1, research_tier_level = 1},
+  {key = "red", label = "Red", tier_level = 3, research_tier_level = 3},
+  {key = "blue", label = "Blue", tier_level = 4, research_tier_level = 4},
+  {key = "turbo", label = "Green", tier_level = 5, research_tier_level = 5}
+}
+runtime_defs.CONFIG_RESOURCE_TECH_UNLOCKS = {
+  ingress = {
+    ["crude-oil"] = {"oil-gathering", "oil-processing"},
+    ["uranium-ore"] = {"uranium-mining"},
+    ["sulfuric-acid"] = {"uranium-mining"}
+  },
+  egress = {
+    ["sulfuric-acid"] = {"uranium-mining"}
+  }
+}
 runtime_defs.DEBUG_SPACE_AGE_PLANETS = {
   {name = "nauvis", label = "Nauvis"},
   {name = "vulcanus", label = "Vulcanus"},
@@ -239,8 +256,98 @@ function runtime_defs.get_generic_anchor_item_name(kind, flow)
   return runtime_defs.GENERIC_ANCHOR_ITEMS[get_generic_anchor_key(kind, flow)]
 end
 
+function runtime_defs.get_generic_anchor_item_name_for_tier(kind, flow, tier_level)
+  local base_name = runtime_defs.get_generic_anchor_item_name(kind, flow)
+
+  if not base_name then
+    return nil
+  end
+
+  local tier_key = runtime_defs.get_managed_line_item_tier_key(tier_level)
+
+  if not tier_key or tier_key == "yellow" then
+    return base_name
+  end
+
+  return base_name .. "-" .. tier_key
+end
+
 function runtime_defs.get_generic_anchor_entity_name(kind, flow)
   return runtime_defs.GENERIC_ANCHOR_ENTITIES[get_generic_anchor_key(kind, flow)]
+end
+
+function runtime_defs.get_managed_line_item_tier_key(tier_level)
+  for _, tier in ipairs(runtime_defs.MANAGED_LINE_ITEM_TIERS) do
+    if tier.tier_level == tier_level then
+      return tier.key
+    end
+  end
+
+  return "yellow"
+end
+
+function runtime_defs.get_managed_line_item_tier_by_key(tier_key)
+  for _, tier in ipairs(runtime_defs.MANAGED_LINE_ITEM_TIERS) do
+    if tier.key == tier_key then
+      return tier
+    end
+  end
+
+  return runtime_defs.MANAGED_LINE_ITEM_TIERS[1]
+end
+
+function runtime_defs.get_researched_managed_line_item_tiers(force)
+  local ingress_tier = runtime_defs.get_ingress_tier_level_for_force(force)
+  local egress_tier = runtime_defs.get_egress_tier_level_for_force(force)
+  local max_tier = math.max(ingress_tier, egress_tier)
+  local tiers = {}
+
+  for _, tier in ipairs(runtime_defs.MANAGED_LINE_ITEM_TIERS) do
+    if tier.research_tier_level <= max_tier then
+      tiers[#tiers + 1] = tier
+    end
+  end
+
+  return tiers
+end
+
+local function are_all_force_technologies_researched(force, technology_names)
+  if not technology_names then
+    return false
+  end
+
+  if not (force and force.valid ~= false and force.technologies) then
+    return false
+  end
+
+  for _, technology_name in ipairs(technology_names) do
+    local technology = force.technologies[technology_name]
+
+    if not (technology and technology.researched) then
+      return false
+    end
+  end
+
+  return true
+end
+
+function runtime_defs.is_config_definition_unlocked(definition, flow, force)
+  if not definition then
+    return false
+  end
+
+  if definition.starter_side then
+    return true
+  end
+
+  local unlocks_by_flow = runtime_defs.CONFIG_RESOURCE_TECH_UNLOCKS[flow]
+  local technology_names = unlocks_by_flow and unlocks_by_flow[definition.resource]
+
+  if not technology_names then
+    return false
+  end
+
+  return are_all_force_technologies_researched(force or runtime_defs.get_player_force(), technology_names)
 end
 
 function runtime_defs.get_config_recipe_name(resource, flow)
@@ -431,7 +538,9 @@ function runtime_defs.get_anchor_presentation(flow, kind, resource)
   return "underground-belt-inward"
 end
 
-function runtime_defs.create_managed_anchor(definition, flow, side, position)
+function runtime_defs.create_managed_anchor(definition, flow, side, position, tier_level)
+  tier_level = tier_level or 1
+
   return {
     resource = definition.resource,
     kind = definition.kind,
@@ -439,12 +548,11 @@ function runtime_defs.create_managed_anchor(definition, flow, side, position)
     side = side,
     direction = side and runtime_defs.get_anchor_direction_for_side(flow, definition.kind, side) or nil,
     position = position,
-    item_name = flow == "egress"
-      and runtime_defs.get_egress_item_name(definition.resource)
-      or runtime_defs.get_ingress_item_name(definition.resource),
+    tier_level = tier_level,
+    item_name = runtime_defs.get_generic_anchor_item_name_for_tier(definition.kind, flow, tier_level),
     entity_name = flow == "egress"
-      and runtime_defs.get_egress_entity_name(definition.resource)
-      or runtime_defs.get_ingress_entity_name(definition.resource),
+      and runtime_defs.get_egress_entity_name(definition.resource, tier_level)
+      or runtime_defs.get_ingress_entity_name(definition.resource, tier_level),
     item_progress = {0, 0}
   }
 end
@@ -739,14 +847,24 @@ function runtime_defs.get_anchor_entity_name_for_current_tier(anchor)
   end
 
   if anchor.flow == "egress" then
-    return runtime_defs.get_egress_entity_name(anchor.resource, runtime_defs.get_current_egress_tier_level())
+    return runtime_defs.get_egress_entity_name(anchor.resource, anchor.tier_level or runtime_defs.get_current_egress_tier_level())
   end
 
   if anchor.kind == "item" then
-    return runtime_defs.get_ingress_entity_name(anchor.resource, runtime_defs.get_current_ingress_tier_level())
+    return runtime_defs.get_ingress_entity_name(anchor.resource, anchor.tier_level or runtime_defs.get_current_ingress_tier_level())
   end
 
   return runtime_defs.get_ingress_entity_name(anchor.resource, 1)
+end
+
+function runtime_defs.get_effective_ingress_tier_for_anchor(anchor)
+  local tier_level = anchor and anchor.tier_level or 1
+
+  if tier_level == 1 and runtime_defs.get_current_ingress_tier_level() >= 2 then
+    tier_level = 2
+  end
+
+  return runtime_defs.get_ingress_tier_definition(tier_level)
 end
 
 function runtime_defs.build_ingress_tier_summary()

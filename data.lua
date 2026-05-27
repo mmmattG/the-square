@@ -54,6 +54,13 @@ if mods and mods["space-age"] and data.raw["underground-belt"]["turbo-undergroun
   item_egress_belt_tiers[#item_egress_belt_tiers + 1] = {key = "turbo", prototype_name = "turbo-underground-belt"}
 end
 
+local managed_line_item_tiers = {
+  {key = "yellow", label = "Yellow", tier_level = 1, anchor_frames = 1, item_belt = "transport-belt", underground_belt = "underground-belt", square_tint = {r = 1, g = 0.83, b = 0.22, a = 1}},
+  {key = "red", label = "Red", tier_level = 3, anchor_frames = 5, previous_key = "yellow", item_belt = "fast-transport-belt", underground_belt = "fast-underground-belt", prerequisite_technology = "the-square-ingress-red", square_tint = {r = 0.95, g = 0.12, b = 0.08, a = 1}},
+  {key = "blue", label = "Blue", tier_level = 4, anchor_frames = 10, previous_key = "red", item_belt = "express-transport-belt", underground_belt = "express-underground-belt", prerequisite_technology = "the-square-ingress-blue", square_tint = {r = 0.12, g = 0.42, b = 1, a = 1}},
+  {key = "turbo", label = "Green", tier_level = 5, anchor_frames = 20, previous_key = "blue", item_belt = "turbo-transport-belt", underground_belt = "turbo-underground-belt", prerequisite_technology = "the-square-egress-turbo", space_age_only = true, square_tint = {r = 0.1, g = 0.9, b = 0.25, a = 1}}
+}
+
 local square_expansion_research_bands = {
   {
     start_level = 1,
@@ -134,6 +141,18 @@ local function build_anchor_upgrade_icons(belt_icon)
   }
 end
 
+local function get_managed_line_tier_recipe_names(tier_key)
+  local names = {}
+
+  for _, kind in ipairs({"item", "fluid"}) do
+    for _, flow in ipairs({"ingress", "egress"}) do
+      local base_name = "the-square-" .. kind .. "-" .. flow .. "-anchor"
+      names[#names + 1] = tier_key == "yellow" and base_name or base_name .. "-" .. tier_key
+    end
+  end
+
+  return names
+end
 
 local ingress_research_definitions = {
   {
@@ -152,7 +171,8 @@ local ingress_research_definitions = {
     previous_ingress_technology_name = "the-square-ingress-dual-lane",
     localised_name = {"technology-name.the-square-ingress-red"},
     localised_description = {"technology-description.the-square-ingress-red"},
-    effect_description = {"technology-effect.the-square-ingress-red"}
+    effect_description = {"technology-effect.the-square-ingress-red"},
+    unlock_recipes = get_managed_line_tier_recipe_names("red")
   },
   {
     name = "the-square-ingress-blue",
@@ -161,7 +181,8 @@ local ingress_research_definitions = {
     previous_ingress_technology_name = "the-square-ingress-red",
     localised_name = {"technology-name.the-square-ingress-blue"},
     localised_description = {"technology-description.the-square-ingress-blue"},
-    effect_description = {"technology-effect.the-square-ingress-blue"}
+    effect_description = {"technology-effect.the-square-ingress-blue"},
+    unlock_recipes = get_managed_line_tier_recipe_names("blue")
   }
 }
 
@@ -244,6 +265,16 @@ local function generic_anchor_item_name(kind, flow)
   return "the-square-" .. kind .. "-" .. flow .. "-anchor"
 end
 
+local function generic_anchor_item_name_for_tier(kind, flow, tier)
+  local base_name = generic_anchor_item_name(kind, flow)
+
+  if not tier or tier.key == "yellow" then
+    return base_name
+  end
+
+  return base_name .. "-" .. tier.key
+end
+
 local function generic_anchor_entity_name(kind, flow)
   return "the-square-generic-" .. kind .. "-" .. flow .. "-anchor"
 end
@@ -273,12 +304,40 @@ local function build_parameterised_anchor_icons(icon)
   }
 end
 
-local function build_generic_anchor_item(name, icon, order, place_result)
+local function build_tiered_managed_line_icons(tier, kind, flow, fallback_icon)
+  local icon = fallback_icon
+  local icon_size = 64
+
+  if kind == "item" then
+    local belt_item = data.raw.item[tier.underground_belt] or data.raw.item["underground-belt"]
+
+    if belt_item then
+      icon = belt_item.icon
+      icon_size = belt_item.icon_size or 64
+    end
+  end
+
+  return {
+    {icon = icon, icon_size = icon_size},
+    {
+      icon = "__core__/graphics/white-square.png",
+      icon_size = 10,
+      scale = 2,
+      shift = {12, 12},
+      tint = tier.square_tint
+    }
+  }
+end
+
+local function build_generic_anchor_item(name, icon, order, place_result, tier, kind, flow)
   return {
     type = "item",
     name = name,
+    localised_name = tier
+      and {"item-name.the-square-tiered-generic-anchor", {"the-square-managed-line-tier." .. tier.key}, {"item-name." .. generic_anchor_item_name(kind, flow)}}
+      or nil,
     localised_description = {"item-description.the-square-generic-anchor"},
-    icons = build_parameterised_anchor_icons(icon),
+    icons = build_tiered_managed_line_icons(tier, kind, flow, icon),
     subgroup = "energy-pipe-distribution",
     order = order,
     place_result = place_result,
@@ -369,6 +428,26 @@ local function build_recipe(name, result, ingredients, energy_required)
     ingredients = ingredients,
     results = {{type = "item", name = result, amount = 1}}
   }
+end
+
+local function is_managed_line_item_tier_available(tier)
+  if not tier then
+    return true
+  end
+
+  if tier.space_age_only and not (mods and mods["space-age"]) then
+    return false
+  end
+
+  if tier.underground_belt and not data.raw["underground-belt"][tier.underground_belt] then
+    return false
+  end
+
+  if tier.item_belt and not data.raw.item[tier.item_belt] then
+    return false
+  end
+
+  return true
 end
 
 local function config_recipe_name(resource, flow)
@@ -650,7 +729,7 @@ local function build_ingress_research_technology(definition)
     prerequisites[#prerequisites + 1] = definition.previous_ingress_technology_name
   end
 
-  return {
+  local technology = {
     type = "technology",
     name = definition.name,
     localised_name = definition.localised_name,
@@ -668,6 +747,17 @@ local function build_ingress_research_technology(definition)
       }
     }
   }
+
+  if definition.unlock_recipes then
+    for _, recipe_name in ipairs(definition.unlock_recipes) do
+      technology.effects[#technology.effects + 1] = {
+        type = "unlock-recipe",
+        recipe = recipe_name
+      }
+    end
+  end
+
+  return technology
 end
 
 local function get_expansion_research_band(level)
@@ -701,6 +791,33 @@ local function build_tips_item(definition)
   }
 end
 
+local function add_recipe_unlock_to_technology(technology_name, recipe_name)
+  local technology = data.raw.technology[technology_name]
+
+  if not technology or not data.raw.recipe[recipe_name] then
+    return
+  end
+
+  technology.effects = technology.effects or {}
+  for _, effect in ipairs(technology.effects) do
+    if effect.type == "unlock-recipe" and effect.recipe == recipe_name then
+      return
+    end
+  end
+
+  technology.effects[#technology.effects + 1] = {
+    type = "unlock-recipe",
+    recipe = recipe_name
+  }
+end
+
+local function add_resource_configuration_unlocks()
+  add_recipe_unlock_to_technology("oil-processing", config_recipe_name("crude-oil", "ingress"))
+  add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("uranium-ore", "ingress"))
+  add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("sulfuric-acid", "ingress"))
+  add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("sulfuric-acid", "egress"))
+end
+
 local prototypes = {}
 
 prototypes[#prototypes + 1] = {
@@ -722,10 +839,31 @@ prototypes[#prototypes + 1] = build_anchor_slot_proxy()
 prototypes[#prototypes + 1] = build_anchor_place_input()
 prototypes[#prototypes + 1] = build_anchor_open_input()
 prototypes[#prototypes + 1] = build_anchor_frame_item()
-prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-ingress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-b[item-ingress-anchor]", "the-square-generic-item-ingress-anchor")
-prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-item-egress-anchor", "__base__/graphics/icons/underground-belt.png", "z[the-square]-c[item-egress-anchor]", "the-square-generic-item-egress-anchor")
-prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-fluid-ingress-anchor", "__base__/graphics/icons/offshore-pump.png", "z[the-square]-d[fluid-ingress-anchor]", "the-square-generic-fluid-ingress-anchor")
-prototypes[#prototypes + 1] = build_generic_anchor_item("the-square-fluid-egress-anchor", "__base__/graphics/icons/pipe-to-ground.png", "z[the-square]-e[fluid-egress-anchor]", "the-square-generic-fluid-egress-anchor")
+local generic_anchor_item_definitions = {
+  {kind = "item", flow = "ingress", icon = "__base__/graphics/icons/underground-belt.png", order = "b[item-ingress-anchor]", place_result = "the-square-generic-item-ingress-anchor"},
+  {kind = "item", flow = "egress", icon = "__base__/graphics/icons/underground-belt.png", order = "c[item-egress-anchor]", place_result = "the-square-generic-item-egress-anchor"},
+  {kind = "fluid", flow = "ingress", icon = "__base__/graphics/icons/offshore-pump.png", order = "d[fluid-ingress-anchor]", place_result = "the-square-generic-fluid-ingress-anchor"},
+  {kind = "fluid", flow = "egress", icon = "__base__/graphics/icons/pipe-to-ground.png", order = "e[fluid-egress-anchor]", place_result = "the-square-generic-fluid-egress-anchor"}
+}
+
+for _, tier in ipairs(managed_line_item_tiers) do
+  if is_managed_line_item_tier_available(tier) then
+    for _, definition in ipairs(generic_anchor_item_definitions) do
+      local item_name = generic_anchor_item_name_for_tier(definition.kind, definition.flow, tier)
+      local order_suffix = tier.key == "yellow" and definition.order or definition.order .. "-" .. tier.key
+
+      prototypes[#prototypes + 1] = build_generic_anchor_item(
+        item_name,
+        definition.icon,
+        "z[the-square]-" .. order_suffix,
+        tier.key == "yellow" and definition.place_result or nil,
+        tier,
+        definition.kind,
+        definition.flow
+      )
+    end
+  end
+end
 prototypes[#prototypes + 1] = build_generic_anchor_entity("the-square-generic-item-ingress-anchor", "the-square-item-ingress-anchor", "item", "ingress")
 prototypes[#prototypes + 1] = build_generic_anchor_entity("the-square-generic-item-egress-anchor", "the-square-item-egress-anchor", "item", "egress")
 prototypes[#prototypes + 1] = build_generic_anchor_entity("the-square-generic-fluid-ingress-anchor", "the-square-fluid-ingress-anchor", "fluid", "ingress")
@@ -735,26 +873,56 @@ prototypes[#prototypes + 1] = build_recipe("the-square-anchor-frame", "the-squar
   {type = "item", name = "electronic-circuit", amount = 50},
   {type = "item", name = "iron-gear-wheel", amount = 50}
 }, 10)
-prototypes[#prototypes + 1] = build_recipe("the-square-item-ingress-anchor", "the-square-item-ingress-anchor", {
-  {type = "item", name = "the-square-anchor-frame", amount = 1},
-  {type = "item", name = "transport-belt", amount = 50},
-  {type = "item", name = "underground-belt", amount = 5}
-}, 5)
-prototypes[#prototypes + 1] = build_recipe("the-square-item-egress-anchor", "the-square-item-egress-anchor", {
-  {type = "item", name = "the-square-anchor-frame", amount = 1},
-  {type = "item", name = "transport-belt", amount = 50},
-  {type = "item", name = "underground-belt", amount = 5}
-}, 5)
-prototypes[#prototypes + 1] = build_recipe("the-square-fluid-ingress-anchor", "the-square-fluid-ingress-anchor", {
-  {type = "item", name = "the-square-anchor-frame", amount = 1},
-  {type = "item", name = "pipe", amount = 50},
-  {type = "item", name = "offshore-pump", amount = 1}
-}, 5)
-prototypes[#prototypes + 1] = build_recipe("the-square-fluid-egress-anchor", "the-square-fluid-egress-anchor", {
-  {type = "item", name = "the-square-anchor-frame", amount = 1},
-  {type = "item", name = "pipe", amount = 50},
-  {type = "item", name = "pipe-to-ground", amount = 1}
-}, 5)
+for _, tier in ipairs(managed_line_item_tiers) do
+  if is_managed_line_item_tier_available(tier) then
+    for _, definition in ipairs(generic_anchor_item_definitions) do
+      local item_name = generic_anchor_item_name_for_tier(definition.kind, definition.flow, tier)
+      local ingredients
+
+      if tier.key == "yellow" then
+        if definition.kind == "item" then
+          ingredients = {
+            {type = "item", name = "the-square-anchor-frame", amount = tier.anchor_frames},
+            {type = "item", name = "transport-belt", amount = 50},
+            {type = "item", name = "underground-belt", amount = 5}
+          }
+        elseif definition.flow == "ingress" then
+          ingredients = {
+            {type = "item", name = "the-square-anchor-frame", amount = tier.anchor_frames},
+            {type = "item", name = "pipe", amount = 50},
+            {type = "item", name = "offshore-pump", amount = 1}
+          }
+        else
+          ingredients = {
+            {type = "item", name = "the-square-anchor-frame", amount = tier.anchor_frames},
+            {type = "item", name = "pipe", amount = 50},
+            {type = "item", name = "pipe-to-ground", amount = 1}
+          }
+        end
+      else
+        ingredients = {
+          {type = "item", name = generic_anchor_item_name_for_tier(definition.kind, definition.flow, {key = tier.previous_key}), amount = 1},
+          {type = "item", name = "the-square-anchor-frame", amount = tier.anchor_frames}
+        }
+
+        ingredients[#ingredients + 1] = {type = "item", name = tier.item_belt, amount = 50}
+        ingredients[#ingredients + 1] = {type = "item", name = tier.underground_belt, amount = 5}
+
+        if definition.kind ~= "item" and definition.flow == "ingress" then
+          ingredients[#ingredients + 1] = {type = "item", name = "pipe", amount = 50}
+          ingredients[#ingredients + 1] = {type = "item", name = "pump", amount = 1}
+        elseif definition.kind ~= "item" then
+          ingredients[#ingredients + 1] = {type = "item", name = "pipe", amount = 50}
+          ingredients[#ingredients + 1] = {type = "item", name = "pipe-to-ground", amount = 5}
+        end
+      end
+
+      local recipe = build_recipe(item_name, item_name, ingredients, 5)
+      recipe.enabled = tier.key == "yellow"
+      prototypes[#prototypes + 1] = recipe
+    end
+  end
+end
 
 for _, definition in ipairs(ingress_resources) do
   if definition.kind == "item" then
@@ -840,7 +1008,8 @@ if mods and mods["space-age"] and data.raw.technology["turbo-transport-belt"] th
     previous_ingress_technology_name = "the-square-ingress-blue",
     localised_name = {"technology-name.the-square-egress-turbo"},
     localised_description = {"technology-description.the-square-egress-turbo"},
-    effect_description = {"technology-effect.the-square-egress-turbo"}
+    effect_description = {"technology-effect.the-square-egress-turbo"},
+    unlock_recipes = get_managed_line_tier_recipe_names("turbo")
   })
 end
 
@@ -849,3 +1018,4 @@ for _, definition in ipairs(tips_and_tricks_items) do
 end
 
 data:extend(prototypes)
+add_resource_configuration_unlocks()
