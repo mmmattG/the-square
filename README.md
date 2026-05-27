@@ -43,15 +43,19 @@ For manual testing, enable the per-player `Developer mode` runtime setting. That
 
 Issue `#18` was resolved by `PR #52`, which fixed the border/background rendering regressions that prompted the earlier experiments here.
 
-`make install` builds the zip and copies it into your local Factorio mods directory. By default the install script auto-detects:
+`make install` builds the zip and copies it into your Windows Factorio mods directory from WSL. By default the Makefile asks Windows for `%APPDATA%` and installs to:
 
-- macOS: `~/Library/Application Support/factorio/mods`
-- Linux: `~/.factorio/mods`
+```sh
+/mnt/c/Users/<windows-user>/AppData/Roaming/Factorio/mods
+```
+
+If Windows detection is unavailable, it falls back to `~/.factorio/mods`.
 
 Override the destination with `FACTORIO_MODS_DIR`:
 
 ```sh
-FACTORIO_MODS_DIR="/path/to/factorio/mods" make install
+FACTORIO_MODS_DIR="/mnt/c/Users/<windows-user>/AppData/Roaming/Factorio/mods" make install
 ```
 
 The install step removes previously installed copies of this mod before copying the new zip, so the game sees a single current version.
+If Factorio is running, Windows may keep the old zip locked; close Factorio and run `make install` again to remove stale versions.
