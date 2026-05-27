@@ -3,7 +3,9 @@ local resource_balance = require("lib.resource_balance")
 local managed_line_throughput_policy = {}
 
 managed_line_throughput_policy.URANIUM_ORE_PER_SULFURIC_ACID = resource_balance.URANIUM_ORE_PER_SULFURIC_ACID
+managed_line_throughput_policy.URANIUM_SULFURIC_ACID_BUFFER_CAPACITY = 1000
 managed_line_throughput_policy.GLEBA_FRUIT_PER_SEED = 50
+managed_line_throughput_policy.GLEBA_SEED_BUFFER_CAPACITY = 20
 managed_line_throughput_policy.gleba_seed_by_fruit = {
   yumako = "yumako-seed",
   jellynut = "jellynut-seed"
@@ -33,7 +35,7 @@ function managed_line_throughput_policy.get_gleba_fruit_for_seed_anchor(anchor)
 end
 
 function managed_line_throughput_policy.should_skip_regular_egress(planet_name, anchor, uranium_context)
-  if uranium_context and anchor.resource == "sulfuric-acid" then
+  if anchor.resource == "sulfuric-acid" then
     return true
   end
 

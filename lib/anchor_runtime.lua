@@ -5,6 +5,7 @@ local planet_instance = require("lib.planet_instance")
 local managed_line_state = require("lib.managed_line_state")
 local anchor_identity = require("lib.anchor_identity")
 local anchor_placement = require("lib.anchor_placement")
+local throughput_policy = require("lib.managed_line_throughput_policy")
 
 local anchor_runtime = {}
 
@@ -53,7 +54,23 @@ local function get_tile_center_position(position)
   }
 end
 
-local function configure_source_anchor_entity(entity, direction)
+local function should_anchor_entity_be_active(anchor, planet_name)
+  if not anchor then
+    return false
+  end
+
+  if anchor.flow == "ingress" and anchor.resource == "uranium-ore" then
+    return anchor.input_budget_active == true
+  end
+
+  if throughput_policy.should_gate_gleba_fruit(planet_name, anchor) then
+    return anchor.input_budget_active == true
+  end
+
+  return true
+end
+
+local function configure_source_anchor_entity(entity, direction, anchor, planet_name)
   if not (entity and entity.valid) then
     return
   end
@@ -65,7 +82,10 @@ local function configure_source_anchor_entity(entity, direction)
   entity.destructible = false
   entity.operable = true
   if entity.active ~= nil then
-    entity.active = false
+    entity.active = not (
+      anchor_identity.is_generic_entity_name(entity.name)
+      or anchor_identity.is_config_proxy_entity_name(entity.name)
+    ) and should_anchor_entity_be_active(anchor, planet_name)
   end
 end
 
@@ -279,7 +299,7 @@ local function destroy_entities_at_anchor_position(surface, anchor)
   end
 end
 
-local function ensure_anchor_entity(surface, anchor)
+local function ensure_anchor_entity(surface, anchor, planet_name)
   if not (surface and anchor and anchor.position) then
     return nil
   end
@@ -294,7 +314,7 @@ local function ensure_anchor_entity(surface, anchor)
     local required_belt_type = get_required_underground_belt_type(anchor)
 
     if not required_belt_type or entity.belt_to_ground_type == required_belt_type then
-      configure_source_anchor_entity(entity, anchor.direction)
+      configure_source_anchor_entity(entity, anchor.direction, anchor, planet_name)
       destroy_entities_at_anchor_position(surface, anchor)
       return entity
     end
@@ -314,7 +334,7 @@ local function ensure_anchor_entity(surface, anchor)
 
     if not required_belt_type or entity.belt_to_ground_type == required_belt_type then
       anchor.entity = entity
-      configure_source_anchor_entity(entity, anchor.direction)
+      configure_source_anchor_entity(entity, anchor.direction, anchor, planet_name)
       destroy_entities_at_anchor_position(surface, anchor)
       return entity
     end
@@ -332,7 +352,7 @@ local function ensure_anchor_entity(surface, anchor)
 
   if entity then
     anchor.entity = entity
-    configure_source_anchor_entity(entity, anchor.direction)
+    configure_source_anchor_entity(entity, anchor.direction, anchor, planet_name)
     destroy_entities_at_anchor_position(surface, anchor)
   end
 
@@ -400,14 +420,14 @@ function anchor_runtime.ensure_starter_anchor_state()
   return managed_line_state.ensure("nauvis")
 end
 
-local function ensure_anchor_set(surface, square_size, starter_anchors)
+local function ensure_anchor_set(surface, square_size, starter_anchors, planet_name)
   if not (surface and starter_anchors) then
     return
   end
 
   for _, anchor in ipairs(starter_anchors.anchors) do
     if anchor.position and anchor.resource then
-      ensure_anchor_entity(surface, anchor)
+      ensure_anchor_entity(surface, anchor, planet_name)
     elseif anchor.position and anchor.entity then
       if anchor.entity.valid and anchor.entity.destroy then
         anchor.entity.destroy({raise_destroy = false})
@@ -496,7 +516,7 @@ function anchor_runtime.ensure_starter_anchors()
 
   local starter_anchors = anchor_runtime.ensure_starter_anchor_state()
 
-  ensure_anchor_set(surface, bootstrap.square_size, starter_anchors)
+  ensure_anchor_set(surface, bootstrap.square_size, starter_anchors, "nauvis")
 end
 
 function anchor_runtime.ensure_planet_starter_anchor_state(planet_name)
@@ -517,7 +537,7 @@ function anchor_runtime.ensure_planet_starter_anchors(planet_name)
   end
 
   anchor_runtime.unlock_planet_bootstrap_research(planet_name, game.forces.player)
-  ensure_anchor_set(surface, planet:get_square_size(), anchor_runtime.ensure_planet_starter_anchor_state(planet_name))
+  ensure_anchor_set(surface, planet:get_square_size(), anchor_runtime.ensure_planet_starter_anchor_state(planet_name), planet_name)
   ensure_planet_starter_entities(surface, planet_name, planet)
 end
 

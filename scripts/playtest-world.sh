@@ -83,6 +83,11 @@ local managed_line_tier_suffixes = {
   "-turbo"
 }
 
+local bonus_item_stacks = {
+  {name = "infinity-pipe", count = 10},
+  {name = "electric-energy-interface", count = 10}
+}
+
 local research_buttons = {
   {
     name = "the_square_playtest_unlock_oil",
@@ -207,6 +212,10 @@ local function get_existing_managed_line_item_names()
   return names
 end
 
+local function item_prototype_exists(item_name)
+  return prototypes and prototypes.item and prototypes.item[item_name] ~= nil
+end
+
 local function entity_prototype_exists(entity_name)
   return prototypes and prototypes.entity and prototypes.entity[entity_name] ~= nil
 end
@@ -243,6 +252,12 @@ local function fill_bonus_chest(surface)
   inventory.clear()
   for _, item_name in ipairs(get_existing_managed_line_item_names()) do
     inventory.insert({name = item_name, count = 50})
+  end
+
+  for _, stack in ipairs(bonus_item_stacks) do
+    if item_prototype_exists(stack.name) then
+      inventory.insert(stack)
+    end
   end
 
   return chest

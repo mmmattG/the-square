@@ -39,6 +39,16 @@ local function get_anchor_transport_line(entity, lane_index)
   return line
 end
 
+local function set_anchor_active(anchor, entity, active)
+  if anchor then
+    anchor.input_budget_active = active and true or false
+  end
+
+  if entity and entity.valid and entity.active ~= nil then
+    entity.active = active and true or false
+  end
+end
+
 local function pump_item_anchor(entity, resource, lane_index, item_count)
   if item_count <= 0 then
     return 0
@@ -62,6 +72,18 @@ local function pump_item_anchor(entity, resource, lane_index, item_count)
   end
 
   return inserted
+end
+
+local function can_insert_item_at_back(entity, lane_index)
+  local line = get_anchor_transport_line(entity, lane_index)
+
+  if not line or not line.can_insert_at_back then
+    return false
+  end
+
+  local ok, can_insert = pcall(line.can_insert_at_back)
+
+  return ok and can_insert == true
 end
 
 local function drain_item_anchor(entity, resource, lane_index, item_count)
@@ -110,7 +132,41 @@ local function get_mining_productivity_bonus()
   return player_force.mining_drill_productivity_bonus or 0
 end
 
-local function get_active_uranium_anchors(ingress_tier, starter_anchors)
+local function drain_uranium_acid_buffer(starter_anchors, bootstrap)
+  if not (starter_anchors and bootstrap) then
+    return 0
+  end
+
+  local buffer_capacity = throughput_policy.URANIUM_SULFURIC_ACID_BUFFER_CAPACITY
+  local buffer = math.min(buffer_capacity, math.max(0, bootstrap.uranium_sulfuric_acid_buffer or 0))
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    local entity = anchor.position and anchor.entity or nil
+
+    if anchor.flow == "egress"
+      and anchor.resource == "sulfuric-acid"
+      and entity
+      and entity.valid
+    then
+      local remaining_capacity = buffer_capacity - buffer
+
+      if remaining_capacity <= 0 then
+        break
+      end
+
+      buffer = buffer + drain_fluid_anchor(
+        entity,
+        anchor.resource,
+        math.min(defs.get_effective_ingress_tier_for_anchor(anchor).fluid_amount_per_interval, remaining_capacity)
+      )
+    end
+  end
+
+  bootstrap.uranium_sulfuric_acid_buffer = buffer
+  return buffer
+end
+
+local function get_uranium_anchors(ingress_tier, starter_anchors)
   local anchors = {}
 
   if not starter_anchors then
@@ -126,16 +182,22 @@ local function get_active_uranium_anchors(ingress_tier, starter_anchors)
       and entity.valid
     then
       local emission = get_item_anchor_emissions(anchor, defs.get_effective_ingress_tier_for_anchor(anchor), 1)
-      local requested_count = (emission.lane_emissions[1] or 0) + (emission.lane_emissions[2] or 0)
+      local insertable_count = 0
 
-      if requested_count > 0 then
-        anchors[#anchors + 1] = {
-          anchor = anchor,
-          entity = entity,
-          requested_emission = emission,
-          capacity = requested_count
-        }
+      for lane_index = 1, 2 do
+        local requested_count = emission.lane_emissions[lane_index] or 0
+
+        if requested_count > 0 and can_insert_item_at_back(entity, lane_index) then
+          insertable_count = insertable_count + requested_count
+        end
       end
+
+      anchors[#anchors + 1] = {
+        anchor = anchor,
+        entity = entity,
+        requested_emission = emission,
+        capacity = insertable_count
+      }
     end
   end
 
@@ -158,39 +220,18 @@ local function get_active_uranium_budget_per_interval(uranium_anchors, starter_a
     return 0
   end
 
-  local sulfuric_acid_needed = total_capacity / (
+  local available_acid = math.max(0, bootstrap.uranium_sulfuric_acid_buffer or 0)
+  local sulfuric_acid_to_spend = math.min(available_acid, total_capacity / (
     throughput_policy.URANIUM_ORE_PER_SULFURIC_ACID * (1 + mining_productivity_bonus)
-  )
-  local sulfuric_acid_egressed = 0
-
-  for _, anchor in ipairs(starter_anchors.anchors) do
-    local entity = anchor.position and anchor.entity or nil
-
-    if anchor.flow == "egress"
-      and anchor.resource == "sulfuric-acid"
-      and entity
-      and entity.valid
-    then
-      local remaining_needed = sulfuric_acid_needed - sulfuric_acid_egressed
-
-      if remaining_needed <= 0 then
-        break
-      end
-
-      sulfuric_acid_egressed = sulfuric_acid_egressed + drain_fluid_anchor(
-        entity,
-        anchor.resource,
-        math.min(defs.get_effective_ingress_tier_for_anchor(anchor).fluid_amount_per_interval, remaining_needed)
-      )
-    end
-  end
+  ))
 
   local budget = throughput_policy.compute_uranium_budget(
-    sulfuric_acid_egressed,
+    sulfuric_acid_to_spend,
     mining_productivity_bonus,
     bootstrap.uranium_ore_progress_carry or 0
   )
 
+  bootstrap.uranium_sulfuric_acid_buffer = available_acid - sulfuric_acid_to_spend
   bootstrap.uranium_ore_progress_carry = budget.remaining_ore_progress
   return budget.ore_budget
 end
@@ -211,7 +252,8 @@ local function pump_uranium_ingress_anchor(entity, requested_emission, shared_bu
 end
 
 local function drain_gleba_seed_budgets(starter_anchors, ingress_tier, planet_name)
-  local budgets = {}
+  starter_anchors.gleba_fruit_budgets = starter_anchors.gleba_fruit_budgets or {}
+  local budgets = starter_anchors.gleba_fruit_budgets
 
   if planet_name ~= "gleba" then
     return budgets
@@ -223,8 +265,15 @@ local function drain_gleba_seed_budgets(starter_anchors, ingress_tier, planet_na
 
     if fruit and anchor.flow == "egress" and anchor.kind == "item" and entity and entity.valid then
       local emission = get_item_anchor_emissions(anchor, defs.get_effective_ingress_tier_for_anchor(anchor), 1)
-      local drained_seeds = drain_item_anchor(entity, anchor.resource, 1, emission.lane_emissions[1] or 0)
-        + drain_item_anchor(entity, anchor.resource, 2, emission.lane_emissions[2] or 0)
+      local fruit_buffer_capacity = throughput_policy.GLEBA_SEED_BUFFER_CAPACITY * throughput_policy.GLEBA_FRUIT_PER_SEED
+      local available_fruit_capacity = fruit_buffer_capacity - math.min(fruit_buffer_capacity, math.max(0, budgets[fruit] or 0))
+      local seed_capacity = math.floor(available_fruit_capacity / throughput_policy.GLEBA_FRUIT_PER_SEED)
+      local lane_one_target = math.min(emission.lane_emissions[1] or 0, seed_capacity)
+      local drained_seeds = drain_item_anchor(entity, anchor.resource, 1, lane_one_target)
+      local remaining_seed_capacity = seed_capacity - drained_seeds
+      local lane_two_target = math.min(emission.lane_emissions[2] or 0, remaining_seed_capacity)
+
+      drained_seeds = drained_seeds + drain_item_anchor(entity, anchor.resource, 2, lane_two_target)
 
       budgets[fruit] = (budgets[fruit] or 0) + drained_seeds * throughput_policy.GLEBA_FRUIT_PER_SEED
     end
@@ -238,7 +287,6 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
     return
   end
 
-  local uranium_anchor_index = 1
   local gleba_fruit_budgets = drain_gleba_seed_budgets(starter_anchors, ingress_tier, planet_name)
 
   for _, anchor in ipairs(starter_anchors.anchors) do
@@ -247,16 +295,18 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
     if entity and entity.valid and anchor.resource then
       if anchor.flow == "ingress" then
         if anchor.kind == "item" then
-          if uranium_context and anchor.resource == "uranium-ore" then
-            local allocated_budget = uranium_context.allocations[uranium_anchor_index] or 0
-            local uranium_anchor = uranium_context.anchors[uranium_anchor_index]
+          if anchor.resource == "uranium-ore" then
+            local uranium_anchor = uranium_context and uranium_context.by_anchor and uranium_context.by_anchor[anchor] or nil
+            local allocated_budget = uranium_anchor and uranium_anchor.allocation or 0
+            local uranium_buffer = uranium_context and uranium_context.sulfuric_acid_buffer or 0
 
+            set_anchor_active(anchor, entity, allocated_budget > 0 or uranium_buffer > 0)
             pump_uranium_ingress_anchor(entity, uranium_anchor and uranium_anchor.requested_emission, allocated_budget)
-            uranium_anchor_index = uranium_anchor_index + 1
           elseif throughput_policy.should_gate_gleba_fruit(planet_name, anchor) then
-            local available = (anchor.gleba_fruit_budget or 0) + (gleba_fruit_budgets[anchor.resource] or 0)
+            local available = gleba_fruit_budgets[anchor.resource] or 0
             local emission = get_item_anchor_emissions(anchor, defs.get_effective_ingress_tier_for_anchor(anchor), 1)
 
+            set_anchor_active(anchor, entity, available > 0)
             if available > 0 then
               local lane_one_inserted = pump_item_anchor(entity, anchor.resource, 1, math.min(emission.lane_emissions[1] or 0, available))
               available = available - lane_one_inserted
@@ -264,7 +314,7 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
               available = available - lane_two_inserted
             end
 
-            anchor.gleba_fruit_budget = available
+            gleba_fruit_budgets[anchor.resource] = available
           else
             local emission = get_item_anchor_emissions(anchor, defs.get_effective_ingress_tier_for_anchor(anchor), 1)
 
@@ -296,10 +346,16 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
 end
 
 local function get_uranium_context(ingress_tier, starter_anchors, bootstrap)
-  local uranium_anchors = get_active_uranium_anchors(ingress_tier, starter_anchors)
+  local sulfuric_acid_buffer = drain_uranium_acid_buffer(starter_anchors, bootstrap)
+  local uranium_anchors = get_uranium_anchors(ingress_tier, starter_anchors)
 
   if #uranium_anchors == 0 then
-    return nil
+    return {
+      anchors = {},
+      allocations = {},
+      by_anchor = {},
+      sulfuric_acid_buffer = sulfuric_acid_buffer
+    }
   end
 
   local uranium_budget = get_active_uranium_budget_per_interval(uranium_anchors, starter_anchors, bootstrap)
@@ -309,9 +365,19 @@ local function get_uranium_context(ingress_tier, starter_anchors, bootstrap)
     uranium_capacities[index] = uranium_anchor.capacity
   end
 
+  local allocations = throughput_policy.allocate_shared_budget(uranium_budget, uranium_capacities)
+  local by_anchor = {}
+
+  for index, uranium_anchor in ipairs(uranium_anchors) do
+    uranium_anchor.allocation = allocations[index] or 0
+    by_anchor[uranium_anchor.anchor] = uranium_anchor
+  end
+
   return {
     anchors = uranium_anchors,
-    allocations = throughput_policy.allocate_shared_budget(uranium_budget, uranium_capacities)
+    allocations = allocations,
+    by_anchor = by_anchor,
+    sulfuric_acid_buffer = bootstrap.uranium_sulfuric_acid_buffer or 0
   }
 end
 

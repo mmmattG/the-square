@@ -794,6 +794,7 @@ run_test("unconfigured anchor points stay empty and keep their slot proxy", func
         position = spec.position,
         direction = spec.direction,
         force = spec.force,
+        active = false,
         belt_to_ground_type = spec.type
       }
       created_entities[#created_entities + 1] = entity
@@ -1043,6 +1044,7 @@ run_test("ingress tier research sync keeps planet starter Managed Lines as minab
         position = spec.position,
         direction = spec.direction,
         force = spec.force,
+        active = false,
         belt_to_ground_type = spec.type
       }
       created_entities[#created_entities + 1] = entity
@@ -1084,6 +1086,7 @@ run_test("ingress tier research sync keeps planet starter Managed Lines as minab
   assert_equal(storage.bootstrap.ingress_tier, 3, "red ingress research should set tier 3")
   assert_equal(destroyed_yellow, true, "legacy planet ingress Managed Line should be destroyed")
   assert_equal(created_entities[1].name, runtime_defs.get_ingress_entity_name("scrap", 3), "planet ingress Managed Line should be recreated as the upgraded minable base entity")
+  assert_equal(created_entities[1].active, true, "configured Managed Lines should stay active after replacement")
   assert_equal(storage.planets.fulgora.starter_anchors.anchors[1].entity, created_entities[1], "planet Managed Line state should point at the upgraded entity")
 end)
 
