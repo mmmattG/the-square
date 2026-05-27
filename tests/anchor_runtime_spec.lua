@@ -70,6 +70,29 @@ local function build_player()
   local item_counts = {}
   local messages = {}
   local player
+  local function make_gui_parent()
+    local parent = {}
+    parent.add = function(_, spec)
+      spec = spec or _
+      local child = make_gui_parent()
+      child.valid = true
+      child.name = spec.name
+      child.type = spec.type
+      child.caption = spec.caption
+      child.enabled = true
+      child.destroy = function()
+        child.valid = false
+        if child.name then
+          parent[child.name] = nil
+        end
+      end
+      if child.name then
+        parent[child.name] = child
+      end
+      return child
+    end
+    return parent
+  end
   local function create_entity(_, spec)
     spec = spec or _
     local entity
@@ -96,6 +119,7 @@ local function build_player()
 
   player = {
     valid = true,
+    index = 1,
     force = {},
     position = {x = 0, y = 0},
     surface = {
@@ -111,6 +135,9 @@ local function build_player()
       inventory[#inventory + 1] = stack.name
       item_counts[stack.name] = (item_counts[stack.name] or 0) + (stack.count or 1)
       return stack.count
+    end,
+    can_insert = function()
+      return true
     end,
     get_item_count = function(item_name)
       return item_counts[item_name] or 0
@@ -129,7 +156,10 @@ local function build_player()
     end,
     get_messages = function()
       return messages
-    end
+    end,
+    gui = {
+      screen = make_gui_parent()
+    }
   }
 
   return player
@@ -161,9 +191,12 @@ local function configure_selected_slot(player, resource, flow)
     return {}
   end
   anchor_runtime.handle_managed_anchor_slot_click(player)
-  assert_equal(player.opened ~= nil, true, "slot click should open a Managed Line configuration menu")
-  player.opened.recipe = {name = runtime_defs.get_config_recipe_name(resource, flow)}
-  local configured = anchor_runtime.handle_anchor_recipe_changed(player.opened, player)
+  assert_equal(player.gui.screen[runtime_defs.ANCHOR_CONFIG_FRAME_NAME] ~= nil, true, "slot click should open an anchor configuration menu")
+  assert_equal(player.opened, player.gui.screen[runtime_defs.ANCHOR_CONFIG_FRAME_NAME], "anchor configuration should be the player's opened GUI")
+  local configured = anchor_runtime.handle_anchor_config_gui_click(player, {
+    valid = true,
+    name = runtime_defs.ANCHOR_CONFIG_BUTTON_PREFIX .. flow .. "__" .. resource
+  })
   local message = player.get_messages()[#player.get_messages()]
   assert_equal(configured, true, "recipe selection should configure the selected anchor slot: " .. tostring(message and message[1] or message))
   return configured
@@ -252,6 +285,98 @@ run_test("uranium purchase also grants one sulfuric acid egress line", function(
     runtime_defs.get_egress_item_name("sulfuric-acid"),
     "player should also receive the sulfuric acid egress item"
   )
+end)
+
+run_test("swapping anchor line type refunds the previous Managed Line item", function()
+  storage.bootstrap = {square_size = 12, surface_name = "fes-bootstrap"}
+  storage.planets = nil
+  storage.starter_anchors = {
+    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = {
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", "north", {x = -6, y = -7})
+    }
+  }
+
+  local player = build_player()
+  player.surface = {name = "fes-bootstrap"}
+
+  player.insert({name = runtime_defs.get_generic_anchor_item_name("fluid", "ingress"), count = 1})
+  anchor_runtime.handle_anchor_gui_opened({
+    valid = true,
+    name = runtime_defs.get_ingress_entity_name("iron-ore", 1),
+    position = {x = -6, y = -7},
+    surface = player.surface
+  }, player)
+
+  assert_equal(anchor_runtime.handle_anchor_config_gui_click(player, {
+    valid = true,
+    name = runtime_defs.ANCHOR_CONFIG_BUTTON_PREFIX .. "pick__ingress__water"
+  }), true, "swap click should be handled")
+
+  local anchor = storage.starter_anchors.anchors[1]
+  assert_equal(anchor.resource, "water", "anchor should switch to the selected fluid ingress")
+  assert_equal(player.get_item_count(runtime_defs.get_generic_anchor_item_name("fluid", "ingress")), 0, "new fluid line item should be consumed")
+  assert_equal(player.get_item_count(runtime_defs.get_generic_anchor_item_name("item", "ingress")), 1, "previous item line should be refunded")
+end)
+
+run_test("swapping anchor line type is cancelled when previous Managed Line cannot be refunded", function()
+  storage.bootstrap = {square_size = 12, surface_name = "fes-bootstrap"}
+  storage.planets = nil
+  storage.starter_anchors = {
+    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = {
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", "north", {x = -6, y = -7})
+    }
+  }
+
+  local player = build_player()
+  player.surface = {name = "fes-bootstrap"}
+  player.can_insert = function()
+    return false
+  end
+
+  player.insert({name = runtime_defs.get_generic_anchor_item_name("fluid", "ingress"), count = 1})
+  anchor_runtime.handle_anchor_gui_opened({
+    valid = true,
+    name = runtime_defs.get_ingress_entity_name("iron-ore", 1),
+    position = {x = -6, y = -7},
+    surface = player.surface
+  }, player)
+
+  assert_equal(anchor_runtime.handle_anchor_config_gui_click(player, {
+    valid = true,
+    name = runtime_defs.ANCHOR_CONFIG_BUTTON_PREFIX .. "pick__ingress__water"
+  }), true, "failed swap click should still be handled")
+
+  local anchor = storage.starter_anchors.anchors[1]
+  assert_equal(anchor.resource, "iron-ore", "anchor should keep the previous item ingress")
+  assert_equal(player.get_item_count(runtime_defs.get_generic_anchor_item_name("fluid", "ingress")), 1, "new fluid line item should not be consumed")
+  assert_equal(player.get_messages()[1][1], "message.the-square-managed-line-refund-inventory-full", "player should see the full-inventory refund error")
+end)
+
+run_test("closing the anchor configuration GUI destroys the screen frame", function()
+  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.starter_anchors = {
+    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
+    anchors = {}
+  }
+
+  local player = build_player()
+  player.surface = {name = "fes-bootstrap"}
+  player.selected = {
+    valid = true,
+    name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
+    position = {x = -6, y = -7}
+  }
+
+  anchor_runtime.handle_managed_anchor_slot_click(player)
+
+  local frame = player.gui.screen[runtime_defs.ANCHOR_CONFIG_FRAME_NAME]
+  assert_equal(frame ~= nil, true, "slot click should create the anchor configuration frame")
+  assert_equal(anchor_runtime.handle_anchor_config_gui_closed(player, frame), true, "closed screen frame should be handled")
+  assert_equal(frame.valid, false, "closed frame should be destroyed")
+  assert_equal(player.gui.screen[runtime_defs.ANCHOR_CONFIG_FRAME_NAME], nil, "destroyed frame should be removed from screen GUI")
+  assert_equal(storage.anchor_config_open[player.index], nil, "closed frame should clear per-player open anchor state")
 end)
 
 run_test("fluid egress faces inward on the managed border", function()
@@ -580,7 +705,7 @@ run_test("placing non-uranium ingress does not unlock uranium processing", funct
   assert_equal(#force.get_played_sounds(), 0, "non-uranium placement should not play the research-complete sound")
 end)
 
-run_test("placed generic Managed Lines stay unconfigured and operable", function()
+run_test("unconfigured anchor points stay empty and keep their slot proxy", function()
   local player_force = {valid = true, technologies = {}}
   local created_entities = {}
   local surface = {
@@ -627,12 +752,11 @@ run_test("placed generic Managed Lines stay unconfigured and operable", function
 
   local anchor = storage.starter_anchors.anchors[1]
   assert_equal(anchor.resource, nil, "new generic Managed Lines should not configure a resource during placement")
-  assert_equal(anchor.entity_name, runtime_defs.get_generic_anchor_entity_name("fluid", "ingress"), "unconfigured Managed Lines should spawn the matching generic entity")
-  assert_equal(anchor.entity.name, runtime_defs.get_generic_anchor_entity_name("fluid", "ingress"), "placement should recreate an unconfigured generic entity")
-  assert_equal(anchor.entity.operable, true, "unconfigured generic Managed Lines should stay operable so clicking opens configuration")
+  assert_equal(anchor.entity, nil, "unconfigured anchor points should not spawn a Managed Line entity")
+  assert_equal(created_entities[1].name, runtime_defs.ANCHOR_SLOT_PROXY_NAME, "unconfigured anchor points should keep an anchor slot proxy")
 end)
 
-run_test("existing generic item Managed Lines do not require underground belt fields", function()
+run_test("existing generic item Managed Lines collapse back to anchor slot proxies", function()
   local player_force = {valid = true, technologies = {}}
   local generic_entity = setmetatable({
     valid = true,
@@ -685,7 +809,7 @@ run_test("existing generic item Managed Lines do not require underground belt fi
 
   anchor_runtime.ensure_starter_anchors()
 
-  assert_equal(storage.starter_anchors.anchors[1].entity, generic_entity, "existing generic item Managed Line should be reused without underground-belt access")
+  assert_equal(storage.starter_anchors.anchors[1].entity, nil, "existing generic item Managed Line state should no longer own a visible generic entity")
 end)
 
 run_test("choosing a Managed Line recipe configures the Managed Line for its minable base entity", function()
@@ -801,9 +925,10 @@ run_test("anchor slot configuration fails when matching Managed Line item is mis
   end
 
   anchor_runtime.handle_managed_anchor_slot_click(player)
-  player.opened.recipe = {name = runtime_defs.get_config_recipe_name("iron-ore", "ingress")}
-
-  assert_equal(anchor_runtime.handle_anchor_recipe_changed(player.opened, player), false, "missing inventory should reject placement")
+  assert_equal(anchor_runtime.handle_anchor_config_gui_click(player, {
+    valid = true,
+    name = runtime_defs.ANCHOR_CONFIG_BUTTON_PREFIX .. "ingress__iron-ore"
+  }), true, "missing inventory should be handled by the anchor configuration menu")
   assert_equal(player.get_messages()[1][1], "message.the-square-managed-line-missing-inventory", "missing inventory should explain the failure")
   assert_equal(anchor_runtime.get_owned_line_counts("iron-ore").owned, 0, "failed placement should not create owned lines")
 end)

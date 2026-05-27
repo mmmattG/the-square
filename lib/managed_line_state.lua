@@ -19,6 +19,12 @@ local function migrate_anchor_to_anchor_ring(square_size, anchor)
 end
 
 local function normalize_anchor(anchor, square_size)
+  if anchor.position and not anchor.resource and not (anchor.kind or anchor.flow) then
+    anchor.item_progress = anchor.item_progress or {0, 0}
+    migrate_anchor_to_anchor_ring(square_size, anchor)
+    return
+  end
+
   anchor.flow = anchor.flow or "ingress"
   anchor.item_progress = anchor.item_progress or {0, 0}
   anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind or "item", anchor.flow)

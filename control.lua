@@ -94,6 +94,10 @@ end
 
 if defines.events.on_gui_closed then
   script.on_event(defines.events.on_gui_closed, function(event)
+    if event.element and managed_line_runtime.handle_config_gui_closed(game.get_player(event.player_index), event.element) then
+      return
+    end
+
     if event.entity then
       managed_line_runtime.handle_recipe_changed(event.entity, game.get_player(event.player_index))
     end
@@ -138,6 +142,10 @@ script.on_event(defines.events.on_gui_click, function(event)
   end
 
   local player = game.get_player(event.player_index)
+
+  if managed_line_runtime.handle_config_gui_click(player, event.element) then
+    return
+  end
 
   if event.element.name == defs.DEV_EXPAND_BUTTON_NAME then
     if player and gui_runtime.is_dev_mode_enabled(player) then

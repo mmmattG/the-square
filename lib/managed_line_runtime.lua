@@ -60,6 +60,14 @@ function managed_line_runtime.handle_gui_opened(entity, player)
   return anchor_runtime.handle_anchor_gui_opened(entity, player)
 end
 
+function managed_line_runtime.handle_config_gui_click(player, element)
+  return anchor_runtime.handle_anchor_config_gui_click(player, element)
+end
+
+function managed_line_runtime.handle_config_gui_closed(player, element)
+  return anchor_runtime.handle_anchor_config_gui_closed(player, element)
+end
+
 function managed_line_runtime.handle_recipe_changed(entity, actor)
   return anchor_runtime.handle_anchor_recipe_changed(entity, actor)
 end

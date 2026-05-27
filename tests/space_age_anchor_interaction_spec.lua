@@ -38,19 +38,30 @@ local function run_test(name, fn)
   io.stdout:write("PASS " .. name .. "\n")
 end
 
-local function make_clearable_stack(name)
-  local stack = {valid_for_read = true, name = name, count = 1}
-  stack.clear = function()
-    stack.valid_for_read = false
-    stack.name = nil
-    stack.count = 0
-  end
-  return stack
-end
-
 local function give_player_item(player, item_name)
   player.item_counts = player.item_counts or {}
   player.item_counts[item_name] = (player.item_counts[item_name] or 0) + 1
+end
+
+local function make_gui_parent()
+  local parent = {}
+  parent.add = function(_, spec)
+    spec = spec or _
+    local child = make_gui_parent()
+    child.valid = true
+    child.name = spec.name
+    child.destroy = function()
+      child.valid = false
+      if child.name then
+        parent[child.name] = nil
+      end
+    end
+    if child.name then
+      parent[child.name] = child
+    end
+    return child
+  end
+  return parent
 end
 
 run_test("Vulcanus anchor slots open a Managed Line configuration menu using planet-local state", function()
@@ -103,12 +114,14 @@ run_test("Vulcanus anchor slots open a Managed Line configuration menu using pla
 
   anchor_runtime.handle_anchor_mined(anchor.entity)
 
-  assert_equal(anchor.position, nil, "mining a Vulcanus Managed Line should stash the planet-local line")
+  assert_equal(anchor.position.x, 0, "mining a Vulcanus Managed Line should leave the planet-local anchor point in place")
+  assert_equal(anchor.resource, nil, "mining a Vulcanus Managed Line should clear the anchor point's Managed Line")
 
   local player
   local messages = {}
   player = {
     valid = true,
+    index = 1,
     surface = surface,
     force = game.forces.player,
     selected = {valid = true, name = runtime_defs.ANCHOR_SLOT_PROXY_NAME, position = {x = 1, y = -9}},
@@ -121,14 +134,14 @@ run_test("Vulcanus anchor slots open a Managed Line configuration menu using pla
       player.item_counts[stack.name] = available - removed
       return removed
     end,
-    print = function(message) messages[#messages + 1] = message end
+    print = function(message) messages[#messages + 1] = message end,
+    gui = {screen = make_gui_parent()}
   }
 
   give_player_item(player, runtime_defs.get_generic_anchor_item_name("item", "ingress"))
   anchor_runtime.handle_managed_anchor_slot_click(player)
-  assert_equal(player.opened ~= nil, true, "slot click should open a configuration menu")
-  assert_equal(player.opened.position.x, 1, "configuration proxy should use the selected Vulcanus anchor slot")
-  assert_equal(player.opened.position.y, -9, "configuration proxy should use the Vulcanus square bounds")
+  assert_equal(player.gui.screen[runtime_defs.ANCHOR_CONFIG_FRAME_NAME] ~= nil, true, "slot click should open a configuration menu")
+  assert_equal(storage.anchor_config_open[1].position_key, "1:-9", "configuration menu should be owned by the selected Vulcanus anchor slot")
 end)
 
 run_test("Space Age item ingress mining matches centered entity positions after reload", function()
@@ -179,6 +192,7 @@ run_test("Space Age item ingress mining matches centered entity positions after 
       surface = surface
     })
 
-    assert_equal(anchor.position, nil, case.planet .. " " .. case.resource .. " ingress should stash when mined by centered entity position")
+    assert_equal(anchor.resource, nil, case.planet .. " " .. case.resource .. " ingress should clear when mined by centered entity position")
+    assert_equal(anchor.position.x, 0, case.planet .. " " .. case.resource .. " anchor point should stay in place")
   end
 end)
