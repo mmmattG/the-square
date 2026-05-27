@@ -83,10 +83,18 @@ local function build_ingress_edge_check_debug(square_size, position)
 end
 
 function gui_runtime.is_dev_mode_enabled(player)
+  if storage and storage.the_square_playtest_debug_enabled then
+    return true
+  end
+
   return settings.get_player_settings(player)[defs.SETTING_DEV_MODE].value
 end
 
 function gui_runtime.is_ingress_placement_debug_enabled(player)
+  if storage and storage.the_square_playtest_debug_enabled then
+    return true
+  end
+
   return player
     and player.valid
     and settings.get_player_settings(player)[defs.SETTING_INGRESS_PLACEMENT_DEBUG].value

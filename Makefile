@@ -3,7 +3,7 @@ SHELL := /bin/sh
 LUA ?= $(shell command -v luajit 2>/dev/null || command -v lua 2>/dev/null)
 LUAC ?= $(shell command -v luac 2>/dev/null || command -v luac5.4 2>/dev/null || command -v luac5.3 2>/dev/null || command -v luac5.2 2>/dev/null)
 
-.PHONY: all build install test typecheck unit-test e2e-load-test e2e-test e2e-screenshot-test
+.PHONY: all build install test typecheck unit-test e2e-load-test e2e-test e2e-screenshot-test playtest
 
 all: build install
 
@@ -93,3 +93,8 @@ e2e-screenshot-test:
 		rm -f $$tmp; \
 		exit $$status; \
 	fi
+
+# Creates and launches an isolated human-in-the-loop playtest save with helper controls.
+# Set PLAYTEST_NO_LAUNCH=1 to only create the save.
+playtest:
+	./scripts/playtest-world.sh

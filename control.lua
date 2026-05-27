@@ -12,6 +12,19 @@ local function sync_all_runtime_guis()
   gui_runtime.sync_all_shop_guis(managed_line_runtime)
 end
 
+local function sync_research_runtime_state(force)
+  local target_force = force or defs.get_player_force()
+
+  if target_force then
+    managed_line_runtime.sync_tier(target_force)
+    if not defs.is_logistic_network_automation_enabled() then
+      managed_line_runtime.apply_logistic_network_setting_to_force(target_force)
+    end
+  end
+
+  sync_all_runtime_guis()
+end
+
 local function bootstrap_world()
   bootstrap_runtime.bootstrap_world(managed_line_runtime, gui_runtime)
 end
@@ -279,3 +292,14 @@ end)
 script.on_nth_tick(defs.ITEM_ANCHOR_INTERVAL_TICKS, function()
   managed_line_runtime.ensure_all()
 end)
+
+remote.add_interface("the-square", {
+  sync_research_runtime_state = function(force_name)
+    local force = force_name and game.forces[force_name] or defs.get_player_force()
+    sync_research_runtime_state(force)
+  end,
+  set_playtest_debug_enabled = function(enabled)
+    storage.the_square_playtest_debug_enabled = enabled and true or nil
+    gui_runtime.sync_all_dev_guis()
+  end
+})
