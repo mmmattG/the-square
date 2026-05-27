@@ -106,6 +106,34 @@ local function migrate_anchor_namespace(anchor)
   anchor.entity_name = replace_legacy_prefix(anchor.entity_name)
 end
 
+local function get_tier_level_from_anchor_entity_name(anchor)
+  if not (anchor and anchor.entity_name and anchor.kind == "item") then
+    return nil
+  end
+
+  for _, tier in ipairs(defs.MANAGED_LINE_ITEM_TIERS) do
+    if tier.key ~= "yellow" and string.match(anchor.entity_name, "%-" .. tier.key .. "$") then
+      return tier.tier_level
+    end
+  end
+
+  return nil
+end
+
+local function get_fallback_anchor_tier_level(anchor)
+  if not (anchor and anchor.kind == "item") then
+    return 1
+  end
+
+  local bootstrap = storage.bootstrap or {}
+
+  if anchor.flow == "egress" then
+    return bootstrap.egress_tier or bootstrap.ingress_tier or 1
+  end
+
+  return bootstrap.ingress_tier or 1
+end
+
 local function migrate_anchor_to_generic(anchor)
   if not anchor then
     return
@@ -113,8 +141,13 @@ local function migrate_anchor_to_generic(anchor)
 
   anchor.flow = anchor.flow or "ingress"
   anchor.kind = anchor.kind or "item"
-  anchor.item_name = defs.get_generic_anchor_item_name(anchor.kind, anchor.flow)
-  anchor.entity_name = defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
+  anchor.tier_level = anchor.tier_level
+    or get_tier_level_from_anchor_entity_name(anchor)
+    or get_fallback_anchor_tier_level(anchor)
+  anchor.item_name = defs.get_generic_anchor_item_name_for_tier(anchor.kind, anchor.flow, anchor.tier_level)
+  anchor.entity_name = anchor.position and anchor.resource
+    and defs.get_anchor_entity_name_for_current_tier(anchor)
+    or defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
   anchor.entity = nil
 end
 
