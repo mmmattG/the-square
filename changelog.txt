@@ -1,4 +1,15 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.1.3
+Date: 2026-05-27
+  Features:
+    - Added Space Age support for planets, Vulcanus, Fulgora, Gleba and Aquilo.
+    - Added a per-player "Get cliff explosives" mod setting button to help recover from cliff generation blocking progression on Vulcanus.
+  Changes:
+    - This is a major update, with entire systems reworked to better fit Space Age.
+    - Reworked the ingress/egress system around craftable anchors.
+    - Removed the expansion point purchasing system. Ingress and egress anchors are now crafted and placed from inventory.
+    - Anchor slots can now be clicked to configure ingress and egress directly, consuming the matching anchor item from the player's inventory.
+---------------------------------------------------------------------------------------------------
 Version: 0.1.1
 Date: 2026-03-30
   Features:
