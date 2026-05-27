@@ -35,4 +35,19 @@ run_test("Managed Line throughput policy owns planet-specific budget rules", fun
     true,
     "Gleba seed egress is consumed by the policy budget pass"
   )
+  assert_equal(
+    throughput_policy.should_gate_biter_egg("nauvis", {flow = "ingress", kind = "item", resource = "biter-egg"}),
+    true,
+    "Nauvis biter egg ingress should be gated"
+  )
+  assert_equal(
+    throughput_policy.should_skip_regular_egress("nauvis", {resource = "bioflux"}),
+    true,
+    "Nauvis bioflux egress is consumed by the biter egg budget pass"
+  )
+  assert_equal(
+    throughput_policy.BITER_BIOFLUX_BUFFER_CAPACITY,
+    30,
+    "Biter egg support should buffer thirty bioflux worth of egg budget"
+  )
 end)

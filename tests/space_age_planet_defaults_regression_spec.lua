@@ -61,8 +61,8 @@ run_test("Nauvis defaults remain on the legacy path", function()
 
   assert_equal(config.square_size, 7, "Nauvis should keep the original default square size")
   assert_equal(config.floor_tile_name, nil, "Nauvis should keep using the configurable legacy floor")
-  assert_equal(resource_names(defs.get_input_definitions("nauvis")), "coal,copper-ore,crude-oil,iron-ore,stone,uranium-ore,water,wood")
-  assert_equal(resource_names(defs.get_output_definitions("nauvis")), "sulfuric-acid")
+  assert_equal(resource_names(defs.get_input_definitions("nauvis")), "biter-egg,coal,copper-ore,crude-oil,iron-ore,stone,uranium-ore,water,wood")
+  assert_equal(resource_names(defs.get_output_definitions("nauvis")), "bioflux,sulfuric-acid")
 end)
 
 run_test("anchor presentation maps item and fluid ingress/egress behavior", function()

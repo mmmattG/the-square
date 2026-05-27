@@ -524,6 +524,96 @@ run_test("one Gleba seed budgets fifty matching fruit", function()
   assert_equal(counts.inserted.yumako, 50, "one yumako seed should budget fifty yumako fruit")
 end)
 
+run_test("one Nauvis bioflux budgets thirty biter eggs", function()
+  local counts = {inserted = {}, removed = {}}
+  local bioflux_available = true
+  local force = {valid = true, technologies = {["biter-egg-handling"] = {researched = false}}}
+
+  local function belt_entity()
+    return {
+      valid = true,
+      force = force,
+      get_transport_line = function()
+        return {
+          can_insert_at_back = function() return true end,
+          insert_at_back = function(stack)
+            counts.inserted[stack.name] = (counts.inserted[stack.name] or 0) + stack.count
+          end,
+          remove_item = function(stack)
+            if stack.name ~= "bioflux" or not bioflux_available then
+              return 0
+            end
+
+            bioflux_available = false
+            counts.removed[stack.name] = (counts.removed[stack.name] or 0) + stack.count
+            return stack.count
+          end
+        }
+      end
+    }
+  end
+
+  local bootstrap = {
+    square_size = 7,
+    surface_name = "nauvis",
+    ingress_tier = 1,
+    starter_anchors = {anchors = {
+      {resource = "biter-egg", kind = "item", flow = "ingress", position = {x = 0, y = -4}, entity = belt_entity(), item_progress = {0, 0}},
+      {resource = "bioflux", kind = "item", flow = "egress", position = {x = 0, y = 4}, entity = belt_entity(), item_progress = {0, 0}}
+    }}
+  }
+  storage = {
+    bootstrap = bootstrap,
+    starter_anchors = bootstrap.starter_anchors,
+    planets = {nauvis = bootstrap}
+  }
+
+  for _ = 1, defs.ITEM_ANCHOR_INTERVAL_TICKS * 30 do
+    ingress_runtime.pump_planet_anchors("nauvis")
+  end
+
+  assert_equal(counts.removed.bioflux, 1, "only one bioflux should be drained")
+  assert_equal(counts.inserted["biter-egg"], 30, "one bioflux should budget thirty biter eggs")
+  assert_equal(force.technologies["biter-egg-handling"].researched, true, "first harvested biter egg should grant biter egg handling")
+  assert_equal(bootstrap.biter_egg_handling_granted_from_ingress, true, "grant should be recorded on the Nauvis planet state")
+end)
+
+run_test("Nauvis bioflux egress buffers up to thirty bioflux worth of biter eggs", function()
+  local removed = {}
+
+  local bioflux_entity = {
+    valid = true,
+    get_transport_line = function()
+      return {
+        remove_item = function(stack)
+          removed[stack.name] = (removed[stack.name] or 0) + stack.count
+          return stack.count
+        end
+      }
+    end
+  }
+  local bootstrap = {
+    square_size = 7,
+    surface_name = "nauvis",
+    ingress_tier = 1,
+    starter_anchors = {anchors = {
+      {resource = "bioflux", kind = "item", flow = "egress", position = {x = 0, y = 4}, entity = bioflux_entity, item_progress = {0, 0}}
+    }}
+  }
+  storage = {
+    bootstrap = bootstrap,
+    starter_anchors = bootstrap.starter_anchors,
+    planets = {nauvis = bootstrap}
+  }
+
+  for _ = 1, defs.ITEM_ANCHOR_INTERVAL_TICKS * 31 do
+    ingress_runtime.pump_planet_anchors("nauvis")
+  end
+
+  assert_equal(removed.bioflux, 30, "bioflux egress should stop draining once the bioflux buffer is full")
+  assert_equal(bootstrap.starter_anchors.biter_egg_budget, 900, "thirty buffered bioflux should hold nine hundred biter eggs")
+end)
+
 run_test("Gleba fruit ingresses and seed egresses use normal Managed Line rates", function()
   local counts = {inserted = {}, removed = {}}
 

@@ -67,6 +67,10 @@ local function should_anchor_entity_be_active(anchor, planet_name)
     return anchor.input_budget_active == true
   end
 
+  if throughput_policy.should_gate_biter_egg(planet_name, anchor) then
+    return anchor.input_budget_active == true
+  end
+
   return true
 end
 

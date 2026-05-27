@@ -28,13 +28,15 @@ local ingress_resources = {
   {resource = "jellynut", kind = "item", icon = space_age_icon("jellynut.png", "__base__/graphics/icons/wood.png"), order = "a[ingress]-p[jellynut]"},
   {resource = "ammoniacal-solution", kind = "fluid", icon = space_age_icon("fluid/ammoniacal-solution.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-q[ammoniacal-solution]"},
   {resource = "fluorine", kind = "fluid", icon = space_age_icon("fluid/fluorine.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-r[fluorine]"},
-  {resource = "lithium-brine", kind = "fluid", icon = space_age_icon("fluid/lithium-brine.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-s[lithium-brine]"}
+  {resource = "lithium-brine", kind = "fluid", icon = space_age_icon("fluid/lithium-brine.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-s[lithium-brine]"},
+  {resource = "biter-egg", kind = "item", icon = space_age_icon("biter-egg.png", "__base__/graphics/icons/small-biter.png"), order = "a[ingress]-t[biter-egg]"}
 }
 
 local egress_resources = {
   {resource = "sulfuric-acid", kind = "fluid", icon = "__base__/graphics/icons/fluid/sulfuric-acid.png", order = "b[egress]-a[sulfuric-acid]"},
   {resource = "yumako-seed", kind = "item", icon = space_age_icon("yumako-seed.png", "__base__/graphics/icons/wood.png"), order = "b[egress]-b[yumako-seed]"},
-  {resource = "jellynut-seed", kind = "item", icon = space_age_icon("jellynut-seed.png", "__base__/graphics/icons/wood.png"), order = "b[egress]-c[jellynut-seed]"}
+  {resource = "jellynut-seed", kind = "item", icon = space_age_icon("jellynut-seed.png", "__base__/graphics/icons/wood.png"), order = "b[egress]-c[jellynut-seed]"},
+  {resource = "bioflux", kind = "item", icon = space_age_icon("bioflux.png", "__base__/graphics/icons/wood.png"), order = "b[egress]-d[bioflux]"}
 }
 
 local item_ingress_belt_tiers = {
@@ -826,6 +828,8 @@ local function add_resource_configuration_unlocks()
   add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("uranium-ore", "ingress"))
   add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("sulfuric-acid", "ingress"))
   add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("sulfuric-acid", "egress"))
+  add_recipe_unlock_to_technology("captivity", config_recipe_name("biter-egg", "ingress"))
+  add_recipe_unlock_to_technology("captivity", config_recipe_name("bioflux", "egress"))
 end
 
 local prototypes = {}

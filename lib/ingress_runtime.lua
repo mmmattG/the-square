@@ -282,12 +282,84 @@ local function drain_gleba_seed_budgets(starter_anchors, ingress_tier, planet_na
   return budgets
 end
 
+local function grant_biter_egg_handling_from_ingress(bootstrap, force)
+  if not bootstrap or bootstrap.biter_egg_handling_granted_from_ingress then
+    return
+  end
+
+  if not (force and force.valid ~= false and force.technologies) then
+    return
+  end
+
+  local technology = force.technologies["biter-egg-handling"]
+
+  if not technology then
+    return
+  end
+
+  bootstrap.biter_egg_handling_granted_from_ingress = true
+
+  if not technology.researched then
+    technology.researched = true
+    if type(force.play_sound) == "function" then
+      force.play_sound({path = "utility/research_completed"})
+    end
+  end
+end
+
+local function drain_biter_egg_budget(starter_anchors, planet_name)
+  if planet_name ~= "nauvis" then
+    return 0
+  end
+
+  local egg_budget_capacity = throughput_policy.BITER_BIOFLUX_BUFFER_CAPACITY * throughput_policy.BITER_EGGS_PER_BIOFLUX
+
+  starter_anchors.biter_egg_budget = math.min(
+    egg_budget_capacity,
+    math.max(0, starter_anchors.biter_egg_budget or 0)
+  )
+
+  local budget = starter_anchors.biter_egg_budget
+
+  for _, anchor in ipairs(starter_anchors.anchors) do
+    local entity = anchor.position and anchor.entity or nil
+
+    if anchor.flow == "egress"
+      and anchor.kind == "item"
+      and anchor.resource == "bioflux"
+      and entity
+      and entity.valid
+    then
+      local available_egg_capacity = egg_budget_capacity - budget
+      local bioflux_capacity = math.floor(available_egg_capacity / throughput_policy.BITER_EGGS_PER_BIOFLUX)
+
+      if bioflux_capacity <= 0 then
+        break
+      end
+
+      local emission = get_item_anchor_emissions(anchor, defs.get_effective_ingress_tier_for_anchor(anchor), 1)
+      local lane_one_target = math.min(emission.lane_emissions[1] or 0, bioflux_capacity)
+      local drained_bioflux = drain_item_anchor(entity, anchor.resource, 1, lane_one_target)
+      local remaining_bioflux_capacity = bioflux_capacity - drained_bioflux
+      local lane_two_target = math.min(emission.lane_emissions[2] or 0, remaining_bioflux_capacity)
+
+      drained_bioflux = drained_bioflux + drain_item_anchor(entity, anchor.resource, 2, lane_two_target)
+      budget = budget + drained_bioflux * throughput_policy.BITER_EGGS_PER_BIOFLUX
+    end
+  end
+
+  starter_anchors.biter_egg_budget = budget
+  return budget
+end
+
 local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, planet_name)
   if not starter_anchors then
     return
   end
 
   local gleba_fruit_budgets = drain_gleba_seed_budgets(starter_anchors, ingress_tier, planet_name)
+  local biter_egg_budget = drain_biter_egg_budget(starter_anchors, planet_name)
+  local bootstrap = planet_name and storage.planets and storage.planets[planet_name] or nil
 
   for _, anchor in ipairs(starter_anchors.anchors) do
     local entity = anchor.position and anchor.entity or nil
@@ -315,6 +387,22 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
             end
 
             gleba_fruit_budgets[anchor.resource] = available
+          elseif throughput_policy.should_gate_biter_egg(planet_name, anchor) then
+            local emission = get_item_anchor_emissions(anchor, defs.get_effective_ingress_tier_for_anchor(anchor), 1)
+
+            set_anchor_active(anchor, entity, biter_egg_budget > 0)
+            if biter_egg_budget > 0 then
+              local lane_one_inserted = pump_item_anchor(entity, anchor.resource, 1, math.min(emission.lane_emissions[1] or 0, biter_egg_budget))
+              biter_egg_budget = biter_egg_budget - lane_one_inserted
+              local lane_two_inserted = pump_item_anchor(entity, anchor.resource, 2, math.min(emission.lane_emissions[2] or 0, biter_egg_budget))
+              biter_egg_budget = biter_egg_budget - lane_two_inserted
+
+              if lane_one_inserted + lane_two_inserted > 0 then
+                grant_biter_egg_handling_from_ingress(bootstrap, entity.force or defs.get_player_force())
+              end
+            end
+
+            starter_anchors.biter_egg_budget = biter_egg_budget
           else
             local emission = get_item_anchor_emissions(anchor, defs.get_effective_ingress_tier_for_anchor(anchor), 1)
 

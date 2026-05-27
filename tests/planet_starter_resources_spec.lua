@@ -31,6 +31,8 @@ local function run_test(name, fn)
 end
 
 run_test("planet starter resource matrix is planet-local", function()
+  assert_equal(names(defs.get_input_definitions("nauvis")), "biter-egg,coal,copper-ore,crude-oil,iron-ore,stone,uranium-ore,water,wood")
+  assert_equal(names(defs.get_output_definitions("nauvis")), "bioflux,sulfuric-acid")
   assert_equal(names(defs.get_input_definitions("vulcanus")), "calcite,coal,lava,sulfuric-acid,tungsten-ore")
   assert_equal(names(defs.get_output_definitions("vulcanus")), "")
   assert_equal(names(defs.get_input_definitions("fulgora")), "heavy-oil,scrap")

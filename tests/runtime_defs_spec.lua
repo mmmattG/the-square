@@ -137,7 +137,8 @@ run_test("late resource configuration unlocks follow vanilla research", function
     technologies = {
       ["oil-gathering"] = {researched = true},
       ["oil-processing"] = {researched = true},
-      ["uranium-mining"] = {researched = true}
+      ["uranium-mining"] = {researched = true},
+      captivity = {researched = true}
     }
   }
 
@@ -160,5 +161,15 @@ run_test("late resource configuration unlocks follow vanilla research", function
     runtime_defs.is_config_definition_unlocked(runtime_defs.get_output_definition("sulfuric-acid"), "egress", force),
     true,
     "uranium mining should unlock sulfuric acid egress configuration"
+  )
+  assert_equal(
+    runtime_defs.is_config_definition_unlocked(runtime_defs.get_input_definition("biter-egg"), "ingress", force),
+    true,
+    "captivity should unlock biter egg ingress configuration"
+  )
+  assert_equal(
+    runtime_defs.is_config_definition_unlocked(runtime_defs.get_output_definition("bioflux"), "egress", force),
+    true,
+    "captivity should unlock bioflux egress configuration"
   )
 end)
