@@ -28,6 +28,20 @@ write_data_dir="$case_dir/write-data"
 config_path="$case_dir/config.ini"
 save_path="$case_dir/the-square-playtest.zip"
 log_path="$case_dir/factorio-create.log"
+space_age_enabled=${PLAYTEST_SPACE_AGE:-1}
+
+case "$space_age_enabled" in
+  1|true|TRUE|yes|YES|on|ON)
+    official_space_age_mods_enabled=true
+    ;;
+  0|false|FALSE|no|NO|off|OFF)
+    official_space_age_mods_enabled=false
+    ;;
+  *)
+    echo "error: PLAYTEST_SPACE_AGE must be 1 or 0." >&2
+    exit 2
+    ;;
+esac
 
 rm -rf "$case_dir"
 mkdir -p "$mod_dir" "$write_data_dir"
@@ -40,7 +54,7 @@ write-data=$write_data_dir
 EOF
 
 cat > "$mod_dir/mod-list.json" <<EOF
-{"mods":[{"name":"base","enabled":true},{"name":"elevated-rails","enabled":false},{"name":"quality","enabled":false},{"name":"space-age","enabled":false},{"name":"$mod_name","enabled":true},{"name":"the-square-playtest-tools","enabled":true}]}
+{"mods":[{"name":"base","enabled":true},{"name":"elevated-rails","enabled":$official_space_age_mods_enabled},{"name":"quality","enabled":$official_space_age_mods_enabled},{"name":"space-age","enabled":$official_space_age_mods_enabled},{"name":"$mod_name","enabled":true},{"name":"the-square-playtest-tools","enabled":true}]}
 EOF
 
 playtest_mod_dir="$mod_dir/the-square-playtest-tools_0.1.0"
@@ -386,6 +400,11 @@ fi
 
 echo "Created playtest save: $save_path"
 echo "Playtest data directory: $case_dir"
+if [ "$official_space_age_mods_enabled" = true ]; then
+  echo "Space Age playtest mods enabled: elevated-rails, quality, space-age"
+else
+  echo "Space Age playtest mods disabled"
+fi
 
 if [ "${PLAYTEST_NO_LAUNCH:-}" ]; then
   exit 0
