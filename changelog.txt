@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.1.4
+Date: 2026-05-28
+  Features:
+    - Added a short interactive world creation tutorial for getting resources through an ingress Managed Line.
+---------------------------------------------------------------------------------------------------
 Version: 0.1.3
 Date: 2026-05-27
   Features:

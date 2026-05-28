@@ -6,6 +6,7 @@ local planet_square_runtime = require("lib.planet_square_runtime")
 local gui_runtime = require("lib.gui_runtime")
 local screenshot_runtime = require("lib.screenshot_runtime")
 local void_item_runtime = require("lib.void_item_runtime")
+local tutorial = require("lib.tutorial")
 
 local function sync_all_runtime_guis()
   gui_runtime.refresh_all_debug_guis()
@@ -39,6 +40,7 @@ local function handle_player_join_or_respawn(event)
     gui_runtime.sync_screenshot_gui(player)
     gui_runtime.sync_shop_gui(player, managed_line_runtime)
     gui_runtime.sync_cliff_explosive_gui(player)
+    tutorial.show_world_creation(player)
   end
 end
 
@@ -157,6 +159,7 @@ script.on_event(defines.events.on_gui_click, function(event)
   local player = game.get_player(event.player_index)
 
   if managed_line_runtime.handle_config_gui_click(player, event.element) then
+    tutorial.handle_anchor_config_changed(player, managed_line_runtime)
     return
   end
 
@@ -208,6 +211,7 @@ script.on_event(defs.PLACE_MANAGED_ANCHOR_INPUT_NAME, function(event)
 
   if player then
     managed_line_runtime.handle_slot_click(player)
+    tutorial.handle_anchor_slot_clicked(player)
     gui_runtime.sync_all_shop_guis(managed_line_runtime)
   end
 end)
@@ -284,6 +288,12 @@ script.on_event(defines.events.on_research_finished, function(event)
     managed_line_runtime.apply_logistic_network_setting_to_force(research.force)
   end
 end)
+
+if defines.events.on_player_main_inventory_changed then
+  script.on_event(defines.events.on_player_main_inventory_changed, function(event)
+    tutorial.handle_inventory_changed(game.get_player(event.player_index))
+  end)
+end
 
 script.on_nth_tick(1, function()
   managed_line_runtime.pump_all()
