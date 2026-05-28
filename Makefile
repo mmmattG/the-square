@@ -5,8 +5,7 @@ LUAC ?= $(shell command -v luac 2>/dev/null || command -v luac5.4 2>/dev/null ||
 MOD_NAME := $(shell python3 -c 'import json, pathlib; print(json.loads(pathlib.Path("info.json").read_text())["name"])')
 MOD_VERSION := $(shell python3 -c 'import json, pathlib; print(json.loads(pathlib.Path("info.json").read_text())["version"])')
 ARTIFACT := build/$(MOD_NAME)_$(MOD_VERSION).zip
-DETECTED_WINDOWS_FACTORIO_MODS_DIR := $(shell if command -v cmd.exe >/dev/null 2>&1 && command -v wslpath >/dev/null 2>&1; then win_path=$$(cmd.exe /C "echo %APPDATA%\Factorio\mods" 2>/dev/null | tr -d '\r'); if [ -n "$$win_path" ]; then wslpath -u "$$win_path"; fi; fi)
-DETECTED_FACTORIO_MODS_DIR := $(or $(DETECTED_WINDOWS_FACTORIO_MODS_DIR),$(HOME)/.factorio/mods)
+DETECTED_FACTORIO_MODS_DIR := $(shell ./scripts/detect-factorio-mods-dir.sh)
 FACTORIO_MODS_DIR ?= $(DETECTED_FACTORIO_MODS_DIR)
 
 .PHONY: all build install test typecheck unit-test e2e-load-test e2e-test e2e-screenshot-test playtest
