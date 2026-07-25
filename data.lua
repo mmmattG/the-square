@@ -818,7 +818,7 @@ local function add_recipe_unlock_to_technology(technology_name, recipe_name)
 end
 
 local function add_resource_configuration_unlocks()
-  add_recipe_unlock_to_technology("oil-processing", config_recipe_name("crude-oil", "ingress"))
+  add_recipe_unlock_to_technology("oil-gathering", config_recipe_name("crude-oil", "ingress"))
   add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("uranium-ore", "ingress"))
   add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("sulfuric-acid", "ingress"))
   add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("sulfuric-acid", "egress"))

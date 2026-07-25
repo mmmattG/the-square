@@ -74,7 +74,7 @@ runtime_defs.MANAGED_LINE_ITEM_TIERS = {
 }
 runtime_defs.CONFIG_RESOURCE_TECH_UNLOCKS = {
   ingress = {
-    ["crude-oil"] = {"oil-gathering", "oil-processing"},
+    ["crude-oil"] = {"oil-gathering"},
     ["uranium-ore"] = {"uranium-mining"},
     ["sulfuric-acid"] = {"uranium-mining"}
   },

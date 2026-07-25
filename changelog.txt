@@ -8,6 +8,7 @@ Date: 2026-07-25
     - Removed Nauvis biter egg ingress and bioflux egress in favour of handcrafted biter eggs to better fit with vanilla captive biter spawners.
   Bugfixes:
     - Base screenshots now capture the supported planet currently being viewed, based on feedback from @Birk.
+    - Crude oil ingress is now unlocked by Oil gathering instead of Oil processing, based on reports from Redlight and seb_zeppelin on the Mod Portal.
   Credits:
     - Thanks to @Birk on Discord for feedback
 

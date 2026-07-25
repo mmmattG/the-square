@@ -131,12 +131,12 @@ run_test("Managed Line tier research includes the Space Age-only final tier", fu
   assert_equal(runtime_defs.get_ingress_entity_name("scrap", 5), "the-square-item-ingress-managed-anchor-turbo")
 end)
 
-run_test("remaining late resource configuration unlocks follow vanilla research", function()
+run_test("resource configuration unlocks follow vanilla research", function()
   local force = {
     valid = true,
     technologies = {
       ["oil-gathering"] = {researched = true},
-      ["oil-processing"] = {researched = true},
+      ["oil-processing"] = {researched = false},
       ["uranium-mining"] = {researched = true}
     }
   }
@@ -144,7 +144,7 @@ run_test("remaining late resource configuration unlocks follow vanilla research"
   assert_equal(
     runtime_defs.is_config_definition_unlocked(runtime_defs.get_input_definition("crude-oil"), "ingress", force),
     true,
-    "oil gathering plus oil processing should unlock crude oil ingress configuration"
+    "oil gathering should unlock crude oil ingress configuration without oil processing"
   )
   assert_equal(
     runtime_defs.is_config_definition_unlocked(runtime_defs.get_input_definition("uranium-ore"), "ingress", force),
