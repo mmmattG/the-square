@@ -1,4 +1,5 @@
 local expansion_research = require("lib.expansion_research")
+local biter_egg_bootstrap = require("lib.biter_egg_bootstrap")
 local pentapod_egg_bootstrap = require("lib.pentapod_egg_bootstrap")
 local planet_config = require("lib.planet_config")
 
@@ -29,15 +30,13 @@ local ingress_resources = {
   {resource = "jellynut", kind = "item", icon = space_age_icon("jellynut.png", "__base__/graphics/icons/wood.png"), order = "a[ingress]-p[jellynut]"},
   {resource = "ammoniacal-solution", kind = "fluid", icon = space_age_icon("fluid/ammoniacal-solution.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-q[ammoniacal-solution]"},
   {resource = "fluorine", kind = "fluid", icon = space_age_icon("fluid/fluorine.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-r[fluorine]"},
-  {resource = "lithium-brine", kind = "fluid", icon = space_age_icon("fluid/lithium-brine.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-s[lithium-brine]"},
-  {resource = "biter-egg", kind = "item", icon = space_age_icon("biter-egg.png", "__base__/graphics/icons/small-biter.png"), order = "a[ingress]-t[biter-egg]"}
+  {resource = "lithium-brine", kind = "fluid", icon = space_age_icon("fluid/lithium-brine.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-s[lithium-brine]"}
 }
 
 local egress_resources = {
   {resource = "sulfuric-acid", kind = "fluid", icon = "__base__/graphics/icons/fluid/sulfuric-acid.png", order = "b[egress]-a[sulfuric-acid]"},
   {resource = "yumako-seed", kind = "item", icon = space_age_icon("yumako-seed.png", "__base__/graphics/icons/wood.png"), order = "b[egress]-b[yumako-seed]"},
-  {resource = "jellynut-seed", kind = "item", icon = space_age_icon("jellynut-seed.png", "__base__/graphics/icons/wood.png"), order = "b[egress]-c[jellynut-seed]"},
-  {resource = "bioflux", kind = "item", icon = space_age_icon("bioflux.png", "__base__/graphics/icons/wood.png"), order = "b[egress]-d[bioflux]"}
+  {resource = "jellynut-seed", kind = "item", icon = space_age_icon("jellynut-seed.png", "__base__/graphics/icons/wood.png"), order = "b[egress]-c[jellynut-seed]"}
 }
 
 local item_ingress_belt_tiers = {
@@ -823,8 +822,6 @@ local function add_resource_configuration_unlocks()
   add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("uranium-ore", "ingress"))
   add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("sulfuric-acid", "ingress"))
   add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("sulfuric-acid", "egress"))
-  add_recipe_unlock_to_technology("captivity", config_recipe_name("biter-egg", "ingress"))
-  add_recipe_unlock_to_technology("captivity", config_recipe_name("bioflux", "egress"))
 end
 
 local prototypes = {}
@@ -1024,4 +1021,5 @@ end
 
 data:extend(prototypes)
 add_resource_configuration_unlocks()
+biter_egg_bootstrap.install(data, mods)
 pentapod_egg_bootstrap.install(data, mods)

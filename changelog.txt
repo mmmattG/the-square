@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.1.4
+Date: 2026-07-25
+  Features:
+    - Added character-only bootstrap recipes for hand-grown pentapod eggs on Gleba and hand-grown biter eggs on Nauvis.
+  Changes:
+    - Replaced Nauvis biter egg ingress and bioflux egress Managed Lines with Nauvis-only hand-crafted biter eggs.
+    - Existing configured biter egg and bioflux Managed Lines are stashed and refunded as generic Managed Lines.
+---------------------------------------------------------------------------------------------------
 Version: 0.1.3
 Date: 2026-05-27
   Features:

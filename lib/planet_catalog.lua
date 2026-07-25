@@ -14,12 +14,10 @@ local planets = {
       {resource = "water", kind = "fluid", starter_side = "west", prerequisite_resource = nil},
       {resource = "wood", kind = "item", starter_side = "east", prerequisite_resource = nil},
       {resource = "crude-oil", kind = "fluid", starter_side = nil, prerequisite_resource = nil},
-      {resource = "uranium-ore", kind = "item", starter_side = nil, prerequisite_resource = "crude-oil"},
-      {resource = "biter-egg", kind = "item", starter_side = nil, prerequisite_resource = nil}
+      {resource = "uranium-ore", kind = "item", starter_side = nil, prerequisite_resource = "crude-oil"}
     },
     opt_in_egress_resources = {
-      {resource = "sulfuric-acid", kind = "fluid", starter_side = nil, prerequisite_resource = "uranium-ore"},
-      {resource = "bioflux", kind = "item", starter_side = nil, prerequisite_resource = nil}
+      {resource = "sulfuric-acid", kind = "fluid", starter_side = nil, prerequisite_resource = "uranium-ore"}
     }
   },
   {
