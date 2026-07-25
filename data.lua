@@ -1,4 +1,5 @@
 local expansion_research = require("lib.expansion_research")
+local pentapod_egg_bootstrap = require("lib.pentapod_egg_bootstrap")
 local planet_config = require("lib.planet_config")
 
 local function space_age_icon(path, fallback)
@@ -1023,3 +1024,4 @@ end
 
 data:extend(prototypes)
 add_resource_configuration_unlocks()
+pentapod_egg_bootstrap.install(data, mods)
