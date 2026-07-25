@@ -1,5 +1,5 @@
 local expansion_research = require("lib.expansion_research")
-local captive_biter_spawner_bootstrap = require("lib.captive_biter_spawner_bootstrap")
+local biter_egg_bootstrap = require("lib.biter_egg_bootstrap")
 local pentapod_egg_bootstrap = require("lib.pentapod_egg_bootstrap")
 local planet_config = require("lib.planet_config")
 
@@ -1021,5 +1021,5 @@ end
 
 data:extend(prototypes)
 add_resource_configuration_unlocks()
-captive_biter_spawner_bootstrap.install(data, mods)
+biter_egg_bootstrap.install(data, mods)
 pentapod_egg_bootstrap.install(data, mods)

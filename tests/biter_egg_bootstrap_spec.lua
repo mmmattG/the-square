@@ -1,6 +1,6 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 
-local bootstrap = require("lib.captive_biter_spawner_bootstrap")
+local bootstrap = require("lib.biter_egg_bootstrap")
 
 local function assert_equal(actual, expected, message)
   if actual ~= expected then
@@ -31,8 +31,7 @@ local function build_data_stage()
       },
       ["assembling-machine"] = {
         ["assembling-machine-1"] = {crafting_categories = {"crafting"}},
-        biochamber = {crafting_categories = {"organic"}},
-        ["captive-biter-spawner"] = {crafting_categories = {"captive-spawner-process"}}
+        biochamber = {crafting_categories = {"organic"}}
       },
       technology = {
         captivity = {effects = {{type = "unlock-recipe", recipe = "capture-robot-rocket"}}},
@@ -71,7 +70,7 @@ local function has_unlock(technology, recipe_name)
   return false
 end
 
-run_test("captive spawner bootstrap prototypes are gated behind Space Age", function()
+run_test("biter egg bootstrap prototypes are gated behind Space Age", function()
   local data_stage = build_data_stage()
 
   assert_equal(bootstrap.install(data_stage, {}), false)
@@ -80,29 +79,25 @@ run_test("captive spawner bootstrap prototypes are gated behind Space Age", func
   assert_equal(data_stage.raw.technology["biter-egg-handling"].research_trigger.type, "capture-spawner")
 end)
 
-run_test("Space Age installs a Captivity-era character-only captive spawner recipe", function()
+run_test("Space Age installs a Nauvis-only character biter egg recipe at Captivity", function()
   local data_stage = build_data_stage()
 
   assert_equal(bootstrap.install(data_stage, {["space-age"] = "2.0.66"}), true)
 
   local recipe = data_stage.raw.recipe[bootstrap.RECIPE_NAME]
-  local ingredients = {}
-
-  for _, ingredient in ipairs(recipe.ingredients) do
-    ingredients[ingredient.name] = ingredient.amount
-    assert_true(ingredient.name ~= "biter-egg", "the first-spawner recipe must not require an existing egg")
-    assert_true(ingredient.name ~= "captive-biter-spawner", "the bootstrap must not require an existing spawner")
-  end
-
   assert_equal(recipe.category, bootstrap.CATEGORY_NAME)
   assert_equal(recipe.enabled, false)
-  assert_equal(recipe.energy_required, 30)
+  assert_equal(recipe.energy_required, 10)
   assert_equal(recipe.reset_freshness_on_craft, true)
-  assert_equal(ingredients["capture-robot-rocket"], 1)
-  assert_equal(ingredients.bioflux, 100)
-  assert_equal(ingredients["refined-concrete"], 25)
-  assert_equal(recipe.results[1].name, "captive-biter-spawner")
-  assert_equal(recipe.results[1].amount, 1)
+  assert_equal(#recipe.ingredients, 1)
+  assert_equal(recipe.ingredients[1].name, "bioflux")
+  assert_equal(recipe.ingredients[1].amount, 1)
+  assert_equal(recipe.results[1].name, "biter-egg")
+  assert_equal(recipe.results[1].amount, 5)
+  assert_equal(#recipe.surface_conditions, 1)
+  assert_equal(recipe.surface_conditions[1].property, "pressure")
+  assert_equal(recipe.surface_conditions[1].min, 1000)
+  assert_equal(recipe.surface_conditions[1].max, 1000)
   assert_equal(contains(data_stage.raw.character.character.crafting_categories, bootstrap.CATEGORY_NAME), true)
 
   for machine_name, machine in pairs(data_stage.raw["assembling-machine"]) do
@@ -115,5 +110,6 @@ run_test("Space Age installs a Captivity-era character-only captive spawner reci
 
   assert_equal(has_unlock(data_stage.raw.technology.captivity, bootstrap.RECIPE_NAME), true)
   assert_equal(data_stage.raw.technology["biter-egg-handling"].research_trigger.type, "craft-item")
-  assert_equal(data_stage.raw.technology["biter-egg-handling"].research_trigger.item, "captive-biter-spawner")
+  assert_equal(data_stage.raw.technology["biter-egg-handling"].research_trigger.item, "biter-egg")
+  assert_equal(data_stage.raw.technology["biter-egg-handling"].research_trigger.count, 5)
 end)

@@ -37,9 +37,7 @@ Research now includes custom expanding-square technologies:
 - `Square expansion` is a repeatable research line that uses science bands in blocks: levels `1-10`, `11-20`, `21-30`, and `31-40` step through broader pack sets, then level `41+` continues infinitely with all science through space.
 - `Dual-lane ingress`, `Red ingress`, and `Blue ingress` are one-time researches unlocked after `Logistics`, `Logistics 2`, and `Logistics 3`. Each copies the science cost of the logistics technology that gates it.
 
-With Space Age enabled, Nauvis biter eggs come from vanilla captive biter spawners rather than Managed Lines. Researching `Captivity` unlocks a slow, character-only recipe for the first captive spawner using one capture robot rocket, 100 bioflux, and 25 refined concrete. Crafting it completes the visible `Biter egg handling` trigger; after placement on Nauvis, feeding, egg production, starvation damage, and hostile reversion are vanilla behavior. The later Aquilo-era vanilla captive-spawner recipe remains unchanged.
-
-The optional combat acquisition path is reserved for the instanced encounter system tracked by issue `#145`. Its intended transfer is an explicit encounter reward after a successful vanilla capture, redeemable as one captive-spawner item for placement on Nauvis; it must not silently clone the captured entity.
+With Space Age enabled, Nauvis biter eggs are no longer available through Managed Lines. Researching `Captivity` unlocks a character-only recipe that hand-grows five fresh biter eggs from one bioflux in ten seconds. The recipe has Nauvis's exact pressure as a surface condition, so it cannot be crafted on the other supported planets. Crafting the first five eggs completes the visible `Biter egg handling` trigger. The vanilla captive-spawner recipe and capture progression remain unchanged.
 
 Tips and tricks are currently text-first and use base-game icons as placeholders. Proper custom instructional art is deferred for later work.
 
