@@ -1,12 +1,14 @@
 local base_screenshot = require("lib.base_screenshot")
 local defs = require("lib.runtime_defs")
+local planet_instance = require("lib.planet_instance")
 
 local screenshot_runtime = {}
 
-local function build_screenshot_path(square_size)
+local function build_screenshot_path(planet_name, square_size)
   return string.format(
-    "%s/base-%dx%d-tick-%d.png",
+    "%s/%s-base-%dx%d-tick-%d.png",
     defs.BASE_SCREENSHOT_DIRECTORY,
+    planet_name,
     square_size,
     square_size,
     game.tick
@@ -14,23 +16,32 @@ local function build_screenshot_path(square_size)
 end
 
 function screenshot_runtime.take_base_screenshot(player)
-  if not (player and player.valid and storage.bootstrap) then
-    return
+  if not (player and player.valid) then
+    return false
   end
 
-  local bootstrap = storage.bootstrap
-  local surface = game.surfaces[bootstrap.surface_name]
+  local viewed_surface = player.surface
+  local planet = viewed_surface and planet_instance.for_surface(viewed_surface.name)
+
+  if not planet then
+    player.print({"message.the-square-screenshot-unsupported-surface"})
+    return false
+  end
+
+  local square_size = planet:get_square_size()
+  local surface = game.surfaces[planet:get_surface_name()]
 
   if not surface then
-    return
+    player.print({"message.the-square-screenshot-unsupported-surface"})
+    return false
   end
 
   local capture = base_screenshot.build_capture_spec(
-    bootstrap.square_size,
+    square_size,
     defs.BASE_SCREENSHOT_MARGIN_TILES,
     defs.get_screenshot_pixels_per_tile()
   )
-  local path = build_screenshot_path(bootstrap.square_size)
+  local path = build_screenshot_path(viewed_surface.name, square_size)
 
   game.take_screenshot({
     by_player = player,
@@ -48,10 +59,12 @@ function screenshot_runtime.take_base_screenshot(player)
   player.print({
     "message.the-square-screenshot-saved",
     path,
-    bootstrap.square_size,
+    square_size,
     defs.BASE_SCREENSHOT_MARGIN_TILES,
     defs.get_screenshot_pixels_per_tile()
   })
+
+  return true
 end
 
 return screenshot_runtime
