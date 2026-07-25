@@ -3,7 +3,7 @@ local pentapod_egg_bootstrap = {}
 pentapod_egg_bootstrap.CATEGORY_NAME = "the-square-hand-crafting"
 pentapod_egg_bootstrap.RECIPE_NAME = "the-square-pentapod-egg-bootstrap"
 pentapod_egg_bootstrap.UNLOCK_TECHNOLOGY_NAME = "biochamber"
-pentapod_egg_bootstrap.ENERGY_REQUIRED = 120
+pentapod_egg_bootstrap.ENERGY_REQUIRED = 15
 
 local function append_unique(values, value)
   for _, existing_value in ipairs(values) do
@@ -43,9 +43,7 @@ local function build_recipe()
     allow_decomposition = false,
     energy_required = pentapod_egg_bootstrap.ENERGY_REQUIRED,
     ingredients = {
-      {type = "item", name = "yumako-mash", amount = 50},
-      {type = "item", name = "jelly", amount = 50},
-      {type = "item", name = "spoilage", amount = 100}
+      {type = "item", name = "nutrients", amount = 30}
     },
     results = {
       {type = "item", name = "pentapod-egg", amount = 1}
