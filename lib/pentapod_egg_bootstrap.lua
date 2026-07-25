@@ -4,6 +4,7 @@ pentapod_egg_bootstrap.CATEGORY_NAME = "the-square-hand-crafting"
 pentapod_egg_bootstrap.RECIPE_NAME = "the-square-pentapod-egg-bootstrap"
 pentapod_egg_bootstrap.UNLOCK_TECHNOLOGY_NAME = "biochamber"
 pentapod_egg_bootstrap.ENERGY_REQUIRED = 15
+pentapod_egg_bootstrap.GLEBA_PRESSURE = 2000
 
 local function append_unique(values, value)
   for _, existing_value in ipairs(values) do
@@ -48,7 +49,14 @@ local function build_recipe()
     results = {
       {type = "item", name = "pentapod-egg", amount = 1}
     },
-    reset_freshness_on_craft = true
+    reset_freshness_on_craft = true,
+    surface_conditions = {
+      {
+        property = "pressure",
+        min = pentapod_egg_bootstrap.GLEBA_PRESSURE,
+        max = pentapod_egg_bootstrap.GLEBA_PRESSURE
+      }
+    }
   }
 end
 

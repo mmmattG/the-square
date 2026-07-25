@@ -95,6 +95,10 @@ run_test("Space Age installs a character-only bootstrap recipe", function()
   assert_equal(recipe.ingredients[1].amount, 30)
   assert_equal(recipe.results[1].name, "pentapod-egg")
   assert_equal(recipe.results[1].amount, 1)
+  assert_equal(#recipe.surface_conditions, 1)
+  assert_equal(recipe.surface_conditions[1].property, "pressure")
+  assert_equal(recipe.surface_conditions[1].min, bootstrap.GLEBA_PRESSURE)
+  assert_equal(recipe.surface_conditions[1].max, bootstrap.GLEBA_PRESSURE)
 
   for _, ingredient in ipairs(recipe.ingredients) do
     assert_equal(ingredient.type, "item", "bootstrap ingredients must remain hand-craftable items")
