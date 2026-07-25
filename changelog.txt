@@ -11,6 +11,7 @@ Date: 2026-07-25
     - Crude oil ingress is now unlocked by Oil gathering instead of Oil processing, based on reports from Redlight and seb_zeppelin on the Mod Portal.
   Credits:
     - Thanks to @Birk on Discord for feedback
+    - Thanks to @Redlight and seb_zeppelin for feedback on Mod Portal
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.3
