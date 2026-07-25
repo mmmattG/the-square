@@ -6,7 +6,6 @@ local planet_square_runtime = require("lib.planet_square_runtime")
 local gui_runtime = require("lib.gui_runtime")
 local screenshot_runtime = require("lib.screenshot_runtime")
 local void_item_runtime = require("lib.void_item_runtime")
-local biter_managed_line_migration = require("lib.biter_managed_line_migration")
 
 local function sync_all_runtime_guis()
   gui_runtime.refresh_all_debug_guis()
@@ -50,7 +49,6 @@ end)
 script.on_configuration_changed(function()
   if storage.bootstrap then
     bootstrap_runtime.ensure_bootstrap_state_defaults()
-    biter_managed_line_migration.migrate_storage()
     managed_line_runtime.ensure_state("nauvis")
     managed_line_runtime.sync_tier(defs.get_player_force())
 

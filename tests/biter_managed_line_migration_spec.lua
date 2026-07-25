@@ -114,7 +114,7 @@ run_test("migration removes a placed line from the surface when its saved entity
   assert_equal(anchor_set.anchors[1].position, nil)
 end)
 
-run_test("storage migration refunds placed lines once and preserves completed research", function()
+run_test("0.1.4 migration refunds placed lines and preserves completed research", function()
   local inserted = {}
   local anchor_set = {
     biter_egg_budget = 900,
@@ -162,12 +162,9 @@ run_test("storage migration refunds placed lines once and preserves completed re
     }
   }
 
-  assert_equal(migration.migrate_storage(), 1)
+  dofile("migrations/0.1.4.lua")
+
   assert_equal(inserted[defs.get_generic_anchor_item_name_for_tier("item", "ingress", 1)], 1)
   assert_equal(storage.bootstrap.biter_egg_handling_granted_from_ingress, nil)
-  assert_equal(storage.biter_managed_line_migration_version, migration.VERSION)
   assert_equal(game.forces.player.technologies["biter-egg-handling"].researched, true)
-
-  assert_equal(migration.migrate_storage(), 0, "migration should be idempotent")
-  assert_equal(inserted[defs.get_generic_anchor_item_name_for_tier("item", "ingress", 1)], 1)
 end)

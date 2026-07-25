@@ -4,8 +4,6 @@ local defs = require("lib.runtime_defs")
 
 local biter_managed_line_migration = {}
 
-biter_managed_line_migration.VERSION = 1
-
 local function is_obsolete_biter_line(anchor)
   return anchor
     and (
@@ -74,10 +72,6 @@ local function refund_item(item_name)
 end
 
 function biter_managed_line_migration.migrate_storage()
-  if storage.biter_managed_line_migration_version == biter_managed_line_migration.VERSION then
-    return 0
-  end
-
   local nauvis = storage.planets and storage.planets.nauvis or storage.bootstrap
   local anchor_set = nauvis and nauvis.starter_anchors or storage.starter_anchors
   local surface = game.surfaces and game.surfaces[defs.SURFACE_NAME]
@@ -91,7 +85,6 @@ function biter_managed_line_migration.migrate_storage()
     refund_item(item_name)
   end
 
-  storage.biter_managed_line_migration_version = biter_managed_line_migration.VERSION
   return #refund_item_names
 end
 
