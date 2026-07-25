@@ -76,12 +76,10 @@ runtime_defs.CONFIG_RESOURCE_TECH_UNLOCKS = {
   ingress = {
     ["crude-oil"] = {"oil-gathering", "oil-processing"},
     ["uranium-ore"] = {"uranium-mining"},
-    ["sulfuric-acid"] = {"uranium-mining"},
-    ["biter-egg"] = {"captivity"}
+    ["sulfuric-acid"] = {"uranium-mining"}
   },
   egress = {
-    ["sulfuric-acid"] = {"uranium-mining"},
-    bioflux = {"captivity"}
+    ["sulfuric-acid"] = {"uranium-mining"}
   }
 }
 runtime_defs.DEBUG_SPACE_AGE_PLANETS = {
