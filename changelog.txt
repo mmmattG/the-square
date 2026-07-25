@@ -2,12 +2,13 @@
 Version: 0.1.4
 Date: 2026-07-25
   Features:
-    - Added character-only bootstrap recipes for hand-grown pentapod eggs on Gleba and hand-grown biter eggs on Nauvis.
+    - Added a character-only bootstrap recipe for hand-grown pentapod eggs on Gleba, based on feedback from @Birk.
+    - Added a character-only bootstrap recipe for hand-grown biter eggs on Nauvis.
   Changes:
     - Replaced Nauvis biter egg ingress and bioflux egress Managed Lines with Nauvis-only hand-crafted biter eggs.
     - Existing saves remove configured biter egg and bioflux Managed Lines; placed obsolete lines are not refunded.
   Bugfixes:
-    - Base screenshots now capture the supported planet currently being viewed, use its current Square size, and include its name in the filename.
+    - Base screenshots now capture the supported planet currently being viewed, use its current Square size, and include its name in the filename, based on feedback from @Birk.
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.3
 Date: 2026-05-27
