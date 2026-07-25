@@ -2,13 +2,15 @@
 Version: 0.1.4
 Date: 2026-07-25
   Features:
-    - Added a character-only bootstrap recipe for hand-grown pentapod eggs on Gleba, based on feedback from @Birk.
-    - Added a character-only bootstrap recipe for hand-grown biter eggs on Nauvis.
-  Changes:
-    - Replaced Nauvis biter egg ingress and bioflux egress Managed Lines with Nauvis-only hand-crafted biter eggs.
-    - Existing saves remove configured biter egg and bioflux Managed Lines; placed obsolete lines are not refunded.
+    - Added a handcraftable bootstrap recipe for hand-grown pentapod eggs on Gleba, based on feedback from @Birk.
+    - Added a handcraftable bootstrap recipe for hand-grown biter eggs on Nauvis.
+  Balancing:
+    - Removed Nauvis biter egg ingress and bioflux egress in favour of handcrafted biter eggs to better fit with vanilla captive biter spawners.
   Bugfixes:
-    - Base screenshots now capture the supported planet currently being viewed, use its current Square size, and include its name in the filename, based on feedback from @Birk.
+    - Base screenshots now capture the supported planet currently being viewed, based on feedback from @Birk.
+  Credits:
+    - Thanks to @Birk on Discord for feedback
+
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.3
 Date: 2026-05-27
@@ -21,7 +23,7 @@ Date: 2026-05-27
     - Removed the expansion point purchasing system. Ingress and egress anchors are now crafted and placed from inventory.
     - Anchor slots can now be clicked to configure ingress and egress directly, consuming the matching anchor item from the player's inventory.
 ---------------------------------------------------------------------------------------------------
-Version: 0.1.1
+Version: 0.1.2
 Date: 2026-03-30
   Features:
     - Added a top-bar Base screenshot button that captures the current square to script-output, with settings for pixels per tile and alt-mode overlays in the mod settings.
