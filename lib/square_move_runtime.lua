@@ -3,6 +3,7 @@ local planet_instance = require("lib.planet_instance")
 local planet_square = require("lib.planet_square")
 
 local square_move_runtime = {}
+local MOVE_MODES = defs.SQUARE_MOVE_MODES
 
 local OPPOSITE_SIDE = {
   north = "south",
@@ -41,6 +42,25 @@ local function is_entity_inside_bounds(entity, bounds)
   return defs.is_inside_bounds(bounds, get_entity_tile_position(entity))
 end
 
+local function is_content_entity_inside_bounds(entity, bounds)
+  return defs.is_inside_bounds(bounds, get_entity_tile_position(entity))
+end
+
+local function move_bounding_box(bounding_box, direction)
+  return {
+    left_top = defs.move_position(bounding_box.left_top, direction, 1),
+    right_bottom = defs.move_position(bounding_box.right_bottom, direction, 1)
+  }
+end
+
+local function is_entity_inside_bounds_after_move(entity, bounds, direction)
+  if entity.bounding_box then
+    return is_bounding_box_inside(bounds, move_bounding_box(entity.bounding_box, direction))
+  end
+
+  return defs.is_inside_bounds(bounds, defs.move_position(get_entity_tile_position(entity), direction, 1))
+end
+
 local function build_permitted_connections(managed_lines, departing_side)
   local permitted = {}
 
@@ -77,6 +97,41 @@ local function is_permitted_departing_connection(entity, permitted_connections)
   end
 
   return entity.type == "transport-belt" and entity.direction == connection.direction
+end
+
+local function get_connected_managed_lines(surface, managed_lines)
+  local connected = {}
+
+  if not (managed_lines and managed_lines.anchors) then
+    return connected
+  end
+
+  for _, anchor in ipairs(managed_lines.anchors) do
+    if anchor.resource and anchor.position and anchor.side then
+      local connection_position = defs.move_position(anchor.position, anchor.side, -1)
+      local permitted_connections = {
+        [defs.get_position_key(connection_position)] = {
+          kind = anchor.kind,
+          direction = anchor.direction
+            or defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side)
+        }
+      }
+
+      local connection_area = {
+        left_top = copy_position(connection_position),
+        right_bottom = {x = connection_position.x + 1, y = connection_position.y + 1}
+      }
+
+      for _, entity in ipairs(surface.find_entities_filtered({area = connection_area})) do
+        if entity.valid and is_permitted_departing_connection(entity, permitted_connections) then
+          connected[anchor] = entity
+          break
+        end
+      end
+    end
+  end
+
+  return connected
 end
 
 local function get_departing_area(square_size, square_position, direction)
@@ -228,6 +283,35 @@ local function reposition_managed_lines(surface, planet, direction, target_posit
   end
 end
 
+local function reposition_managed_lines_for_contents(surface, planet, direction)
+  local managed_lines = planet:get_managed_lines()
+
+  if not (managed_lines and managed_lines.anchors) then
+    return
+  end
+
+  for _, anchor in ipairs(managed_lines.anchors) do
+    if anchor.resource and anchor.position and anchor.side then
+      if anchor.side ~= OPPOSITE_SIDE[direction] and anchor.side ~= direction then
+        local target_position = defs.move_position(anchor.position, direction, 1)
+        local target_side = defs.get_anchor_side_for_position(
+          planet:get_square_size(),
+          target_position,
+          planet:get_square_position()
+        )
+
+        if target_side == anchor.side then
+          destroy_anchor_entity(surface, anchor)
+          anchor.position = target_position
+          anchor.direction = defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side)
+        end
+      end
+
+      planet_square.ensure_managed_line_inner_connection(surface, anchor)
+    end
+  end
+end
+
 function square_move_runtime.get_target_position(square_position, direction)
   if not VALID_DIRECTIONS[direction] then
     return nil
@@ -240,19 +324,7 @@ function square_move_runtime.get_departing_side(direction)
   return OPPOSITE_SIDE[direction]
 end
 
-function square_move_runtime.check(planet_name, direction)
-  local planet = planet_instance.ensure(planet_name)
-
-  if not planet or not VALID_DIRECTIONS[direction] then
-    return {ok = false, reason = "unsupported"}
-  end
-
-  local surface = game.surfaces[planet:get_surface_name()]
-
-  if not surface then
-    return {ok = false, reason = "unsupported"}
-  end
-
+local function check_square_move(planet, surface, direction)
   local square_position = planet:get_square_position()
   local target_position = square_move_runtime.get_target_position(square_position, direction)
   local target_bounds = defs.get_square_bounds(planet:get_square_size(), target_position)
@@ -275,14 +347,78 @@ function square_move_runtime.check(planet_name, direction)
   return {
     ok = #obstructions == 0,
     reason = #obstructions == 0 and nil or "obstructed",
+    mode = MOVE_MODES.SQUARE,
     direction = direction,
     departing_side = departing_side,
+    obstructed_side = departing_side,
     target_position = target_position,
     obstructions = obstructions
   }
 end
 
-function square_move_runtime.get_options_for_player(player)
+local function check_contents_move(planet, surface, direction)
+  local bounds = defs.get_square_bounds(planet:get_square_size(), planet:get_square_position())
+  local obstructions = {}
+  local permitted_connections = build_permitted_connections(planet:get_managed_lines(), direction)
+  local leading_area = get_departing_area(
+    planet:get_square_size(),
+    planet:get_square_position(),
+    OPPOSITE_SIDE[direction]
+  )
+
+  for _, entity in ipairs(surface.find_entities_filtered({area = leading_area})) do
+    if entity.valid
+      and entity.type ~= "character"
+      and is_content_entity_inside_bounds(entity, bounds)
+    then
+      if not is_entity_inside_bounds_after_move(entity, bounds, direction)
+        and not is_permitted_departing_connection(entity, permitted_connections)
+      then
+        obstructions[#obstructions + 1] = entity
+      end
+    end
+  end
+
+  return {
+    ok = #obstructions == 0,
+    reason = #obstructions == 0 and nil or "obstructed",
+    mode = MOVE_MODES.CONTENTS,
+    direction = direction,
+    obstructed_side = direction,
+    target_position = planet:get_square_position(),
+    obstructions = obstructions
+  }
+end
+
+function square_move_runtime.check(planet_name, direction, mode)
+  local planet = planet_instance.ensure(planet_name)
+
+  if not planet then
+    return {ok = false, reason = "unsupported", mode = mode}
+  end
+
+  if not VALID_DIRECTIONS[direction] then
+    return {ok = false, reason = "unsupported", mode = mode}
+  end
+
+  local surface = game.surfaces[planet:get_surface_name()]
+
+  if not surface then
+    return {ok = false, reason = "unsupported", mode = mode}
+  end
+
+  if mode == MOVE_MODES.CONTENTS then
+    return check_contents_move(planet, surface, direction)
+  end
+
+  if mode == MOVE_MODES.SQUARE then
+    return check_square_move(planet, surface, direction)
+  end
+
+  return {ok = false, reason = "unsupported", mode = mode}
+end
+
+function square_move_runtime.get_options_for_player(player, mode)
   local options = {}
   local planet = player
     and player.valid
@@ -290,22 +426,262 @@ function square_move_runtime.get_options_for_player(player)
     and planet_instance.for_surface(player.surface.name)
 
   for _, direction in ipairs({"north", "east", "south", "west"}) do
-    options[direction] = planet
-      and square_move_runtime.check(planet:get_name(), direction)
-      or {ok = false, reason = "unsupported", direction = direction}
+    if planet then
+      options[direction] = square_move_runtime.check(planet:get_name(), direction, mode)
+    else
+      options[direction] = {
+        ok = false,
+        reason = "unsupported",
+        direction = direction,
+        mode = mode
+      }
+    end
   end
 
   return options
 end
 
-function square_move_runtime.move(planet_name, direction, options)
-  options = options or {}
-  local check = square_move_runtime.check(planet_name, direction)
+-- Factorio keeps the underlying terrain beneath tiles such as landfill as a
+-- hidden tile. Move both layers so mining a moved tile restores the same terrain.
+local function get_contents_tile_updates(surface, planet, direction)
+  local bounds = defs.get_square_bounds(planet:get_square_size(), planet:get_square_position())
+  local visible_tile_updates = {}
+  local hidden_tile_updates = {}
 
-  if not check.ok then
-    return check
+  for y = bounds.left_top.y, bounds.right_bottom.y - 1 do
+    for x = bounds.left_top.x, bounds.right_bottom.x - 1 do
+      local position = {x = x, y = y}
+      local source_position = defs.move_position(position, direction, -1)
+      local visible_tile_name
+      local hidden_tile_name
+
+      if defs.is_inside_bounds(bounds, source_position) then
+        visible_tile_name = surface.get_tile(source_position.x, source_position.y).name
+
+        if surface.get_hidden_tile then
+          hidden_tile_name = surface.get_hidden_tile(source_position)
+        end
+      else
+        visible_tile_name = defs.get_managed_tile_name(
+          planet:get_square_size(),
+          planet:get_surface_size(),
+          position,
+          planet:get_floor_tile_name(),
+          planet:get_square_position()
+        )
+      end
+
+      visible_tile_updates[#visible_tile_updates + 1] = {
+        name = visible_tile_name,
+        position = position
+      }
+      hidden_tile_updates[#hidden_tile_updates + 1] = {
+        name = hidden_tile_name,
+        position = position
+      }
+    end
   end
 
+  return visible_tile_updates, hidden_tile_updates
+end
+
+local function apply_contents_tile_updates(surface, visible_tile_updates, hidden_tile_updates)
+  if #visible_tile_updates > 0 then
+    surface.set_tiles(visible_tile_updates, false, false, false, false)
+  end
+
+  if surface.set_hidden_tile then
+    for _, update in ipairs(hidden_tile_updates) do
+      surface.set_hidden_tile(update.position, update.name)
+    end
+  end
+end
+
+local function collect_contents_entities(surface, bounds)
+  local entities = {}
+
+  for _, entity in ipairs(surface.find_entities_filtered({area = bounds})) do
+    if entity.valid
+      and entity.type ~= "character"
+      and is_content_entity_inside_bounds(entity, bounds)
+    then
+      entities[#entities + 1] = entity
+    end
+  end
+
+  return entities
+end
+
+local function destroy_entities(entities)
+  for _, entity in ipairs(entities) do
+    if entity.valid and entity.destroy then
+      entity.destroy({raise_destroy = false})
+    end
+  end
+end
+
+local function delete_staging_surface(staging_surface)
+  if staging_surface then
+    game.delete_surface(staging_surface)
+  end
+end
+
+local function create_staging_surface(square_size)
+  storage.square_move_staging_sequence = (storage.square_move_staging_sequence or 0) + 1
+  local staging_surface_name = table.concat({
+    defs.SQUARE_MOVE_STAGING_SURFACE_PREFIX,
+    tostring(game.tick or 0),
+    tostring(storage.square_move_staging_sequence)
+  }, "-")
+  local staging_surface_size = square_size + 4
+  local staging_surface = game.create_surface(staging_surface_name, {
+    width = staging_surface_size,
+    height = staging_surface_size,
+    starting_points = {{x = 0, y = 0}},
+    peaceful_mode = true,
+    no_enemies_mode = true
+  })
+
+  staging_surface.request_to_generate_chunks({x = 0, y = 0}, math.ceil(staging_surface_size / 64))
+  staging_surface.force_generate_chunk_requests()
+  destroy_entities(staging_surface.find_entities())
+
+  return staging_surface
+end
+
+local function clone_tiles_to_staging_surface(surface, staging_surface, source_bounds, staging_bounds)
+  surface.clone_area({
+    source_area = source_bounds,
+    destination_area = staging_bounds,
+    destination_surface = staging_surface,
+    clone_tiles = true,
+    clone_entities = false,
+    clone_decoratives = false,
+    clear_destination_entities = true,
+    clear_destination_decoratives = true,
+    expand_map = true,
+    create_build_effect_smoke = false
+  })
+end
+
+local function restore_entities_from_staging_surface(
+  surface,
+  staging_surface,
+  staged_entities,
+  destination_offset,
+  destination_bounds,
+  expected_count
+)
+  staging_surface.clone_entities({
+    entities = staged_entities,
+    destination_offset = destination_offset,
+    destination_surface = surface,
+    create_build_effect_smoke = false
+  })
+
+  return #collect_contents_entities(surface, destination_bounds) == expected_count
+end
+
+local function move_contents(planet, surface, direction, options)
+  local bounds = defs.get_square_bounds(planet:get_square_size(), planet:get_square_position())
+  local staging_bounds = defs.get_square_bounds(planet:get_square_size(), {x = 0, y = 0})
+  local center = planet:get_square_position()
+  local to_staging_offset = {x = -center.x, y = -center.y}
+  local to_destination_offset = defs.move_position(center, direction, 1)
+  local managed_lines = planet:get_managed_lines()
+  local connected_managed_lines = get_connected_managed_lines(surface, managed_lines)
+  local permitted_leading_connections = build_permitted_connections(managed_lines, direction)
+  local movable_entities = {}
+  local held_leading_connections = {}
+
+  for _, entity in ipairs(collect_contents_entities(surface, bounds)) do
+    if is_permitted_departing_connection(entity, permitted_leading_connections) then
+      held_leading_connections[#held_leading_connections + 1] = entity
+    else
+      movable_entities[#movable_entities + 1] = entity
+    end
+  end
+
+  -- Staging on a temporary surface lets Factorio clone entity state before the
+  -- originals are removed, and provides the source needed to roll back a failed move.
+  local visible_tile_updates, hidden_tile_updates = get_contents_tile_updates(surface, planet, direction)
+  local staging_surface = create_staging_surface(planet:get_square_size())
+  clone_tiles_to_staging_surface(surface, staging_surface, bounds, staging_bounds)
+
+  surface.clone_entities({
+    entities = movable_entities,
+    destination_offset = to_staging_offset,
+    destination_surface = staging_surface,
+    create_build_effect_smoke = false
+  })
+
+  local staged_entities = collect_contents_entities(staging_surface, staging_bounds)
+
+  if #staged_entities ~= #movable_entities then
+    delete_staging_surface(staging_surface)
+    return {
+      ok = false,
+      reason = "unmovable",
+      mode = MOVE_MODES.CONTENTS,
+      direction = direction
+    }
+  end
+
+  destroy_entities(movable_entities)
+  destroy_entities(held_leading_connections)
+
+  if not restore_entities_from_staging_surface(
+    surface,
+    staging_surface,
+    staged_entities,
+    to_destination_offset,
+    bounds,
+    #movable_entities
+  ) then
+    destroy_entities(collect_contents_entities(surface, bounds))
+    restore_entities_from_staging_surface(
+      surface,
+      staging_surface,
+      staged_entities,
+      center,
+      bounds,
+      #movable_entities
+    )
+
+    for anchor, connection in pairs(connected_managed_lines) do
+      if connection and anchor.side == direction then
+        planet_square.ensure_managed_line_inner_connection(surface, anchor)
+      end
+    end
+
+    delete_staging_surface(staging_surface)
+    return {
+      ok = false,
+      reason = "unmovable",
+      mode = MOVE_MODES.CONTENTS,
+      direction = direction
+    }
+  end
+
+  apply_contents_tile_updates(surface, visible_tile_updates, hidden_tile_updates)
+  reposition_managed_lines_for_contents(surface, planet, direction)
+  delete_staging_surface(staging_surface)
+
+  if options.managed_line_runtime and options.managed_line_runtime.reconcile then
+    options.managed_line_runtime.reconcile(planet:get_name())
+  end
+
+  return {
+    ok = true,
+    mode = MOVE_MODES.CONTENTS,
+    direction = direction,
+    planet_name = planet:get_name(),
+    square_position = copy_position(center),
+    moved_entity_count = #movable_entities
+  }
+end
+
+local function move_square(planet_name, direction, check, options)
   local planet = planet_instance.ensure(planet_name)
   local surface = game.surfaces[planet:get_surface_name()]
   local tile_updates = get_square_tile_updates(planet, check.target_position)
@@ -335,10 +711,30 @@ function square_move_runtime.move(planet_name, direction, options)
 
   return {
     ok = true,
+    mode = MOVE_MODES.SQUARE,
     direction = direction,
     planet_name = planet_name,
     square_position = check.target_position
   }
+end
+
+function square_move_runtime.move(planet_name, direction, options)
+  options = options or {}
+  local mode = options.mode
+  local check = square_move_runtime.check(planet_name, direction, mode)
+
+  if not check.ok then
+    return check
+  end
+
+  if mode == MOVE_MODES.CONTENTS then
+    local planet = planet_instance.ensure(planet_name)
+    local surface = game.surfaces[planet:get_surface_name()]
+
+    return move_contents(planet, surface, direction, options)
+  end
+
+  return move_square(planet_name, direction, check, options)
 end
 
 function square_move_runtime.move_for_player(player, direction, options)

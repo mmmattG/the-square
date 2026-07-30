@@ -212,15 +212,24 @@ script.on_event(defines.events.on_gui_click, function(event)
 
   if square_move_direction then
     local result = square_move_runtime.move_for_player(player, square_move_direction, {
-      managed_line_runtime = managed_line_runtime
+      managed_line_runtime = managed_line_runtime,
+      mode = gui_runtime.get_square_move_mode(player)
     })
 
     if not result.ok and player then
       if result.reason == "obstructed" then
+        local message_key = "message.the-square-move-obstructed"
+
+        if result.mode == defs.SQUARE_MOVE_MODES.CONTENTS then
+          message_key = "message.the-square-move-contents-obstructed"
+        end
+
         player.print({
-          "message.the-square-move-obstructed",
-          {"the-square-direction." .. result.departing_side}
+          message_key,
+          {"the-square-direction." .. result.obstructed_side}
         })
+      elseif result.reason == "unmovable" then
+        player.print({"message.the-square-move-contents-unmovable"})
       else
         player.print({"message.the-square-move-unsupported"})
       end
@@ -239,6 +248,18 @@ script.on_event(defines.events.on_gui_click, function(event)
     return
   end
 
+end)
+
+script.on_event(defines.events.on_gui_switch_state_changed, function(event)
+  if not (event.element and event.element.valid) then
+    return
+  end
+
+  gui_runtime.handle_square_move_mode_changed(
+    game.get_player(event.player_index),
+    event.element,
+    square_move_runtime
+  )
 end)
 
 script.on_event(defs.PLACE_MANAGED_ANCHOR_INPUT_NAME, function(event)

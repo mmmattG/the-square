@@ -18,6 +18,7 @@ settings = {
   }
 }
 
+local defs = require("lib.runtime_defs")
 local square_move_runtime = require("lib.square_move_runtime")
 
 local function assert_equal(actual, expected, message)
@@ -38,43 +39,100 @@ local function run_test(name, fn)
 end
 
 local function make_entity(entity_type, position, direction)
-  return {
+  local entity
+  local entity_position = {x = position.x + 0.5, y = position.y + 0.5}
+  entity = {
     valid = true,
     type = entity_type,
-    position = position,
+    position = entity_position,
     direction = direction,
     bounding_box = {
-      left_top = {x = position.x, y = position.y},
-      right_bottom = {x = position.x + 1, y = position.y + 1}
+      left_top = {x = entity_position.x - 0.4, y = entity_position.y - 0.4},
+      right_bottom = {x = entity_position.x + 0.4, y = entity_position.y + 0.4}
     },
-    destroy = function(self)
-      self.valid = false
+    destroy = function()
+      entity.valid = false
+    end,
+    teleport = function(target_position)
+      local width = entity.bounding_box.right_bottom.x - entity.bounding_box.left_top.x
+      local height = entity.bounding_box.right_bottom.y - entity.bounding_box.left_top.y
+      entity.position = {x = target_position.x, y = target_position.y}
+      entity.bounding_box = {
+        left_top = {x = target_position.x, y = target_position.y},
+        right_bottom = {x = target_position.x + width, y = target_position.y + height}
+      }
+      return true
     end
   }
+
+  return entity
 end
 
-local function make_surface(area_entities)
+local function make_surface(area_entities, tile_names, hidden_tile_names)
   local surface
   surface = {
     name = "nauvis",
     area_entities = area_entities or {},
     map_gen_settings = {width = 9, height = 9},
     tiles_set = nil,
+    hidden_tiles_set = {},
     created_entities = {},
     requested_position = nil,
     request_to_generate_chunks = function(position)
       surface.requested_position = position
     end,
     force_generate_chunk_requests = function() end,
+    find_entities = function()
+      return surface.area_entities
+    end,
     find_entities_filtered = function(filter)
       if filter.area then
         return surface.area_entities
+      end
+
+      if filter.position then
+        local matches = {}
+
+        for _, entity in ipairs(surface.area_entities) do
+          if entity.valid
+            and math.floor(entity.position.x) == filter.position.x
+            and math.floor(entity.position.y) == filter.position.y
+          then
+            matches[#matches + 1] = entity
+          end
+        end
+
+        return matches
       end
 
       return {}
     end,
     set_tiles = function(tiles)
       surface.tiles_set = tiles
+    end,
+    get_tile = function(x, y)
+      return {name = (tile_names and tile_names[x .. ":" .. y]) or "grass-1"}
+    end,
+    get_hidden_tile = function(position)
+      return hidden_tile_names and hidden_tile_names[position.x .. ":" .. position.y]
+    end,
+    set_hidden_tile = function(position, name)
+      surface.hidden_tiles_set[#surface.hidden_tiles_set + 1] = {
+        position = position,
+        name = name
+      }
+    end,
+    clone_area = function() end,
+    clone_entities = function(spec)
+      for _, source in ipairs(spec.entities) do
+        if source.valid then
+          local clone = make_entity(source.type, {
+            x = math.floor(source.position.x) + spec.destination_offset.x,
+            y = math.floor(source.position.y) + spec.destination_offset.y
+          }, source.direction)
+          spec.destination_surface.area_entities[#spec.destination_surface.area_entities + 1] = clone
+        end
+      end
     end,
     create_entity = function(spec)
       surface.created_entities[#surface.created_entities + 1] = spec
@@ -99,7 +157,18 @@ local function install_world(surface, anchors)
   }
 
   game = {
+    tick = 0,
     surfaces = {nauvis = surface},
+    create_surface = function(name)
+      local staging_surface = make_surface()
+      staging_surface.name = name
+      game.surfaces[name] = staging_surface
+      return staging_surface
+    end,
+    delete_surface = function(surface_to_delete)
+      game.surfaces[surface_to_delete.name] = nil
+      return true
+    end,
     forces = {
       player = {
         set_spawn_position = function(position)
@@ -116,12 +185,25 @@ run_test("Square movement is obstructed by an entity on the departing edge", fun
   local surface = make_surface({assembler})
   install_world(surface)
 
-  local result = square_move_runtime.check("nauvis", "east")
+  local result = square_move_runtime.check("nauvis", "east", defs.SQUARE_MOVE_MODES.SQUARE)
 
   assert_equal(result.ok, false, "an assembler left behind in the Void should block the move")
   assert_equal(result.reason, "obstructed", "blocked moves should report an obstruction")
   assert_equal(result.departing_side, "west", "moving east should validate the west edge")
   assert_equal(#result.obstructions, 1, "the obstruction should be returned for UI/runtime diagnostics")
+end)
+
+run_test("Square movement requires a supported mode", function()
+  local surface = make_surface()
+  install_world(surface)
+
+  local missing_mode_result = square_move_runtime.check("nauvis", "east")
+  local result = square_move_runtime.check("nauvis", "east", "unsupported-mode")
+
+  assert_equal(missing_mode_result.ok, false, "a missing movement mode should be rejected")
+  assert_equal(missing_mode_result.reason, "unsupported", "a missing mode should report unsupported")
+  assert_equal(result.ok, false, "an unknown movement mode should be rejected")
+  assert_equal(result.reason, "unsupported", "an unknown movement mode should report unsupported")
 end)
 
 run_test("Only a correctly aligned belt connected to a departing Managed Line is permitted", function()
@@ -138,14 +220,14 @@ run_test("Only a correctly aligned belt connected to a departing Managed Line is
   install_world(surface, {west_anchor})
 
   assert_equal(
-    square_move_runtime.check("nauvis", "east").ok,
+    square_move_runtime.check("nauvis", "east", defs.SQUARE_MOVE_MODES.SQUARE).ok,
     true,
     "the connected inward-flowing ingress belt should be allowed"
   )
 
   belt.direction = defines.direction.west
   assert_equal(
-    square_move_runtime.check("nauvis", "east").ok,
+    square_move_runtime.check("nauvis", "east", defs.SQUARE_MOVE_MODES.SQUARE).ok,
     false,
     "a belt flowing away from its Managed Line should block the move"
   )
@@ -165,7 +247,7 @@ run_test("A pipe connected to a departing fluid ingress or egress Managed Line i
   install_world(surface, {west_anchor})
 
   assert_equal(
-    square_move_runtime.check("nauvis", "east").ok,
+    square_move_runtime.check("nauvis", "east", defs.SQUARE_MOVE_MODES.SQUARE).ok,
     true,
     "the pipe directly connected to a fluid Managed Line should be allowed"
   )
@@ -173,14 +255,14 @@ run_test("A pipe connected to a departing fluid ingress or egress Managed Line i
   west_anchor.flow = "egress"
   west_anchor.direction = defines.direction.east
   assert_equal(
-    square_move_runtime.check("nauvis", "east").ok,
+    square_move_runtime.check("nauvis", "east", defs.SQUARE_MOVE_MODES.SQUARE).ok,
     true,
     "the connected pipe exception should apply to fluid egress as well"
   )
 
   pipe.type = "storage-tank"
   assert_equal(
-    square_move_runtime.check("nauvis", "east").ok,
+    square_move_runtime.check("nauvis", "east", defs.SQUARE_MOVE_MODES.SQUARE).ok,
     false,
     "another fluid entity in the same position should still obstruct the move"
   )
@@ -196,7 +278,7 @@ run_test("Moving the Square updates tiles and Boundary state without moving fact
     side = "west",
     position = {x = -4, y = 0},
     direction = defines.direction.east,
-    entity_name = "the-square-iron-ore-ingress-anchor",
+    entity_name = "the-square-item-ingress-managed-anchor",
     entity = west_anchor_entity
   }
   local east_anchor = {
@@ -224,6 +306,7 @@ run_test("Moving the Square updates tiles and Boundary state without moving fact
   local reconciled_planet = nil
 
   local result = square_move_runtime.move("nauvis", "east", {
+    mode = defs.SQUARE_MOVE_MODES.SQUARE,
     managed_line_runtime = {
       reconcile = function(planet_name)
         reconciled_planet = planet_name
@@ -234,8 +317,8 @@ run_test("Moving the Square updates tiles and Boundary state without moving fact
   assert_equal(result.ok, true, "an unobstructed move should succeed")
   assert_equal(storage.planets.nauvis.square_position.x, 1, "the Planet-local Square position should move east")
   assert_equal(storage.planets.nauvis.square_position.y, 0, "moving east should retain the Square y position")
-  assert_equal(assembler.position.x, 0, "factory entities should retain their world x coordinate")
-  assert_equal(assembler.position.y, 0, "factory entities should retain their world y coordinate")
+  assert_equal(assembler.position.x, 0.5, "factory entities should retain their world x coordinate")
+  assert_equal(assembler.position.y, 0.5, "factory entities should retain their world y coordinate")
   assert_equal(west_anchor.position.x, -3, "the departing Managed Line should move onto its connected belt")
   assert_equal(east_anchor.position.x, 5, "the arriving Managed Line should move outward with the Boundary")
   assert_equal(north_anchor.position.x, 0, "a Managed Line in an overlapping Boundary slot should stay connected")
@@ -245,6 +328,198 @@ run_test("Moving the Square updates tiles and Boundary state without moving fact
   assert_equal(type(surface.tiles_set), "table", "playable and Void tiles should be rewritten")
   assert_equal(reconciled_planet, "nauvis", "Managed Lines should be reconciled after the Boundary moves")
   assert_equal(game.spawn_position.x, 1, "the force spawn should follow the moved Square")
+end)
+
+run_test("Contents movement is obstructed when an entity would enter the Void", function()
+  local east_edge_assembler = make_entity("assembling-machine", {x = 3, y = 0})
+  local surface = make_surface({east_edge_assembler})
+  install_world(surface)
+
+  local result = square_move_runtime.check("nauvis", "east", defs.SQUARE_MOVE_MODES.CONTENTS)
+
+  assert_equal(result.ok, false, "contents on the destination edge should block the move")
+  assert_equal(result.reason, "obstructed", "blocked contents moves should report an obstruction")
+  assert_equal(result.obstructed_side, "east", "moving contents east should validate the east edge")
+end)
+
+run_test("Contents movement permits belts and pipes connected to leading Managed Lines", function()
+  local east_belt = make_entity("transport-belt", {x = 3, y = -1}, defines.direction.west)
+  local east_pipe = make_entity("pipe", {x = 3, y = 2})
+  local east_item_anchor = {
+    resource = "iron-ore",
+    kind = "item",
+    flow = "ingress",
+    side = "east",
+    position = {x = 4, y = -1},
+    direction = defines.direction.west
+  }
+  local east_fluid_anchor = {
+    resource = "water",
+    kind = "fluid",
+    flow = "ingress",
+    side = "east",
+    position = {x = 4, y = 2},
+    direction = defines.direction.east
+  }
+  local surface = make_surface({east_belt, east_pipe})
+  install_world(surface, {east_item_anchor, east_fluid_anchor})
+
+  local result = square_move_runtime.check("nauvis", "east", defs.SQUARE_MOVE_MODES.CONTENTS)
+
+  assert_equal(result.ok, true, "valid leading Managed Line connections should not disable the move")
+  assert_equal(#result.obstructions, 0, "valid belts and pipes should not be reported as obstructions")
+end)
+
+run_test("Moving contents keeps characters fixed and includes edge belts and pipes", function()
+  local assembler = make_entity("assembling-machine", {x = 0, y = 0})
+  local character = make_entity("character", {x = -1, y = 1})
+  local connected_belt = make_entity("transport-belt", {x = -3, y = -1}, defines.direction.east)
+  local connected_pipe = make_entity("pipe", {x = 0, y = -3})
+  local west_managed_line = make_entity("underground-belt", {x = -4, y = -1}, defines.direction.east)
+  local north_managed_line = make_entity("pipe-to-ground", {x = 0, y = -4}, defines.direction.north)
+  local east_connected_belt = make_entity("transport-belt", {x = 3, y = 1}, defines.direction.west)
+  local east_managed_line = make_entity("underground-belt", {x = 4, y = 1}, defines.direction.west)
+  local west_disconnected_egress = make_entity("pipe-to-ground", {x = -4, y = 2}, defines.direction.east)
+  local west_anchor = {
+    resource = "iron-ore",
+    kind = "item",
+    flow = "ingress",
+    side = "west",
+    position = {x = -4, y = -1},
+    direction = defines.direction.east,
+    entity_name = "the-square-item-ingress-managed-anchor",
+    entity = west_managed_line
+  }
+  local north_anchor = {
+    resource = "water",
+    kind = "fluid",
+    flow = "ingress",
+    side = "north",
+    position = {x = 0, y = -4},
+    direction = defines.direction.north,
+    entity_name = "the-square-fluid-ingress-managed-anchor",
+    entity = north_managed_line
+  }
+  local east_anchor = {
+    resource = "copper-ore",
+    kind = "item",
+    flow = "ingress",
+    side = "east",
+    position = {x = 4, y = 1},
+    direction = defines.direction.west,
+    entity_name = "the-square-item-ingress-managed-anchor",
+    entity = east_managed_line
+  }
+  local west_egress_anchor = {
+    resource = "sulfuric-acid",
+    kind = "fluid",
+    flow = "egress",
+    side = "west",
+    position = {x = -4, y = 2},
+    direction = defines.direction.east,
+    entity_name = "the-square-fluid-egress-managed-anchor",
+    entity = west_disconnected_egress
+  }
+  local surface = make_surface(
+    {
+      assembler,
+      character,
+      connected_belt,
+      connected_pipe,
+      east_connected_belt,
+      west_managed_line,
+      north_managed_line,
+      east_managed_line,
+      west_disconnected_egress
+    },
+    {
+      ["0:0"] = "refined-concrete"
+    },
+    {
+      ["0:0"] = "water"
+    }
+  )
+  install_world(surface, {west_anchor, north_anchor, east_anchor, west_egress_anchor})
+  local reconciled_planet = nil
+
+  local result = square_move_runtime.move("nauvis", "east", {
+    mode = defs.SQUARE_MOVE_MODES.CONTENTS,
+    managed_line_runtime = {
+      reconcile = function(planet_name)
+        reconciled_planet = planet_name
+      end
+    }
+  })
+
+  assert_equal(result.ok, true, "an unobstructed contents move should succeed")
+  assert_equal(storage.planets.nauvis.square_position.x, 0, "the Square x position should stay fixed")
+  assert_equal(storage.planets.nauvis.square_position.y, 0, "the Square y position should stay fixed")
+  assert_equal(character.position.x, -0.5, "characters should stay at their world x position")
+  assert_equal(character.position.y, 1.5, "characters should stay at their world y position")
+  assert_equal(result.moved_entity_count, 3, "factory entities and edge connections should move")
+  assert_equal(reconciled_planet, "nauvis", "Managed Lines should reconcile after contents move")
+  for surface_name in pairs(game.surfaces) do
+    assert_equal(
+      string.match(surface_name, "^the%-square%-content%-move%-staging"),
+      nil,
+      "the temporary surface should be deleted"
+    )
+  end
+
+  local moved_assembler
+  local moved_belt
+  local moved_pipe
+
+  for _, entity in ipairs(surface.area_entities) do
+    if entity.valid and entity.type == "assembling-machine" then
+      moved_assembler = entity
+    elseif entity.valid and entity.type == "transport-belt" then
+      moved_belt = entity
+    elseif entity.valid and entity.type == "pipe" then
+      moved_pipe = entity
+    end
+  end
+
+  assert_equal(moved_assembler.position.x, 1.5, "factory entities should move east by one tile")
+  assert_equal(moved_belt.position.x, -1.5, "a belt connected at the west edge should move east")
+  assert_equal(moved_pipe.position.x, 1.5, "a pipe connected at the north edge should move east")
+  assert_equal(west_anchor.position.x, -4, "the trailing Boundary Managed Line should remain fixed")
+  assert_equal(north_anchor.position.x, 1, "the north Managed Line should follow its connection east")
+  assert_equal(north_managed_line.valid, false, "the old north Managed Line entity should be replaced")
+  assert_equal(surface.created_entities[1].name, "transport-belt", "the trailing ingress should gain a belt stub")
+  assert_equal(surface.created_entities[1].position.x, -3, "the ingress belt stub should fill the vacated edge")
+  assert_equal(surface.created_entities[1].position.y, -1, "the ingress belt stub should stay aligned")
+  assert_equal(surface.created_entities[2].name, "transport-belt", "the leading ingress should retain a belt")
+  assert_equal(surface.created_entities[2].position.x, 3, "the leading ingress belt should remain on the edge")
+  assert_equal(surface.created_entities[2].position.y, 1, "the leading ingress belt should stay aligned")
+  assert_equal(surface.created_entities[3].name, "pipe", "a disconnected Managed Line should gain a pipe")
+  assert_equal(surface.created_entities[3].position.x, -3, "the new egress pipe should enter the Square")
+  assert_equal(surface.created_entities[3].position.y, 2, "the new egress pipe should stay aligned")
+
+  local moved_concrete = false
+  local vacated_floor = false
+  local moved_hidden_water = false
+
+  for _, tile in ipairs(surface.tiles_set) do
+    if tile.position.x == 1 and tile.position.y == 0 and tile.name == "refined-concrete" then
+      moved_concrete = true
+    elseif tile.position.x == -3 and tile.position.y == 0 and tile.name == "grass-1" then
+      vacated_floor = true
+    end
+  end
+
+  for _, hidden_tile in ipairs(surface.hidden_tiles_set) do
+    if hidden_tile.position.x == 1
+      and hidden_tile.position.y == 0
+      and hidden_tile.name == "water"
+    then
+      moved_hidden_water = true
+    end
+  end
+
+  assert_equal(moved_concrete, true, "placed tiles should move with the contents")
+  assert_equal(moved_hidden_water, true, "the terrain hidden beneath a placed tile should move with it")
+  assert_equal(vacated_floor, true, "the vacated edge should be restored to the managed floor")
 end)
 
 run_test("Square movement button names only parse supported directions", function()

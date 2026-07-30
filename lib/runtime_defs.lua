@@ -60,6 +60,15 @@ runtime_defs.SCREENSHOT_BUTTON_NAME = "the_square_screenshot_button"
 runtime_defs.SQUARE_MOVE_BUTTON_NAME = "the_square_move_button"
 runtime_defs.SQUARE_MOVE_FRAME_NAME = "the_square_move_frame"
 runtime_defs.SQUARE_MOVE_DIRECTION_BUTTON_PREFIX = "the_square_move_direction__"
+runtime_defs.SQUARE_MOVE_MODE_SWITCH_NAME = "the_square_move_mode_switch"
+runtime_defs.SQUARE_MOVE_MODE_INFO_NAME = "the_square_move_mode_info"
+runtime_defs.SQUARE_MOVE_MODE_INFO_SPRITE = "info"
+runtime_defs.SQUARE_MOVE_DESCRIPTION_NAME = "the_square_move_description"
+runtime_defs.SQUARE_MOVE_MODES = {
+  SQUARE = "square",
+  CONTENTS = "contents"
+}
+runtime_defs.SQUARE_MOVE_STAGING_SURFACE_PREFIX = "the-square-content-move-staging"
 runtime_defs.CLIFF_EXPLOSIVE_BUTTON_NAME = "the_square_cliff_explosive_button"
 runtime_defs.ANCHOR_CONFIG_FRAME_NAME = "the_square_anchor_config_frame"
 runtime_defs.ANCHOR_CONFIG_BUTTON_PREFIX = "the_square_anchor_config_pick__"

@@ -2,6 +2,7 @@ local defs = require("lib.runtime_defs")
 local debug_platform_runtime = require("lib.debug_platform_runtime")
 
 local gui_runtime = {}
+local MOVE_MODES = defs.SQUARE_MOVE_MODES
 
 local function destroy_child(parent, name)
   local child = parent and parent[name]
@@ -211,28 +212,71 @@ local function destroy_square_move_frame(player)
   end
 end
 
-local function build_square_move_tooltip(direction, result)
-  local tooltip
+local function get_square_move_mode(player)
+  return storage.square_move_modes[player.index]
+end
 
+local function initialize_square_move_mode(player)
+  if not storage.square_move_modes then
+    storage.square_move_modes = {}
+  end
+
+  if not storage.square_move_modes[player.index] then
+    storage.square_move_modes[player.index] = MOVE_MODES.SQUARE
+  end
+end
+
+local function set_square_move_mode(player, mode)
+  storage.square_move_modes[player.index] = mode
+end
+
+local function build_square_move_tooltip(direction, result, mode)
   if result.ok then
-    tooltip = {
+    if mode == MOVE_MODES.CONTENTS then
+      return {
+        "gui.the-square-move-contents-direction-tooltip",
+        {"the-square-direction." .. direction}
+      }
+    end
+
+    return {
       "gui.the-square-move-direction-tooltip",
       {"the-square-direction." .. direction}
     }
-  elseif result.reason == "obstructed" then
-    tooltip = {
-      "gui.the-square-move-obstructed-tooltip",
-      {"the-square-direction." .. direction},
-      {"the-square-direction." .. result.departing_side}
-    }
-  else
-    tooltip = {"gui.the-square-move-unsupported-tooltip"}
   end
 
-  return tooltip
+  if result.reason == "obstructed" then
+    if mode == MOVE_MODES.CONTENTS then
+      return {
+        "gui.the-square-move-contents-obstructed-tooltip",
+        {"the-square-direction." .. direction},
+        {"the-square-direction." .. result.obstructed_side}
+      }
+    end
+
+    return {
+      "gui.the-square-move-obstructed-tooltip",
+      {"the-square-direction." .. direction},
+      {"the-square-direction." .. result.obstructed_side}
+    }
+  end
+
+  if result.reason == "unmovable" then
+    return {"gui.the-square-move-contents-unmovable-tooltip"}
+  end
+
+  return {"gui.the-square-move-unsupported-tooltip"}
 end
 
-local function add_square_move_cell(table_element, direction, result)
+local function get_square_move_description(mode)
+  if mode == MOVE_MODES.CONTENTS then
+    return "gui.the-square-move-contents-description"
+  end
+
+  return "gui.the-square-move-description"
+end
+
+local function add_square_move_cell(table_element, direction, result, mode)
   if not direction then
     local spacer = table_element.add({type = "empty-widget"})
     spacer.style.width = 48
@@ -244,7 +288,7 @@ local function add_square_move_cell(table_element, direction, result)
     type = "button",
     name = defs.SQUARE_MOVE_DIRECTION_BUTTON_PREFIX .. direction,
     caption = {"gui.the-square-move-" .. direction},
-    tooltip = build_square_move_tooltip(direction, result),
+    tooltip = build_square_move_tooltip(direction, result, mode),
     enabled = result.ok
   })
   button.style.width = 48
@@ -253,15 +297,60 @@ local function add_square_move_cell(table_element, direction, result)
 end
 
 local function open_square_move_gui(player, square_move_runtime)
+  local mode = get_square_move_mode(player)
+  local switch_state = "left"
+
+  if mode == MOVE_MODES.CONTENTS then
+    switch_state = "right"
+  end
+
   local frame = player.gui.screen.add({
     type = "frame",
     name = defs.SQUARE_MOVE_FRAME_NAME,
-    direction = "vertical",
-    caption = {"gui.the-square-move-title"}
+    direction = "vertical"
   })
+  local titlebar = frame.add({
+    type = "flow",
+    name = "the_square_move_titlebar",
+    direction = "horizontal"
+  })
+  titlebar.style.horizontally_stretchable = true
+
+  local title = titlebar.add({
+    type = "label",
+    caption = {"gui.the-square-move-title"},
+    style = "frame_title"
+  })
+  title.drag_target = frame
+
+  local drag_space = titlebar.add({
+    type = "empty-widget",
+    style = "draggable_space_header"
+  })
+  drag_space.style.horizontally_stretchable = true
+  drag_space.style.height = 24
+  drag_space.drag_target = frame
+
+  titlebar.add({
+    type = "switch",
+    name = defs.SQUARE_MOVE_MODE_SWITCH_NAME,
+    left_label_caption = {"gui.the-square-move-mode-square"},
+    right_label_caption = {"gui.the-square-move-mode-contents"},
+    switch_state = switch_state,
+    allow_none_state = false
+  })
+
+  titlebar.add({
+    type = "sprite",
+    name = defs.SQUARE_MOVE_MODE_INFO_NAME,
+    sprite = defs.SQUARE_MOVE_MODE_INFO_SPRITE,
+    tooltip = {"gui.the-square-move-mode-tooltip"}
+  })
+
   frame.add({
     type = "label",
-    caption = {"gui.the-square-move-description"}
+    name = defs.SQUARE_MOVE_DESCRIPTION_NAME,
+    caption = {get_square_move_description(mode)}
   })
 
   local direction_flow = frame.add({
@@ -277,17 +366,17 @@ local function open_square_move_gui(player, square_move_runtime)
     name = "the_square_move_direction_table",
     column_count = 3
   })
-  local options = square_move_runtime.get_options_for_player(player)
+  local options = square_move_runtime.get_options_for_player(player, mode)
 
-  add_square_move_cell(directions)
-  add_square_move_cell(directions, "north", options.north)
-  add_square_move_cell(directions)
-  add_square_move_cell(directions, "west", options.west)
-  add_square_move_cell(directions)
-  add_square_move_cell(directions, "east", options.east)
-  add_square_move_cell(directions)
-  add_square_move_cell(directions, "south", options.south)
-  add_square_move_cell(directions)
+  add_square_move_cell(directions, nil, nil, mode)
+  add_square_move_cell(directions, "north", options.north, mode)
+  add_square_move_cell(directions, nil, nil, mode)
+  add_square_move_cell(directions, "west", options.west, mode)
+  add_square_move_cell(directions, nil, nil, mode)
+  add_square_move_cell(directions, "east", options.east, mode)
+  add_square_move_cell(directions, nil, nil, mode)
+  add_square_move_cell(directions, "south", options.south, mode)
+  add_square_move_cell(directions, nil, nil, mode)
 
   if frame.force_auto_center then
     frame.force_auto_center()
@@ -304,12 +393,18 @@ function gui_runtime.refresh_square_move_gui(player, square_move_runtime)
   local frame = player.gui.screen[defs.SQUARE_MOVE_FRAME_NAME]
   local direction_flow = frame and frame.the_square_move_direction_flow
   local directions = direction_flow and direction_flow.the_square_move_direction_table
+  local description = frame and frame[defs.SQUARE_MOVE_DESCRIPTION_NAME]
 
   if not directions then
     return
   end
 
-  local options = square_move_runtime.get_options_for_player(player)
+  local mode = get_square_move_mode(player)
+  local options = square_move_runtime.get_options_for_player(player, mode)
+
+  if description then
+    description.caption = {get_square_move_description(mode)}
+  end
 
   for _, direction in ipairs({"north", "east", "south", "west"}) do
     local button = directions[defs.SQUARE_MOVE_DIRECTION_BUTTON_PREFIX .. direction]
@@ -317,9 +412,33 @@ function gui_runtime.refresh_square_move_gui(player, square_move_runtime)
 
     if button then
       button.enabled = result.ok
-      button.tooltip = build_square_move_tooltip(direction, result)
+      button.tooltip = build_square_move_tooltip(direction, result, mode)
     end
   end
+end
+
+function gui_runtime.get_square_move_mode(player)
+  return get_square_move_mode(player)
+end
+
+function gui_runtime.handle_square_move_mode_changed(player, element, square_move_runtime)
+  if not (player and player.valid and element and element.valid) then
+    return false
+  end
+
+  if element.name ~= defs.SQUARE_MOVE_MODE_SWITCH_NAME then
+    return false
+  end
+
+  local mode = MOVE_MODES.SQUARE
+
+  if element.switch_state == "right" then
+    mode = MOVE_MODES.CONTENTS
+  end
+
+  set_square_move_mode(player, mode)
+  gui_runtime.refresh_square_move_gui(player, square_move_runtime)
+  return true
 end
 
 function gui_runtime.toggle_square_move_gui(player, square_move_runtime)
@@ -363,6 +482,7 @@ function gui_runtime.sync_square_move_gui(player)
     return
   end
 
+  initialize_square_move_mode(player)
   ensure_square_move_button(player)
 end
 
