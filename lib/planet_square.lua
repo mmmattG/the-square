@@ -113,7 +113,12 @@ local function get_trailing_entity_name(anchor)
     return "pipe"
   end
 
-  local tier_level = anchor.tier_level or (anchor.flow == "egress" and defs.get_current_egress_tier_level() or defs.get_current_ingress_tier_level())
+  local tier_level = anchor.tier_level
+    or (
+      anchor.flow == "egress"
+        and defs.get_current_egress_tier_level("nauvis")
+        or defs.get_current_ingress_tier_level("nauvis")
+    )
   local tier_map = anchor.flow == "egress" and defs.ITEM_EGRESS_BELT_TIER_BY_EGRESS_TIER or defs.ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER
   local belt_tier_key = tier_map[tier_level] or "yellow"
 
@@ -205,7 +210,7 @@ end
 
 function planet_square.apply_square_expansion(planet_name, options)
   options = options or {}
-  planet_name = planet_name or "nauvis"
+  assert(planet_name, "planet_name is required")
 
   local planet = planet_instance.ensure(planet_name)
 

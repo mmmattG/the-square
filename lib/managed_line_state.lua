@@ -38,14 +38,14 @@ local function normalize_anchor(anchor, square_size, square_position)
 end
 
 function managed_line_state.get(planet_name)
-  planet_name = planet_name or "nauvis"
+  assert(planet_name, "planet_name is required")
 
   local planet_state = storage.planets and storage.planets[planet_name]
   return planet_state and planet_state.starter_anchors or nil
 end
 
 function managed_line_state.initialize(planet_name)
-  planet_name = planet_name or "nauvis"
+  assert(planet_name, "planet_name is required")
   local planet = planet_instance.ensure(planet_name)
 
   if not planet then

@@ -382,6 +382,7 @@ local function get_uranium_context(ingress_tier, starter_anchors, planet_state)
 end
 
 function ingress_runtime.pump_planet_anchors(planet_name)
+  assert(planet_name, "planet_name is required")
   local planet = storage.planets and storage.planets[planet_name] and planet_instance.ensure(planet_name) or nil
   local starter_anchors = planet and planet:get_state().starter_anchors or nil
 
@@ -389,12 +390,8 @@ function ingress_runtime.pump_planet_anchors(planet_name)
     return
   end
 
-  local ingress_tier = defs.get_current_ingress_tier()
+  local ingress_tier = defs.get_current_ingress_tier("nauvis")
   pump_anchor_set(starter_anchors, ingress_tier, get_uranium_context(ingress_tier, starter_anchors, planet:get_state()), planet_name)
-end
-
-function ingress_runtime.pump_starter_anchors()
-  ingress_runtime.pump_planet_anchors("nauvis")
 end
 
 function ingress_runtime.pump_planet_starter_anchors()

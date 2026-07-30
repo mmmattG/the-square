@@ -123,7 +123,7 @@ run_test("generic configured item Managed Lines do not crash the pump loop", fun
     }
   }
 
-  ingress_runtime.pump_starter_anchors()
+  ingress_runtime.pump_planet_anchors("nauvis")
 end)
 
 run_test("Gleba fruit ingresses require matching seed egress", function()

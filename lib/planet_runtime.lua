@@ -99,6 +99,7 @@ local function choose_spread_positions(positions, count, side)
 end
 
 function planet_runtime.build_starter_anchor_layout(square_size, planet_name)
+  assert(planet_name, "planet_name is required")
   local bounds = defs.get_anchor_bounds(square_size)
   local resources_by_side = {}
   local anchors = {}
@@ -148,6 +149,7 @@ local function build_stashed_managed_anchor(kind, flow)
 end
 
 function planet_runtime.build_initial_managed_line_state(planet_name)
+  assert(planet_name, "planet_name is required")
   local anchors = {}
 
   if planet_name == "nauvis" then
@@ -350,6 +352,7 @@ local function build_surface_map_gen_settings(square_size)
 end
 
 function planet_runtime.ensure_planet_state(planet_name)
+  assert(planet_name, "planet_name is required")
   return planet_instance.ensure(planet_name)
 end
 
@@ -371,6 +374,7 @@ ensure_surface_dimensions = function(surface, target_surface_size, square_positi
 end
 
 function planet_runtime.initialize_planet_surface(planet_name)
+  assert(planet_name, "planet_name is required")
   local config = planet_config.get(planet_name)
 
   if not config then
@@ -419,6 +423,7 @@ function planet_runtime.chart_play_area(force, surface, surface_size, square_pos
 end
 
 function planet_runtime.teleport_player_to_planet_square(player, planet_name)
+  assert(planet_name, "planet_name is required")
   local planet = planet_instance.ensure(planet_name)
 
   if not planet then
@@ -443,6 +448,7 @@ function planet_runtime.teleport_player_to_planet_square(player, planet_name)
 end
 
 function planet_runtime.expand_planet_square(planet_name, player, gui_runtime, anchor_runtime)
+  assert(planet_name, "planet_name is required")
   local planet_square_runtime = require("lib.planet_square_runtime")
 
   return planet_square_runtime.expand(planet_name, {
@@ -477,6 +483,7 @@ function planet_runtime.initialize_world(anchor_runtime, gui_runtime)
 end
 
 function planet_runtime.refresh_spawn_routing(planet_name, anchor_runtime, gui_runtime)
+  assert(planet_name, "planet_name is required")
   local planet = planet_runtime.ensure_planet_state(planet_name)
 
   if not planet then
@@ -516,6 +523,7 @@ function planet_runtime.refresh_spawn_routing(planet_name, anchor_runtime, gui_r
 end
 
 function planet_runtime.notify_square_size_change_applies_to_new_saves(planet_name)
+  assert(planet_name, "planet_name is required")
   local planet = planet_instance.ensure(planet_name)
   local config = planet_config.get(planet_name)
 

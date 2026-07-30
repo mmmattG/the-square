@@ -40,6 +40,20 @@ run_test("seam returns nil for unsupported planets without creating Managed Line
   assert_equal(managed_line_state.get("not-a-planet"), nil, "unsupported Planet should not read Managed Lines")
 end)
 
+run_test("Managed Line state requires an explicit Planet name", function()
+  storage = {}
+
+  local get_ok = pcall(function()
+    managed_line_state.get()
+  end)
+  local initialize_ok = pcall(function()
+    managed_line_state.initialize()
+  end)
+
+  assert_equal(get_ok, false, "state reads should not default to Nauvis")
+  assert_equal(initialize_ok, false, "state initialization should not default to Nauvis")
+end)
+
 run_test("starter Managed Lines initialize only once per Planet", function()
   storage = {planets = {nauvis = {square_size = 7, surface_name = "nauvis"}}}
 

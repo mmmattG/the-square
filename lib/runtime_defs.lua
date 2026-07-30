@@ -397,8 +397,8 @@ function runtime_defs.get_config_definition(resource, flow, planet_name)
   return nil
 end
 
-function runtime_defs.get_ingress_item_name(resource)
-  local definition = runtime_defs.get_input_definition(resource)
+function runtime_defs.get_ingress_item_name(resource, planet_name)
+  local definition = runtime_defs.get_input_definition(resource, planet_name)
   return runtime_defs.get_generic_anchor_item_name(definition and definition.kind or "item", "ingress")
 end
 
@@ -463,11 +463,13 @@ function runtime_defs.is_ingress_entity_name_for_resource(resource, entity_name)
 end
 
 function runtime_defs.get_input_definitions(planet_name)
-  return runtime_defs.INPUT_DEFINITIONS_BY_PLANET[planet_name or "nauvis"] or runtime_defs.INPUT_DEFINITIONS
+  assert(planet_name, "planet_name is required")
+  return runtime_defs.INPUT_DEFINITIONS_BY_PLANET[planet_name] or {}
 end
 
 function runtime_defs.get_output_definitions(planet_name)
-  return runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET[planet_name or "nauvis"] or runtime_defs.OUTPUT_DEFINITIONS
+  assert(planet_name, "planet_name is required")
+  return runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET[planet_name] or {}
 end
 
 function runtime_defs.get_input_definition(resource, planet_name)
@@ -506,8 +508,8 @@ function runtime_defs.get_line_definition(resource, planet_name)
   return nil, nil
 end
 
-function runtime_defs.get_egress_item_name(resource)
-  local definition = runtime_defs.get_output_definition(resource)
+function runtime_defs.get_egress_item_name(resource, planet_name)
+  local definition = runtime_defs.get_output_definition(resource, planet_name)
   return runtime_defs.get_generic_anchor_item_name(definition and definition.kind or "item", "egress")
 end
 
@@ -687,7 +689,8 @@ function runtime_defs.get_ingress_tier_definition(tier_level)
 end
 
 function runtime_defs.get_current_ingress_tier_level(planet_name)
-  local planet_state = storage.planets and storage.planets[planet_name or "nauvis"]
+  assert(planet_name, "planet_name is required")
+  local planet_state = storage.planets and storage.planets[planet_name]
 
   if not planet_state then
     return 1
@@ -706,8 +709,8 @@ function runtime_defs.get_current_ingress_tier_level(planet_name)
   return tier_level
 end
 
-function runtime_defs.get_current_ingress_tier()
-  return runtime_defs.get_ingress_tier_definition(runtime_defs.get_current_ingress_tier_level())
+function runtime_defs.get_current_ingress_tier(planet_name)
+  return runtime_defs.get_ingress_tier_definition(runtime_defs.get_current_ingress_tier_level(planet_name))
 end
 
 local function get_researched_tier_level_for_force(force, research_definitions)
@@ -743,7 +746,8 @@ function runtime_defs.get_next_expansion_tile_reward(square_size)
 end
 
 function runtime_defs.get_completed_expansion_research_levels(planet_name)
-  local planet_state = storage.planets and storage.planets[planet_name or "nauvis"]
+  assert(planet_name, "planet_name is required")
+  local planet_state = storage.planets and storage.planets[planet_name]
 
   if not planet_state then
     return 0
@@ -767,6 +771,10 @@ function runtime_defs.get_expansion_research_band_for_level(level)
 end
 
 function runtime_defs.get_expansion_research_planet_name(research_name)
+  if expansion_research.get_level_from_technology_name(research_name) then
+    return "nauvis"
+  end
+
   return expansion_research.get_planet_from_technology_name(research_name)
 end
 
@@ -870,7 +878,8 @@ function runtime_defs.snap_entity_position_to_tile(position)
 end
 
 function runtime_defs.get_current_egress_tier_level(planet_name)
-  local planet_state = storage.planets and storage.planets[planet_name or "nauvis"]
+  assert(planet_name, "planet_name is required")
+  local planet_state = storage.planets and storage.planets[planet_name]
 
   if not planet_state then
     return 1
@@ -899,11 +908,17 @@ function runtime_defs.get_anchor_entity_name_for_current_tier(anchor)
   end
 
   if anchor.flow == "egress" then
-    return runtime_defs.get_egress_entity_name(anchor.resource, anchor.tier_level or runtime_defs.get_current_egress_tier_level())
+    return runtime_defs.get_egress_entity_name(
+      anchor.resource,
+      anchor.tier_level or runtime_defs.get_current_egress_tier_level("nauvis")
+    )
   end
 
   if anchor.kind == "item" then
-    return runtime_defs.get_ingress_entity_name(anchor.resource, anchor.tier_level or runtime_defs.get_current_ingress_tier_level())
+    return runtime_defs.get_ingress_entity_name(
+      anchor.resource,
+      anchor.tier_level or runtime_defs.get_current_ingress_tier_level("nauvis")
+    )
   end
 
   return runtime_defs.get_ingress_entity_name(anchor.resource, 1)
@@ -912,7 +927,7 @@ end
 function runtime_defs.get_effective_ingress_tier_for_anchor(anchor)
   local tier_level = anchor and anchor.tier_level or 1
 
-  if tier_level == 1 and runtime_defs.get_current_ingress_tier_level() >= 2 then
+  if tier_level == 1 and runtime_defs.get_current_ingress_tier_level("nauvis") >= 2 then
     tier_level = 2
   end
 
@@ -920,7 +935,7 @@ function runtime_defs.get_effective_ingress_tier_for_anchor(anchor)
 end
 
 function runtime_defs.build_ingress_tier_summary()
-  local tier = runtime_defs.get_current_ingress_tier()
+  local tier = runtime_defs.get_current_ingress_tier("nauvis")
   local item_rate_per_second = runtime_defs.get_ingress_item_rate_per_second()
   local fluid_rate_per_second = runtime_defs.get_ingress_fluid_rate_per_second()
 
@@ -932,7 +947,7 @@ function runtime_defs.build_ingress_tier_summary()
 end
 
 function runtime_defs.get_ingress_item_rate_per_second()
-  local tier = runtime_defs.get_current_ingress_tier()
+  local tier = runtime_defs.get_current_ingress_tier("nauvis")
 
   return item_ingress.get_total_items_per_second(
     tier.item_lane_counts or {0, 0},
@@ -941,7 +956,7 @@ function runtime_defs.get_ingress_item_rate_per_second()
 end
 
 function runtime_defs.get_ingress_fluid_rate_per_second()
-  local tier = runtime_defs.get_current_ingress_tier()
+  local tier = runtime_defs.get_current_ingress_tier("nauvis")
   return (tier.fluid_amount_per_interval or 0) * (60 / runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS)
 end
 

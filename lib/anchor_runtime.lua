@@ -717,7 +717,7 @@ local function get_selected_anchor_slot_proxy(player)
 end
 
 function anchor_runtime.get_owned_line_counts(resource, planet_name)
-  local starter_anchors = managed_line_state.get(planet_name or "nauvis")
+  local starter_anchors = managed_line_state.get(planet_name)
   local counts = {
     owned = 0,
     placed = 0,
@@ -748,7 +748,7 @@ function anchor_runtime.is_resource_unlocked(resource, planet_name)
 end
 
 function anchor_runtime.can_purchase_line(resource, force, planet_name)
-  local definition, flow = defs.get_line_definition(resource)
+  local definition, flow = defs.get_line_definition(resource, planet_name)
 
   if not definition then
     return false, "message.the-square-shop-resource-unknown", nil
@@ -806,17 +806,17 @@ function anchor_runtime.sync_ingress_tier_from_research(force)
   return anchor_runtime.sync_anchor_tiers_from_research(force)
 end
 
-local function get_shop_item_name(resource)
-  local input_definition = defs.get_input_definition(resource)
+local function get_shop_item_name(resource, planet_name)
+  local input_definition = defs.get_input_definition(resource, planet_name)
 
   if input_definition then
-    return defs.get_ingress_item_name(resource)
+    return defs.get_ingress_item_name(resource, planet_name)
   end
 
-  local output_definition = defs.get_output_definition(resource)
+  local output_definition = defs.get_output_definition(resource, planet_name)
 
   if output_definition then
-    return defs.get_egress_item_name(resource)
+    return defs.get_egress_item_name(resource, planet_name)
   end
 
   return nil
@@ -846,11 +846,10 @@ local function grant_managed_line(player, planet_state, definition, flow, item_n
 end
 
 function anchor_runtime.purchase_managed_line_for_resource(player, resource, planet_name)
-  planet_name = planet_name or "nauvis"
   local planet = planet_instance.ensure(planet_name)
   local planet_state = planet and planet:get_state()
-  local definition, flow = defs.get_line_definition(resource)
-  local item_name = get_shop_item_name(resource)
+  local definition, flow = defs.get_line_definition(resource, planet_name)
+  local item_name = get_shop_item_name(resource, planet_name)
 
   if not planet_state or not definition or not item_name then
     return
@@ -862,7 +861,7 @@ function anchor_runtime.purchase_managed_line_for_resource(player, resource, pla
   if not can_purchase then
     if player and player.valid then
       if message_resource then
-        player.print({message_key, {"item-name." .. get_shop_item_name(message_resource)}})
+        player.print({message_key, {"item-name." .. get_shop_item_name(message_resource, planet_name)}})
       else
         player.print({message_key, {"item-name." .. item_name}})
       end
@@ -877,8 +876,8 @@ function anchor_runtime.purchase_managed_line_for_resource(player, resource, pla
   })
 
   if resource == "uranium-ore" and not anchor_runtime.is_resource_unlocked("sulfuric-acid", planet_name) then
-    local sulfuric_acid_definition = defs.get_output_definition("sulfuric-acid")
-    local sulfuric_acid_item_name = defs.get_egress_item_name("sulfuric-acid")
+    local sulfuric_acid_definition = defs.get_output_definition("sulfuric-acid", planet_name)
+    local sulfuric_acid_item_name = defs.get_egress_item_name("sulfuric-acid", planet_name)
 
     grant_managed_line(player, planet_state, sulfuric_acid_definition, "egress", sulfuric_acid_item_name)
   end
@@ -1029,7 +1028,16 @@ local function add_anchor_config_category_tabs(parent, selected_category)
   end
 end
 
-local function add_anchor_config_resource_grid(parent, definitions, flow, kind, anchor, force, selected_tier_level)
+local function add_anchor_config_resource_grid(
+  parent,
+  definitions,
+  flow,
+  kind,
+  anchor,
+  force,
+  selected_tier_level,
+  planet_name
+)
   local table_element = parent.add({
     type = "table",
     column_count = 10
@@ -1039,7 +1047,7 @@ local function add_anchor_config_resource_grid(parent, definitions, flow, kind, 
     if definition.kind == kind
       and (
         anchor.resource == definition.resource
-        or anchor_runtime.is_resource_unlocked(definition.resource)
+        or anchor_runtime.is_resource_unlocked(definition.resource, planet_name)
         or defs.is_config_definition_unlocked(definition, flow, force)
       )
     then
@@ -1139,7 +1147,16 @@ local function open_anchor_config_gui(player, anchor, planet_name, category_name
     and defs.get_output_definitions(planet_name)
     or defs.get_input_definitions(planet_name)
 
-  add_anchor_config_resource_grid(frame, definitions, category.flow, category.kind, anchor, player.force, tier_level)
+  add_anchor_config_resource_grid(
+    frame,
+    definitions,
+    category.flow,
+    category.kind,
+    anchor,
+    player.force,
+    tier_level,
+    planet_name
+  )
 
   if category.kind == "item" then
     add_anchor_config_tier_selector(frame, player, tier_level)

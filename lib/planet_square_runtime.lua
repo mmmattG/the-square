@@ -20,7 +20,7 @@ end
 
 function planet_square_runtime.expand(planet_name, options)
   options = options or {}
-  planet_name = planet_name or "nauvis"
+  assert(planet_name, "planet_name is required")
 
   local result = planet_square.apply_square_expansion(planet_name, {
     player = options.player,
@@ -50,7 +50,7 @@ function planet_square_runtime.expand_after_research(research, options)
     return false
   end
 
-  local planet_name = defs.get_expansion_research_planet_name(research.name) or "nauvis"
+  local planet_name = defs.get_expansion_research_planet_name(research.name)
   planet_instance.ensure(planet_name)
 
   planet_square_runtime.expand(planet_name, {

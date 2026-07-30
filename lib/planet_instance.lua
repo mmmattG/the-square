@@ -60,7 +60,7 @@ local function wrap_planet(state)
 end
 
 function planet_instance.ensure(planet_name)
-  planet_name = planet_name or "nauvis"
+  assert(planet_name, "planet_name is required")
 
   local planets = ensure_planets_storage()
   planets[planet_name] = planets[planet_name] or {}

@@ -11,7 +11,6 @@ function managed_line_runtime.get(planet_name)
 end
 
 function managed_line_runtime.initialize(planet_name)
-  planet_name = planet_name or "nauvis"
   return anchor_runtime.initialize_planet_managed_lines(planet_name)
 end
 
@@ -26,11 +25,10 @@ function managed_line_runtime.refresh_existing_planets()
 end
 
 function managed_line_runtime.reconcile(planet_name)
-  return anchor_runtime.reconcile_planet_managed_lines(planet_name or "nauvis")
+  return anchor_runtime.reconcile_planet_managed_lines(planet_name)
 end
 
 function managed_line_runtime.pump(planet_name)
-  planet_name = planet_name or "nauvis"
   return ingress_runtime.pump_planet_anchors(planet_name)
 end
 

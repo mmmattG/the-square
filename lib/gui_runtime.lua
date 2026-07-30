@@ -406,8 +406,8 @@ function gui_runtime.handle_square_move_gui_closed(player, element)
 end
 
 local function build_shop_status_caption(resource, anchor_runtime)
-  local definition = defs.get_input_definition(resource) or defs.get_output_definition(resource)
-  local counts = anchor_runtime.get_owned_line_counts(resource)
+  local definition = defs.get_input_definition(resource, "nauvis") or defs.get_output_definition(resource, "nauvis")
+  local counts = anchor_runtime.get_owned_line_counts(resource, "nauvis")
 
   if not definition then
     return "Unavailable"
@@ -417,7 +417,9 @@ local function build_shop_status_caption(resource, anchor_runtime)
     return "Owned: " .. counts.owned .. " (" .. counts.placed .. " placed, " .. counts.stashed .. " stashed)"
   end
 
-  if definition.prerequisite_resource and not anchor_runtime.is_resource_unlocked(definition.prerequisite_resource) then
+  if definition.prerequisite_resource
+    and not anchor_runtime.is_resource_unlocked(definition.prerequisite_resource, "nauvis")
+  then
     return "Locked until " .. defs.format_resource_name(definition.prerequisite_resource) .. " is unlocked"
   end
 

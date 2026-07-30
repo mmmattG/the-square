@@ -142,12 +142,12 @@ run_test("resource configuration unlocks follow vanilla research", function()
   }
 
   assert_equal(
-    runtime_defs.is_config_definition_unlocked(runtime_defs.get_input_definition("crude-oil"), "ingress", force),
+    runtime_defs.is_config_definition_unlocked(runtime_defs.get_input_definition("crude-oil", "nauvis"), "ingress", force),
     true,
     "oil gathering should unlock crude oil ingress configuration without oil processing"
   )
   assert_equal(
-    runtime_defs.is_config_definition_unlocked(runtime_defs.get_input_definition("uranium-ore"), "ingress", force),
+    runtime_defs.is_config_definition_unlocked(runtime_defs.get_input_definition("uranium-ore", "nauvis"), "ingress", force),
     true,
     "uranium mining should unlock uranium ingress configuration"
   )
@@ -157,7 +157,7 @@ run_test("resource configuration unlocks follow vanilla research", function()
     "uranium mining should unlock sulfuric acid ingress configuration"
   )
   assert_equal(
-    runtime_defs.is_config_definition_unlocked(runtime_defs.get_output_definition("sulfuric-acid"), "egress", force),
+    runtime_defs.is_config_definition_unlocked(runtime_defs.get_output_definition("sulfuric-acid", "nauvis"), "egress", force),
     true,
     "uranium mining should unlock sulfuric acid egress configuration"
   )
