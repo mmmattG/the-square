@@ -64,9 +64,9 @@ run_test("Planet Square runtime expands one Planet-local Square through one inte
     }
   }
   local refreshed = false
-  local ensured_planet = nil
+  local reconciled_planet = nil
   local gui_runtime = {refresh_all_debug_guis = function() refreshed = true end}
-  local managed_line_runtime = {ensure = function(planet_name) ensured_planet = planet_name end}
+  local managed_line_runtime = {reconcile = function(planet_name) reconciled_planet = planet_name end}
 
   local result = planet_square_runtime.expand("vulcanus", {
     gui_runtime = gui_runtime,
@@ -76,7 +76,7 @@ run_test("Planet Square runtime expands one Planet-local Square through one inte
   assert_equal(result.square_size, 7, "runtime should grow the Planet Square")
   assert_equal(storage.planets.vulcanus.expansion_research_levels, 1, "runtime should advance Planet Progression")
   assert_equal(refreshed, true, "runtime should own expansion GUI refresh")
-  assert_equal(ensured_planet, "vulcanus", "runtime should pass Managed Line adapter through for Managed Line Shift repair")
+  assert_equal(reconciled_planet, "vulcanus", "runtime should reconcile Managed Lines after shifting them")
 end)
 
 run_test("Planet Square runtime handles Square Expansion research without bootstrap_runtime", function()

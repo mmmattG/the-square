@@ -465,13 +465,11 @@ function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
   call_freeplay("set_skip_intro", true)
   call_freeplay("set_disable_crashsite", true)
 
-  storage.starter_anchors = bootstrap_runtime.build_initial_managed_line_state("nauvis")
-
   local surface = bootstrap_runtime.ensure_bootstrap_surface(anchor_runtime)
   game.forces.player.set_spawn_position({x = 0, y = 0}, surface)
 
   if anchor_runtime then
-    anchor_runtime.ensure("nauvis")
+    anchor_runtime.initialize("nauvis")
     anchor_runtime.apply_logistic_network_setting_to_all_forces()
   end
 
@@ -513,7 +511,7 @@ function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
   )
 
   if anchor_runtime then
-    anchor_runtime.ensure("nauvis")
+    anchor_runtime.reconcile("nauvis")
     anchor_runtime.apply_logistic_network_setting_to_all_forces()
   end
 

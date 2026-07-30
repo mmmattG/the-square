@@ -220,12 +220,12 @@ run_test("Moving the Square updates tiles and Boundary state without moving fact
   local assembler = make_entity("assembling-machine", {x = 0, y = 0})
   local surface = make_surface({departing_belt, assembler})
   install_world(surface, {west_anchor, east_anchor, north_anchor})
-  local ensured_planet = nil
+  local reconciled_planet = nil
 
   local result = square_move_runtime.move("nauvis", "east", {
     managed_line_runtime = {
-      ensure = function(planet_name)
-        ensured_planet = planet_name
+      reconcile = function(planet_name)
+        reconciled_planet = planet_name
       end
     }
   })
@@ -242,7 +242,7 @@ run_test("Moving the Square updates tiles and Boundary state without moving fact
   assert_equal(surface.map_gen_settings.width, 11, "the finite surface should grow to contain the moved Square")
   assert_equal(surface.map_gen_settings.height, 9, "an east move should not grow the surface vertically")
   assert_equal(type(surface.tiles_set), "table", "playable and Void tiles should be rewritten")
-  assert_equal(ensured_planet, "nauvis", "Managed Lines should be repaired after the Boundary moves")
+  assert_equal(reconciled_planet, "nauvis", "Managed Lines should be reconciled after the Boundary moves")
   assert_equal(game.spawn_position.x, 1, "the force spawn should follow the moved Square")
 end)
 

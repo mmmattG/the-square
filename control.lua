@@ -52,7 +52,7 @@ end)
 script.on_configuration_changed(function()
   if storage.bootstrap then
     bootstrap_runtime.ensure_bootstrap_state_defaults()
-    managed_line_runtime.ensure_state("nauvis")
+    managed_line_runtime.refresh_existing_planets()
     managed_line_runtime.sync_tier(defs.get_player_force())
 
     if storage.bootstrap.square_size ~= defs.get_square_size() then
@@ -88,7 +88,7 @@ script.on_event(defines.events.on_player_respawned, handle_player_join_or_respaw
 
 script.on_event(defines.events.on_chunk_generated, function(event)
   if bootstrap_runtime.refresh_generated_chunk_for_planet_surface(event.surface, event.area) then
-    managed_line_runtime.ensure(event.surface.name)
+    managed_line_runtime.initialize(event.surface.name)
   end
 end)
 
@@ -333,10 +333,6 @@ end)
 
 script.on_nth_tick(1, function()
   managed_line_runtime.pump_all()
-end)
-
-script.on_nth_tick(defs.ITEM_ANCHOR_INTERVAL_TICKS, function()
-  managed_line_runtime.ensure_all()
 end)
 
 script.on_nth_tick(30, function()

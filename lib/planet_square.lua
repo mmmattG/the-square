@@ -246,8 +246,8 @@ function planet_square.apply_square_expansion(planet_name, options)
   move_managed_lines_outward(managed_lines)
   planet_square.chart_play_area(game.forces.player, surface, next_surface_size, square_position)
 
-  if options.anchor_runtime and options.anchor_runtime.ensure then
-    options.anchor_runtime.ensure(planet_name)
+  if options.anchor_runtime and options.anchor_runtime.reconcile then
+    options.anchor_runtime.reconcile(planet_name)
   end
 
   if options.player and options.player.valid then
