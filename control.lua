@@ -134,7 +134,6 @@ local function handle_entity_built(event)
   managed_line_runtime.handle_built(event, gui_runtime)
   void_item_runtime.destroy_if_void_item(event)
   gui_runtime.sync_all_shop_guis(managed_line_runtime)
-  gui_runtime.refresh_all_square_move_guis(square_move_runtime)
 end
 
 script.on_event(defines.events.on_built_entity, handle_entity_built)
@@ -157,7 +156,6 @@ end
 local function handle_anchor_removed(event)
   managed_line_runtime.handle_mined(event.entity)
   gui_runtime.sync_all_shop_guis(managed_line_runtime)
-  gui_runtime.refresh_all_square_move_guis(square_move_runtime)
 end
 
 script.on_event(defines.events.on_player_mined_entity, handle_anchor_removed)
