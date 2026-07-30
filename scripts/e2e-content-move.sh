@@ -47,6 +47,7 @@ cat > "$validator_dir/info.json" <<EOF
 EOF
 
 cat > "$validator_dir/control.lua" <<'EOF'
+local defs = require("lib.runtime_defs")
 local square_move_runtime = require("lib.square_move_runtime")
 
 local function assert_equal(actual, expected, message)
@@ -63,6 +64,11 @@ local function assert_equal(actual, expected, message)
 end
 
 script.on_init(function()
+  assert(
+    helpers.is_valid_sprite_path(defs.SQUARE_MOVE_MODE_INFO_SPRITE),
+    "[the-square-content-move-validator] movement mode info sprite is invalid"
+  )
+
   local surface = game.surfaces.nauvis
   local west_anchor = {
     resource = "iron-ore",
