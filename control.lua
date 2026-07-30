@@ -10,7 +10,6 @@ local void_item_runtime = require("lib.void_item_runtime")
 
 local function sync_all_runtime_guis()
   gui_runtime.refresh_all_debug_guis()
-  gui_runtime.sync_all_shop_guis(managed_line_runtime)
   gui_runtime.sync_all_square_move_guis()
 end
 
@@ -40,7 +39,6 @@ local function handle_player_join_or_respawn(event)
     gui_runtime.sync_dev_gui(player)
     gui_runtime.sync_screenshot_gui(player)
     gui_runtime.sync_square_move_gui(player)
-    gui_runtime.sync_shop_gui(player, managed_line_runtime)
     gui_runtime.sync_cliff_explosive_gui(player)
   end
 end
@@ -76,7 +74,6 @@ script.on_configuration_changed(function()
     gui_runtime.sync_all_dev_guis()
     gui_runtime.sync_all_screenshot_guis()
     gui_runtime.sync_all_square_move_guis()
-    gui_runtime.sync_all_shop_guis(managed_line_runtime)
     gui_runtime.sync_all_cliff_explosive_guis()
     planet_runtime.refresh_spawn_routing("nauvis", managed_line_runtime, gui_runtime)
     return
@@ -135,7 +132,6 @@ end
 local function handle_entity_built(event)
   managed_line_runtime.handle_built(event, gui_runtime)
   void_item_runtime.destroy_if_void_item(event)
-  gui_runtime.sync_all_shop_guis(managed_line_runtime)
 end
 
 script.on_event(defines.events.on_built_entity, handle_entity_built)
@@ -157,7 +153,6 @@ end
 
 local function handle_anchor_removed(event)
   managed_line_runtime.handle_mined(event.entity)
-  gui_runtime.sync_all_shop_guis(managed_line_runtime)
 end
 
 script.on_event(defines.events.on_player_mined_entity, handle_anchor_removed)
@@ -251,7 +246,6 @@ script.on_event(defs.PLACE_MANAGED_ANCHOR_INPUT_NAME, function(event)
 
   if player then
     managed_line_runtime.handle_slot_click(player)
-    gui_runtime.sync_all_shop_guis(managed_line_runtime)
   end
 end)
 
@@ -266,11 +260,6 @@ end)
 script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
   if event.setting == defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION then
     managed_line_runtime.apply_logistic_network_setting_to_all_forces()
-    return
-  end
-
-  if event.setting == defs.SETTING_LINE_PURCHASE_COST then
-    gui_runtime.sync_all_shop_guis(managed_line_runtime)
     return
   end
 
@@ -296,7 +285,6 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
 
     if player then
       gui_runtime.sync_dev_gui(player)
-      gui_runtime.sync_shop_gui(player, managed_line_runtime)
     end
 
     return

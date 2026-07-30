@@ -747,28 +747,6 @@ function anchor_runtime.is_resource_unlocked(resource, planet_name)
   return anchor_runtime.get_owned_line_counts(resource, planet_name).owned > 0
 end
 
-function anchor_runtime.can_purchase_line(resource, force, planet_name)
-  local definition, flow = defs.get_line_definition(resource, planet_name)
-
-  if not definition then
-    return false, "message.the-square-shop-resource-unknown", nil
-  end
-
-  if anchor_runtime.is_resource_unlocked(resource, planet_name)
-    or defs.is_config_definition_unlocked(definition, flow, force)
-  then
-    return true, nil, nil
-  end
-
-  if definition.prerequisite_resource
-    and not anchor_runtime.is_resource_unlocked(definition.prerequisite_resource, planet_name)
-  then
-    return false, "message.the-square-shop-prerequisite", definition.prerequisite_resource
-  end
-
-  return true, nil, nil
-end
-
 function anchor_runtime.sync_anchor_tiers_from_research(force)
   local nauvis = planet_instance.ensure("nauvis")
   local tier_state = nauvis and nauvis:get_state()
@@ -804,83 +782,6 @@ end
 
 function anchor_runtime.sync_ingress_tier_from_research(force)
   return anchor_runtime.sync_anchor_tiers_from_research(force)
-end
-
-local function get_shop_item_name(resource, planet_name)
-  local input_definition = defs.get_input_definition(resource, planet_name)
-
-  if input_definition then
-    return defs.get_ingress_item_name(resource, planet_name)
-  end
-
-  local output_definition = defs.get_output_definition(resource, planet_name)
-
-  if output_definition then
-    return defs.get_egress_item_name(resource, planet_name)
-  end
-
-  return nil
-end
-
-local function grant_managed_line(player, planet_state, definition, flow, item_name, purchase_message)
-  if not (planet_state and definition and flow and item_name) then
-    return false
-  end
-
-  planet_state.starter_anchors = planet_state.starter_anchors or {
-    layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = {}
-  }
-  planet_state.starter_anchors.anchors[#planet_state.starter_anchors.anchors + 1] =
-    defs.create_managed_anchor(definition, flow, nil, nil)
-
-  if player and player.valid then
-    player_insert_or_spill(player, item_name)
-
-    if purchase_message then
-      player.print(purchase_message)
-    end
-  end
-
-  return true
-end
-
-function anchor_runtime.purchase_managed_line_for_resource(player, resource, planet_name)
-  local planet = planet_instance.ensure(planet_name)
-  local planet_state = planet and planet:get_state()
-  local definition, flow = defs.get_line_definition(resource, planet_name)
-  local item_name = get_shop_item_name(resource, planet_name)
-
-  if not planet_state or not definition or not item_name then
-    return
-  end
-
-  local can_purchase, message_key, message_resource =
-    anchor_runtime.can_purchase_line(resource, player and player.force, planet_name)
-
-  if not can_purchase then
-    if player and player.valid then
-      if message_resource then
-        player.print({message_key, {"item-name." .. get_shop_item_name(message_resource, planet_name)}})
-      else
-        player.print({message_key, {"item-name." .. item_name}})
-      end
-    end
-
-    return
-  end
-
-  grant_managed_line(player, planet_state, definition, flow, item_name, {
-    "message.the-square-shop-purchased-line",
-    {"item-name." .. item_name}
-  })
-
-  if resource == "uranium-ore" and not anchor_runtime.is_resource_unlocked("sulfuric-acid", planet_name) then
-    local sulfuric_acid_definition = defs.get_output_definition("sulfuric-acid", planet_name)
-    local sulfuric_acid_item_name = defs.get_egress_item_name("sulfuric-acid", planet_name)
-
-    grant_managed_line(player, planet_state, sulfuric_acid_definition, "egress", sulfuric_acid_item_name)
-  end
 end
 
 local function run_anchor_placement_effects(anchor, force, actor, source_label)
@@ -1672,6 +1573,5 @@ function anchor_runtime.handle_entity_built(event, gui_runtime)
 end
 
 anchor_runtime.apply_logistic_network_setting_to_force = apply_logistic_network_setting_to_force
-anchor_runtime.purchase_managed_line = anchor_runtime.purchase_managed_line_for_resource
 
 return anchor_runtime

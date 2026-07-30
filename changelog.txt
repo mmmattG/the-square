@@ -3,6 +3,7 @@ Version: 0.1.5
 Date: 2026-07-30
   Changes:
     - Consolidated persisted Square state under the planet model.
+    - Removed legacy Line Shop code now that Managed Lines are crafted and configured through Anchor slots.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.4

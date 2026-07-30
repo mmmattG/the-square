@@ -38,10 +38,6 @@ function managed_line_runtime.pump_all()
   end
 end
 
-function managed_line_runtime.purchase(player, resource, planet_name)
-  return anchor_runtime.purchase_managed_line_for_resource(player, resource, planet_name)
-end
-
 function managed_line_runtime.sync_tier(force)
   return anchor_runtime.sync_anchor_tiers_from_research(force)
 end
@@ -84,14 +80,6 @@ end
 
 function managed_line_runtime.apply_logistic_network_setting_to_force(force)
   return anchor_runtime.apply_logistic_network_setting_to_force(force)
-end
-
-function managed_line_runtime.get_owned_line_counts(resource, planet_name)
-  return anchor_runtime.get_owned_line_counts(resource, planet_name)
-end
-
-function managed_line_runtime.is_resource_unlocked(resource, planet_name)
-  return anchor_runtime.is_resource_unlocked(resource, planet_name)
 end
 
 function managed_line_runtime.unlock_planet_starter_research(planet_name, force)

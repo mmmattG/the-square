@@ -56,13 +56,11 @@ runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION = 12
 runtime_defs.DEV_EXPAND_BUTTON_NAME = "the_square_dev_expand_button"
 runtime_defs.DEV_ORBIT_TELEPORT_BUTTON_PREFIX = "the_square_dev_orbit_teleport__"
 runtime_defs.DEBUG_FRAME_NAME = "the_square_debug_frame"
-runtime_defs.SHOP_BUTTON_NAME = "the_square_shop_button"
 runtime_defs.SCREENSHOT_BUTTON_NAME = "the_square_screenshot_button"
 runtime_defs.SQUARE_MOVE_BUTTON_NAME = "the_square_move_button"
 runtime_defs.SQUARE_MOVE_FRAME_NAME = "the_square_move_frame"
 runtime_defs.SQUARE_MOVE_DIRECTION_BUTTON_PREFIX = "the_square_move_direction__"
 runtime_defs.CLIFF_EXPLOSIVE_BUTTON_NAME = "the_square_cliff_explosive_button"
-runtime_defs.SHOP_FRAME_NAME = "the_square_shop_frame"
 runtime_defs.ANCHOR_CONFIG_FRAME_NAME = "the_square_anchor_config_frame"
 runtime_defs.ANCHOR_CONFIG_BUTTON_PREFIX = "the_square_anchor_config_pick__"
 runtime_defs.ANCHOR_CONFIG_TIER_BUTTON_PREFIX = "the_square_anchor_config_tier__"
@@ -490,22 +488,6 @@ function runtime_defs.get_output_definition(resource, planet_name)
   end
 
   return nil
-end
-
-function runtime_defs.get_line_definition(resource, planet_name)
-  local input_definition = runtime_defs.get_input_definition(resource, planet_name)
-
-  if input_definition then
-    return input_definition, "ingress"
-  end
-
-  local output_definition = runtime_defs.get_output_definition(resource, planet_name)
-
-  if output_definition then
-    return output_definition, "egress"
-  end
-
-  return nil, nil
 end
 
 function runtime_defs.get_egress_item_name(resource, planet_name)
