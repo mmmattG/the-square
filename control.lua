@@ -218,10 +218,14 @@ script.on_event(defines.events.on_gui_click, function(event)
 
     if not result.ok and player then
       if result.reason == "obstructed" then
+        local message_key = "message.the-square-move-obstructed"
+
+        if result.mode == defs.SQUARE_MOVE_MODES.CONTENTS then
+          message_key = "message.the-square-move-contents-obstructed"
+        end
+
         player.print({
-          result.mode == square_move_runtime.MODE_CONTENTS
-              and "message.the-square-move-contents-obstructed"
-            or "message.the-square-move-obstructed",
+          message_key,
           {"the-square-direction." .. result.obstructed_side}
         })
       elseif result.reason == "unmovable" then

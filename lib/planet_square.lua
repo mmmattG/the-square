@@ -167,8 +167,8 @@ local function leave_trailing_managed_line_stub(surface, anchor)
   })
 end
 
-local function ensure_managed_line_connection_stub(surface, anchor)
-  if not (surface and anchor and anchor.position and anchor.resource) then
+local function ensure_managed_line_inner_connection(surface, anchor)
+  if not (surface and anchor and anchor.position and anchor.resource and anchor.side) then
     return
   end
 
@@ -295,6 +295,6 @@ function planet_square.apply_square_expansion(planet_name, options)
 end
 
 planet_square.leave_trailing_managed_line_stub = leave_trailing_managed_line_stub
-planet_square.ensure_managed_line_connection_stub = ensure_managed_line_connection_stub
+planet_square.ensure_managed_line_inner_connection = ensure_managed_line_inner_connection
 
 return planet_square

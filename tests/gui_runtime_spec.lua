@@ -18,6 +18,7 @@ settings = {
   }
 }
 
+local defs = require("lib.runtime_defs")
 local gui_runtime = require("lib.gui_runtime")
 
 local function assert_equal(actual, expected, message)
@@ -61,11 +62,18 @@ end)
 
 run_test("the movement mode switch is remembered per player", function()
   storage = {}
+  local top = {}
+  top.add = function(spec)
+    local element = {valid = true, name = spec.name}
+    top[spec.name] = element
+    return element
+  end
   local player = {
     index = 7,
     valid = true,
     gui = {
-      screen = {}
+      screen = {},
+      top = top
     }
   }
   local element = {
@@ -74,11 +82,20 @@ run_test("the movement mode switch is remembered per player", function()
     switch_state = "right"
   }
 
-  assert_equal(gui_runtime.get_square_move_mode(player), "square", "Square movement should be the default")
+  gui_runtime.sync_square_move_gui(player)
+  assert_equal(
+    gui_runtime.get_square_move_mode(player),
+    defs.SQUARE_MOVE_MODES.SQUARE,
+    "Square movement should be initialized as the default"
+  )
   assert_equal(
     gui_runtime.handle_square_move_mode_changed(player, element, {}),
     true,
     "the movement mode switch should be handled"
   )
-  assert_equal(gui_runtime.get_square_move_mode(player), "contents", "the selected mode should be remembered")
+  assert_equal(
+    gui_runtime.get_square_move_mode(player),
+    defs.SQUARE_MOVE_MODES.CONTENTS,
+    "the selected mode should be remembered"
+  )
 end)

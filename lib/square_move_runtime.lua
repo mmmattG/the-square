@@ -3,9 +3,7 @@ local planet_instance = require("lib.planet_instance")
 local planet_square = require("lib.planet_square")
 
 local square_move_runtime = {}
-
-square_move_runtime.MODE_SQUARE = "square"
-square_move_runtime.MODE_CONTENTS = "contents"
+local MOVE_MODES = defs.SQUARE_MOVE_MODES
 
 local OPPOSITE_SIDE = {
   north = "south",
@@ -61,10 +59,6 @@ local function is_entity_inside_bounds_after_move(entity, bounds, direction)
   end
 
   return defs.is_inside_bounds(bounds, defs.move_position(get_entity_tile_position(entity), direction, 1))
-end
-
-local function is_valid_mode(mode)
-  return mode == square_move_runtime.MODE_SQUARE or mode == square_move_runtime.MODE_CONTENTS
 end
 
 local function build_permitted_connections(managed_lines, departing_side)
@@ -313,7 +307,7 @@ local function reposition_managed_lines_for_contents(surface, planet, direction)
         end
       end
 
-      planet_square.ensure_managed_line_connection_stub(surface, anchor)
+      planet_square.ensure_managed_line_inner_connection(surface, anchor)
     end
   end
 end
@@ -353,7 +347,7 @@ local function check_square_move(planet, surface, direction)
   return {
     ok = #obstructions == 0,
     reason = #obstructions == 0 and nil or "obstructed",
-    mode = square_move_runtime.MODE_SQUARE,
+    mode = MOVE_MODES.SQUARE,
     direction = direction,
     departing_side = departing_side,
     obstructed_side = departing_side,
@@ -388,7 +382,7 @@ local function check_contents_move(planet, surface, direction)
   return {
     ok = #obstructions == 0,
     reason = #obstructions == 0 and nil or "obstructed",
-    mode = square_move_runtime.MODE_CONTENTS,
+    mode = MOVE_MODES.CONTENTS,
     direction = direction,
     obstructed_side = direction,
     target_position = planet:get_square_position(),
@@ -397,10 +391,13 @@ local function check_contents_move(planet, surface, direction)
 end
 
 function square_move_runtime.check(planet_name, direction, mode)
-  mode = mode or square_move_runtime.MODE_SQUARE
   local planet = planet_instance.ensure(planet_name)
 
-  if not planet or not VALID_DIRECTIONS[direction] or not is_valid_mode(mode) then
+  if not planet then
+    return {ok = false, reason = "unsupported", mode = mode}
+  end
+
+  if not VALID_DIRECTIONS[direction] then
     return {ok = false, reason = "unsupported", mode = mode}
   end
 
@@ -410,11 +407,15 @@ function square_move_runtime.check(planet_name, direction, mode)
     return {ok = false, reason = "unsupported", mode = mode}
   end
 
-  if mode == square_move_runtime.MODE_CONTENTS then
+  if mode == MOVE_MODES.CONTENTS then
     return check_contents_move(planet, surface, direction)
   end
 
-  return check_square_move(planet, surface, direction)
+  if mode == MOVE_MODES.SQUARE then
+    return check_square_move(planet, surface, direction)
+  end
+
+  return {ok = false, reason = "unsupported", mode = mode}
 end
 
 function square_move_runtime.get_options_for_player(player, mode)
@@ -425,34 +426,43 @@ function square_move_runtime.get_options_for_player(player, mode)
     and planet_instance.for_surface(player.surface.name)
 
   for _, direction in ipairs({"north", "east", "south", "west"}) do
-    options[direction] = planet
-      and square_move_runtime.check(planet:get_name(), direction, mode)
-      or {ok = false, reason = "unsupported", direction = direction, mode = mode}
+    if planet then
+      options[direction] = square_move_runtime.check(planet:get_name(), direction, mode)
+    else
+      options[direction] = {
+        ok = false,
+        reason = "unsupported",
+        direction = direction,
+        mode = mode
+      }
+    end
   end
 
   return options
 end
 
+-- Factorio keeps the underlying terrain beneath tiles such as landfill as a
+-- hidden tile. Move both layers so mining a moved tile restores the same terrain.
 local function get_contents_tile_updates(surface, planet, direction)
   local bounds = defs.get_square_bounds(planet:get_square_size(), planet:get_square_position())
-  local visible_updates = {}
-  local hidden_updates = {}
+  local visible_tile_updates = {}
+  local hidden_tile_updates = {}
 
   for y = bounds.left_top.y, bounds.right_bottom.y - 1 do
     for x = bounds.left_top.x, bounds.right_bottom.x - 1 do
       local position = {x = x, y = y}
       local source_position = defs.move_position(position, direction, -1)
-      local name
-      local hidden_name
+      local visible_tile_name
+      local hidden_tile_name
 
       if defs.is_inside_bounds(bounds, source_position) then
-        name = surface.get_tile(source_position.x, source_position.y).name
+        visible_tile_name = surface.get_tile(source_position.x, source_position.y).name
 
         if surface.get_hidden_tile then
-          hidden_name = surface.get_hidden_tile(source_position)
+          hidden_tile_name = surface.get_hidden_tile(source_position)
         end
       else
-        name = defs.get_managed_tile_name(
+        visible_tile_name = defs.get_managed_tile_name(
           planet:get_square_size(),
           planet:get_surface_size(),
           position,
@@ -461,21 +471,27 @@ local function get_contents_tile_updates(surface, planet, direction)
         )
       end
 
-      visible_updates[#visible_updates + 1] = {name = name, position = position}
-      hidden_updates[#hidden_updates + 1] = {name = hidden_name, position = position}
+      visible_tile_updates[#visible_tile_updates + 1] = {
+        name = visible_tile_name,
+        position = position
+      }
+      hidden_tile_updates[#hidden_tile_updates + 1] = {
+        name = hidden_tile_name,
+        position = position
+      }
     end
   end
 
-  return visible_updates, hidden_updates
+  return visible_tile_updates, hidden_tile_updates
 end
 
-local function apply_contents_tile_updates(surface, visible_updates, hidden_updates)
-  if #visible_updates > 0 then
-    surface.set_tiles(visible_updates, false, false, false, false)
+local function apply_contents_tile_updates(surface, visible_tile_updates, hidden_tile_updates)
+  if #visible_tile_updates > 0 then
+    surface.set_tiles(visible_tile_updates, false, false, false, false)
   end
 
   if surface.set_hidden_tile then
-    for _, update in ipairs(hidden_updates) do
+    for _, update in ipairs(hidden_tile_updates) do
       surface.set_hidden_tile(update.position, update.name)
     end
   end
@@ -504,40 +520,40 @@ local function destroy_entities(entities)
   end
 end
 
-local function delete_buffer_surface(buffer)
-  if buffer then
-    game.delete_surface(buffer)
+local function delete_staging_surface(staging_surface)
+  if staging_surface then
+    game.delete_surface(staging_surface)
   end
 end
 
-local function create_buffer_surface(square_size)
-  storage.square_move_buffer_sequence = (storage.square_move_buffer_sequence or 0) + 1
-  local buffer_name = table.concat({
-    defs.SQUARE_MOVE_BUFFER_SURFACE_PREFIX,
+local function create_staging_surface(square_size)
+  storage.square_move_staging_sequence = (storage.square_move_staging_sequence or 0) + 1
+  local staging_surface_name = table.concat({
+    defs.SQUARE_MOVE_STAGING_SURFACE_PREFIX,
     tostring(game.tick or 0),
-    tostring(storage.square_move_buffer_sequence)
+    tostring(storage.square_move_staging_sequence)
   }, "-")
-  local buffer_size = square_size + 4
-  local buffer = game.create_surface(buffer_name, {
-    width = buffer_size,
-    height = buffer_size,
+  local staging_surface_size = square_size + 4
+  local staging_surface = game.create_surface(staging_surface_name, {
+    width = staging_surface_size,
+    height = staging_surface_size,
     starting_points = {{x = 0, y = 0}},
     peaceful_mode = true,
     no_enemies_mode = true
   })
 
-  buffer.request_to_generate_chunks({x = 0, y = 0}, math.ceil(buffer_size / 64))
-  buffer.force_generate_chunk_requests()
-  destroy_entities(buffer.find_entities())
+  staging_surface.request_to_generate_chunks({x = 0, y = 0}, math.ceil(staging_surface_size / 64))
+  staging_surface.force_generate_chunk_requests()
+  destroy_entities(staging_surface.find_entities())
 
-  return buffer
+  return staging_surface
 end
 
-local function clone_tiles_to_buffer(surface, buffer, source_bounds, buffer_bounds)
+local function clone_tiles_to_staging_surface(surface, staging_surface, source_bounds, staging_bounds)
   surface.clone_area({
     source_area = source_bounds,
-    destination_area = buffer_bounds,
-    destination_surface = buffer,
+    destination_area = staging_bounds,
+    destination_surface = staging_surface,
     clone_tiles = true,
     clone_entities = false,
     clone_decoratives = false,
@@ -548,16 +564,16 @@ local function clone_tiles_to_buffer(surface, buffer, source_bounds, buffer_boun
   })
 end
 
-local function restore_entities_from_buffer(
+local function restore_entities_from_staging_surface(
   surface,
-  buffer,
-  buffer_entities,
+  staging_surface,
+  staged_entities,
   destination_offset,
   destination_bounds,
   expected_count
 )
-  buffer.clone_entities({
-    entities = buffer_entities,
+  staging_surface.clone_entities({
+    entities = staged_entities,
     destination_offset = destination_offset,
     destination_surface = surface,
     create_build_effect_smoke = false
@@ -568,9 +584,9 @@ end
 
 local function move_contents(planet, surface, direction, options)
   local bounds = defs.get_square_bounds(planet:get_square_size(), planet:get_square_position())
-  local buffer_bounds = defs.get_square_bounds(planet:get_square_size(), {x = 0, y = 0})
+  local staging_bounds = defs.get_square_bounds(planet:get_square_size(), {x = 0, y = 0})
   local center = planet:get_square_position()
-  local to_buffer_offset = {x = -center.x, y = -center.y}
+  local to_staging_offset = {x = -center.x, y = -center.y}
   local to_destination_offset = defs.move_position(center, direction, 1)
   local managed_lines = planet:get_managed_lines()
   local connected_managed_lines = get_connected_managed_lines(surface, managed_lines)
@@ -586,25 +602,27 @@ local function move_contents(planet, surface, direction, options)
     end
   end
 
+  -- Staging on a temporary surface lets Factorio clone entity state before the
+  -- originals are removed, and provides the source needed to roll back a failed move.
   local visible_tile_updates, hidden_tile_updates = get_contents_tile_updates(surface, planet, direction)
-  local buffer = create_buffer_surface(planet:get_square_size())
-  clone_tiles_to_buffer(surface, buffer, bounds, buffer_bounds)
+  local staging_surface = create_staging_surface(planet:get_square_size())
+  clone_tiles_to_staging_surface(surface, staging_surface, bounds, staging_bounds)
 
   surface.clone_entities({
     entities = movable_entities,
-    destination_offset = to_buffer_offset,
-    destination_surface = buffer,
+    destination_offset = to_staging_offset,
+    destination_surface = staging_surface,
     create_build_effect_smoke = false
   })
 
-  local buffer_entities = collect_contents_entities(buffer, buffer_bounds)
+  local staged_entities = collect_contents_entities(staging_surface, staging_bounds)
 
-  if #buffer_entities ~= #movable_entities then
-    delete_buffer_surface(buffer)
+  if #staged_entities ~= #movable_entities then
+    delete_staging_surface(staging_surface)
     return {
       ok = false,
       reason = "unmovable",
-      mode = square_move_runtime.MODE_CONTENTS,
+      mode = MOVE_MODES.CONTENTS,
       direction = direction
     }
   end
@@ -612,19 +630,19 @@ local function move_contents(planet, surface, direction, options)
   destroy_entities(movable_entities)
   destroy_entities(held_leading_connections)
 
-  if not restore_entities_from_buffer(
+  if not restore_entities_from_staging_surface(
     surface,
-    buffer,
-    buffer_entities,
+    staging_surface,
+    staged_entities,
     to_destination_offset,
     bounds,
     #movable_entities
   ) then
     destroy_entities(collect_contents_entities(surface, bounds))
-    restore_entities_from_buffer(
+    restore_entities_from_staging_surface(
       surface,
-      buffer,
-      buffer_entities,
+      staging_surface,
+      staged_entities,
       center,
       bounds,
       #movable_entities
@@ -632,22 +650,22 @@ local function move_contents(planet, surface, direction, options)
 
     for anchor, connection in pairs(connected_managed_lines) do
       if connection and anchor.side == direction then
-        planet_square.ensure_managed_line_connection_stub(surface, anchor)
+        planet_square.ensure_managed_line_inner_connection(surface, anchor)
       end
     end
 
-    delete_buffer_surface(buffer)
+    delete_staging_surface(staging_surface)
     return {
       ok = false,
       reason = "unmovable",
-      mode = square_move_runtime.MODE_CONTENTS,
+      mode = MOVE_MODES.CONTENTS,
       direction = direction
     }
   end
 
   apply_contents_tile_updates(surface, visible_tile_updates, hidden_tile_updates)
   reposition_managed_lines_for_contents(surface, planet, direction)
-  delete_buffer_surface(buffer)
+  delete_staging_surface(staging_surface)
 
   if options.managed_line_runtime and options.managed_line_runtime.reconcile then
     options.managed_line_runtime.reconcile(planet:get_name())
@@ -655,7 +673,7 @@ local function move_contents(planet, surface, direction, options)
 
   return {
     ok = true,
-    mode = square_move_runtime.MODE_CONTENTS,
+    mode = MOVE_MODES.CONTENTS,
     direction = direction,
     planet_name = planet:get_name(),
     square_position = copy_position(center),
@@ -693,7 +711,7 @@ local function move_square(planet_name, direction, check, options)
 
   return {
     ok = true,
-    mode = square_move_runtime.MODE_SQUARE,
+    mode = MOVE_MODES.SQUARE,
     direction = direction,
     planet_name = planet_name,
     square_position = check.target_position
@@ -702,14 +720,14 @@ end
 
 function square_move_runtime.move(planet_name, direction, options)
   options = options or {}
-  local mode = options.mode or square_move_runtime.MODE_SQUARE
+  local mode = options.mode
   local check = square_move_runtime.check(planet_name, direction, mode)
 
   if not check.ok then
     return check
   end
 
-  if mode == square_move_runtime.MODE_CONTENTS then
+  if mode == MOVE_MODES.CONTENTS then
     local planet = planet_instance.ensure(planet_name)
     local surface = game.surfaces[planet:get_surface_name()]
 

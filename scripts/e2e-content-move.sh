@@ -120,6 +120,7 @@ script.on_init(function()
   surface.set_tiles({
     {name = "refined-concrete", position = {x = 0, y = 1}}
   }, false, false, false, false)
+  surface.set_hidden_tile({x = 0, y = 1}, "water")
 
   local chest = surface.create_entity({
     name = "steel-chest",
@@ -193,7 +194,7 @@ script.on_init(function()
   local west_anchor_start = {x = west_anchor.entity.position.x, y = west_anchor.entity.position.y}
 
   local result = square_move_runtime.move("nauvis", "east", {
-    mode = square_move_runtime.MODE_CONTENTS,
+    mode = defs.SQUARE_MOVE_MODES.CONTENTS,
     managed_line_runtime = {
       reconcile = function()
         if not (north_anchor.entity and north_anchor.entity.valid) then
@@ -265,23 +266,24 @@ script.on_init(function()
     "north Managed Line entity did not follow its pipe east"
   )
   assert_equal(surface.get_tile(1, 1).name, "refined-concrete", "placed tile did not move east")
+  assert_equal(surface.get_hidden_tile({x = 1, y = 1}), "water", "hidden tile did not move east")
   assert_equal(surface.get_tile(-3, 1).name, "grass-1", "vacated edge was not restored")
-  storage.awaiting_buffer_cleanup = true
+  storage.awaiting_staging_cleanup = true
   log("[the-square-content-move-validator] entity state and placed tile moved east")
 end)
 
 script.on_nth_tick(1, function()
-  if not storage.awaiting_buffer_cleanup or game.tick == 0 then
+  if not storage.awaiting_staging_cleanup or game.tick == 0 then
     return
   end
 
   for surface_name in pairs(game.surfaces) do
-    if string.match(surface_name, "^the%-square%-content%-move%-buffer") then
-      error("[the-square-content-move-validator] move buffer surface was not deleted: " .. surface_name)
+    if string.match(surface_name, "^the%-square%-content%-move%-staging") then
+      error("[the-square-content-move-validator] move staging surface was not deleted: " .. surface_name)
     end
   end
-  storage.awaiting_buffer_cleanup = nil
-  log("[the-square-content-move-validator] PASS deferred move buffer cleanup completed")
+  storage.awaiting_staging_cleanup = nil
+  log("[the-square-content-move-validator] PASS deferred move staging cleanup completed")
 end)
 EOF
 
