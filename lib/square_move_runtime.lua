@@ -19,6 +19,22 @@ local VALID_DIRECTIONS = {
   west = true
 }
 
+-- Characters stay fixed during Contents movement. A silo's rocket and shadow
+-- have collision boxes larger than the silo itself, so they must not decide
+-- whether the factory fits after a move.
+local CONTENT_OBSTRUCTION_ENTITY_TYPES_TO_IGNORE = {
+  character = true,
+  ["rocket-silo-rocket"] = true,
+  ["rocket-silo-rocket-shadow"] = true
+}
+
+-- Clone the rocket explicitly to preserve a ready silo. Factorio recreates its
+-- shadow, so cloning the shadow separately would double-count staged entities.
+local CONTENT_CLONE_ENTITY_TYPES_TO_IGNORE = {
+  character = true,
+  ["rocket-silo-rocket-shadow"] = true
+}
+
 local function copy_position(position)
   return {x = position.x, y = position.y}
 end
@@ -44,6 +60,12 @@ end
 
 local function is_content_entity_inside_bounds(entity, bounds)
   return defs.is_inside_bounds(bounds, get_entity_tile_position(entity))
+end
+
+local function is_included_content_entity(entity, bounds, ignored_entity_types)
+  return entity.valid
+    and not ignored_entity_types[entity.type]
+    and is_content_entity_inside_bounds(entity, bounds)
 end
 
 local function move_bounding_box(bounding_box, direction)
@@ -367,10 +389,7 @@ local function check_contents_move(planet, surface, direction)
   )
 
   for _, entity in ipairs(surface.find_entities_filtered({area = leading_area})) do
-    if entity.valid
-      and entity.type ~= "character"
-      and is_content_entity_inside_bounds(entity, bounds)
-    then
+    if is_included_content_entity(entity, bounds, CONTENT_OBSTRUCTION_ENTITY_TYPES_TO_IGNORE) then
       if not is_entity_inside_bounds_after_move(entity, bounds, direction)
         and not is_permitted_departing_connection(entity, permitted_connections)
       then
@@ -501,10 +520,7 @@ local function collect_contents_entities(surface, bounds)
   local entities = {}
 
   for _, entity in ipairs(surface.find_entities_filtered({area = bounds})) do
-    if entity.valid
-      and entity.type ~= "character"
-      and is_content_entity_inside_bounds(entity, bounds)
-    then
+    if is_included_content_entity(entity, bounds, CONTENT_CLONE_ENTITY_TYPES_TO_IGNORE) then
       entities[#entities + 1] = entity
     end
   end

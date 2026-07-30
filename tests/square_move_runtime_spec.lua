@@ -370,6 +370,28 @@ run_test("Contents movement permits belts and pipes connected to leading Managed
   assert_equal(#result.obstructions, 0, "valid belts and pipes should not be reported as obstructions")
 end)
 
+run_test("Contents movement ignores rocket entities owned by a silo", function()
+  local rocket = make_entity("rocket-silo-rocket", {x = 0, y = 0})
+  local rocket_shadow = make_entity("rocket-silo-rocket-shadow", {x = 0, y = 0})
+  rocket.bounding_box = {
+    left_top = {x = -2, y = -6},
+    right_bottom = {x = 2, y = 6}
+  }
+  rocket_shadow.bounding_box = {
+    left_top = {x = -6, y = -2},
+    right_bottom = {x = 6, y = 2}
+  }
+  local surface = make_surface({rocket, rocket_shadow})
+  install_world(surface)
+
+  for _, direction in ipairs({"north", "east", "south", "west"}) do
+    local result = square_move_runtime.check("nauvis", direction, defs.SQUARE_MOVE_MODES.CONTENTS)
+
+    assert_equal(result.ok, true, "silo-owned rocket entities should not obstruct moving " .. direction)
+    assert_equal(#result.obstructions, 0, "silo-owned rocket entities should not be reported")
+  end
+end)
+
 run_test("Moving contents keeps characters fixed and includes edge belts and pipes", function()
   local assembler = make_entity("assembling-machine", {x = 0, y = 0})
   local character = make_entity("character", {x = -1, y = 1})
