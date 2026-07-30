@@ -58,3 +58,27 @@ run_test("recurring Square move GUI refreshes do not check directions while the 
 
   assert_equal(checks, 0, "closed movement menus should not scan any Square edge")
 end)
+
+run_test("the movement mode switch is remembered per player", function()
+  storage = {}
+  local player = {
+    index = 7,
+    valid = true,
+    gui = {
+      screen = {}
+    }
+  }
+  local element = {
+    valid = true,
+    name = "the_square_move_mode_switch",
+    switch_state = "right"
+  }
+
+  assert_equal(gui_runtime.get_square_move_mode(player), "square", "Square movement should be the default")
+  assert_equal(
+    gui_runtime.handle_square_move_mode_changed(player, element, {}),
+    true,
+    "the movement mode switch should be handled"
+  )
+  assert_equal(gui_runtime.get_square_move_mode(player), "contents", "the selected mode should be remembered")
+end)

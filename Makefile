@@ -8,7 +8,7 @@ ARTIFACT := build/$(MOD_NAME)_$(MOD_VERSION).zip
 DETECTED_FACTORIO_MODS_DIR := $(shell ./scripts/detect-factorio-mods-dir.sh)
 FACTORIO_MODS_DIR ?= $(DETECTED_FACTORIO_MODS_DIR)
 
-.PHONY: all build install test typecheck unit-test e2e-load-test e2e-test e2e-screenshot-test playtest
+.PHONY: all build install test typecheck unit-test e2e-load-test e2e-test e2e-content-move-test e2e-screenshot-test playtest
 
 all: build install
 
@@ -28,7 +28,7 @@ install: build
 	fi
 	@printf 'Installed %s to %s\n' "$(notdir $(ARTIFACT))" "$(FACTORIO_MODS_DIR)"
 
-test: unit-test e2e-test
+test: unit-test e2e-test e2e-content-move-test
 
 typecheck:
 	@if [ -z "$(LUAC)" ] && [ -z "$(LUA)" ]; then \
@@ -88,6 +88,22 @@ e2e-test: e2e-load-test
 	else \
 		status=$$?; \
 		echo "FAIL e2e create default world test" >&2; \
+		cat $$tmp >&2; \
+		rm -f $$tmp; \
+		exit $$status; \
+	fi
+
+# Runs the contents-movement implementation inside Factorio and verifies that
+# entity state and placed tiles survive a one-tile move.
+e2e-content-move-test:
+	@tmp=$$(mktemp); \
+	if ./scripts/e2e-content-move.sh >$$tmp 2>&1; then \
+		cat $$tmp; \
+		rm -f $$tmp; \
+		echo "PASS e2e contents movement test"; \
+	else \
+		status=$$?; \
+		echo "FAIL e2e contents movement test" >&2; \
 		cat $$tmp >&2; \
 		rm -f $$tmp; \
 		exit $$status; \

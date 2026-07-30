@@ -4,6 +4,9 @@ local planet_square = require("lib.planet_square")
 
 local square_move_runtime = {}
 
+square_move_runtime.MODE_SQUARE = "square"
+square_move_runtime.MODE_CONTENTS = "contents"
+
 local OPPOSITE_SIDE = {
   north = "south",
   east = "west",
@@ -39,6 +42,25 @@ local function is_entity_inside_bounds(entity, bounds)
   end
 
   return defs.is_inside_bounds(bounds, get_entity_tile_position(entity))
+end
+
+local function move_bounding_box(bounding_box, direction)
+  return {
+    left_top = defs.move_position(bounding_box.left_top, direction, 1),
+    right_bottom = defs.move_position(bounding_box.right_bottom, direction, 1)
+  }
+end
+
+local function is_entity_inside_bounds_after_move(entity, bounds, direction)
+  if entity.bounding_box then
+    return is_bounding_box_inside(bounds, move_bounding_box(entity.bounding_box, direction))
+  end
+
+  return defs.is_inside_bounds(bounds, defs.move_position(get_entity_tile_position(entity), direction, 1))
+end
+
+local function is_valid_mode(mode)
+  return mode == square_move_runtime.MODE_SQUARE or mode == square_move_runtime.MODE_CONTENTS
 end
 
 local function build_permitted_connections(managed_lines, departing_side)
@@ -240,19 +262,7 @@ function square_move_runtime.get_departing_side(direction)
   return OPPOSITE_SIDE[direction]
 end
 
-function square_move_runtime.check(planet_name, direction)
-  local planet = planet_instance.ensure(planet_name)
-
-  if not planet or not VALID_DIRECTIONS[direction] then
-    return {ok = false, reason = "unsupported"}
-  end
-
-  local surface = game.surfaces[planet:get_surface_name()]
-
-  if not surface then
-    return {ok = false, reason = "unsupported"}
-  end
-
+local function check_square_move(planet, surface, direction)
   local square_position = planet:get_square_position()
   local target_position = square_move_runtime.get_target_position(square_position, direction)
   local target_bounds = defs.get_square_bounds(planet:get_square_size(), target_position)
@@ -275,14 +285,65 @@ function square_move_runtime.check(planet_name, direction)
   return {
     ok = #obstructions == 0,
     reason = #obstructions == 0 and nil or "obstructed",
+    mode = square_move_runtime.MODE_SQUARE,
     direction = direction,
     departing_side = departing_side,
+    obstructed_side = departing_side,
     target_position = target_position,
     obstructions = obstructions
   }
 end
 
-function square_move_runtime.get_options_for_player(player)
+local function check_contents_move(planet, surface, direction)
+  local bounds = defs.get_square_bounds(planet:get_square_size(), planet:get_square_position())
+  local obstructions = {}
+  local leading_area = get_departing_area(
+    planet:get_square_size(),
+    planet:get_square_position(),
+    OPPOSITE_SIDE[direction]
+  )
+
+  for _, entity in ipairs(surface.find_entities_filtered({area = leading_area})) do
+    if entity.valid and is_entity_inside_bounds(entity, bounds) then
+      if not is_entity_inside_bounds_after_move(entity, bounds, direction) then
+        obstructions[#obstructions + 1] = entity
+      end
+    end
+  end
+
+  return {
+    ok = #obstructions == 0,
+    reason = #obstructions == 0 and nil or "obstructed",
+    mode = square_move_runtime.MODE_CONTENTS,
+    direction = direction,
+    obstructed_side = direction,
+    target_position = planet:get_square_position(),
+    obstructions = obstructions
+  }
+end
+
+function square_move_runtime.check(planet_name, direction, mode)
+  mode = mode or square_move_runtime.MODE_SQUARE
+  local planet = planet_instance.ensure(planet_name)
+
+  if not planet or not VALID_DIRECTIONS[direction] or not is_valid_mode(mode) then
+    return {ok = false, reason = "unsupported", mode = mode}
+  end
+
+  local surface = game.surfaces[planet:get_surface_name()]
+
+  if not surface then
+    return {ok = false, reason = "unsupported", mode = mode}
+  end
+
+  if mode == square_move_runtime.MODE_CONTENTS then
+    return check_contents_move(planet, surface, direction)
+  end
+
+  return check_square_move(planet, surface, direction)
+end
+
+function square_move_runtime.get_options_for_player(player, mode)
   local options = {}
   local planet = player
     and player.valid
@@ -291,21 +352,280 @@ function square_move_runtime.get_options_for_player(player)
 
   for _, direction in ipairs({"north", "east", "south", "west"}) do
     options[direction] = planet
-      and square_move_runtime.check(planet:get_name(), direction)
-      or {ok = false, reason = "unsupported", direction = direction}
+      and square_move_runtime.check(planet:get_name(), direction, mode)
+      or {ok = false, reason = "unsupported", direction = direction, mode = mode}
   end
 
   return options
 end
 
-function square_move_runtime.move(planet_name, direction, options)
-  options = options or {}
-  local check = square_move_runtime.check(planet_name, direction)
+local function get_contents_tile_updates(surface, planet, direction)
+  local bounds = defs.get_square_bounds(planet:get_square_size(), planet:get_square_position())
+  local visible_updates = {}
+  local hidden_updates = {}
 
-  if not check.ok then
-    return check
+  for y = bounds.left_top.y, bounds.right_bottom.y - 1 do
+    for x = bounds.left_top.x, bounds.right_bottom.x - 1 do
+      local position = {x = x, y = y}
+      local source_position = defs.move_position(position, direction, -1)
+      local name
+      local hidden_name
+
+      if defs.is_inside_bounds(bounds, source_position) then
+        name = surface.get_tile(source_position.x, source_position.y).name
+
+        if surface.get_hidden_tile then
+          hidden_name = surface.get_hidden_tile(source_position)
+        end
+      else
+        name = defs.get_managed_tile_name(
+          planet:get_square_size(),
+          planet:get_surface_size(),
+          position,
+          planet:get_floor_tile_name(),
+          planet:get_square_position()
+        )
+      end
+
+      visible_updates[#visible_updates + 1] = {name = name, position = position}
+      hidden_updates[#hidden_updates + 1] = {name = hidden_name, position = position}
+    end
   end
 
+  return visible_updates, hidden_updates
+end
+
+local function apply_contents_tile_updates(surface, visible_updates, hidden_updates)
+  if #visible_updates > 0 then
+    surface.set_tiles(visible_updates, false, false, false, false)
+  end
+
+  if surface.set_hidden_tile then
+    for _, update in ipairs(hidden_updates) do
+      surface.set_hidden_tile(update.position, update.name)
+    end
+  end
+end
+
+local function collect_entities_inside(surface, bounds, include_characters)
+  local entities = {}
+
+  for _, entity in ipairs(surface.find_entities_filtered({area = bounds})) do
+    if entity.valid
+      and is_entity_inside_bounds(entity, bounds)
+      and (include_characters or entity.type ~= "character")
+    then
+      entities[#entities + 1] = entity
+    end
+  end
+
+  return entities
+end
+
+local function destroy_entities(entities)
+  for _, entity in ipairs(entities) do
+    if entity.valid and entity.destroy then
+      entity.destroy({raise_destroy = false})
+    end
+  end
+end
+
+local function teleport_characters(characters, surface, direction, distance)
+  local moved = {}
+
+  for _, character in ipairs(characters) do
+    if character.valid then
+      local target_position = defs.move_position(character.position, direction, distance)
+
+      if not character.teleport(target_position, surface, false) then
+        for _, moved_character in ipairs(moved) do
+          if moved_character.valid then
+            moved_character.teleport(
+              defs.move_position(moved_character.position, direction, -distance),
+              surface,
+              false
+            )
+          end
+        end
+
+        return false
+      end
+
+      moved[#moved + 1] = character
+    end
+  end
+
+  return true
+end
+
+local function delete_buffer_surface(buffer)
+  if buffer then
+    game.delete_surface(buffer)
+  end
+end
+
+local function create_buffer_surface(square_size)
+  storage.square_move_buffer_sequence = (storage.square_move_buffer_sequence or 0) + 1
+  local buffer_name = table.concat({
+    defs.SQUARE_MOVE_BUFFER_SURFACE_PREFIX,
+    tostring(game.tick or 0),
+    tostring(storage.square_move_buffer_sequence)
+  }, "-")
+  local buffer_size = square_size + 4
+  local buffer = game.create_surface(buffer_name, {
+    width = buffer_size,
+    height = buffer_size,
+    starting_points = {{x = 0, y = 0}},
+    peaceful_mode = true,
+    no_enemies_mode = true
+  })
+
+  buffer.request_to_generate_chunks({x = 0, y = 0}, math.ceil(buffer_size / 64))
+  buffer.force_generate_chunk_requests()
+  destroy_entities(buffer.find_entities())
+
+  return buffer
+end
+
+local function clone_tiles_to_buffer(surface, buffer, source_bounds, buffer_bounds)
+  surface.clone_area({
+    source_area = source_bounds,
+    destination_area = buffer_bounds,
+    destination_surface = buffer,
+    clone_tiles = true,
+    clone_entities = false,
+    clone_decoratives = false,
+    clear_destination_entities = true,
+    clear_destination_decoratives = true,
+    expand_map = true,
+    create_build_effect_smoke = false
+  })
+end
+
+local function restore_entities_from_buffer(
+  surface,
+  buffer,
+  buffer_entities,
+  destination_offset,
+  destination_bounds,
+  expected_count
+)
+  buffer.clone_entities({
+    entities = buffer_entities,
+    destination_offset = destination_offset,
+    destination_surface = surface,
+    create_build_effect_smoke = false
+  })
+
+  return #collect_entities_inside(surface, destination_bounds, false) == expected_count
+end
+
+local function move_contents(planet, surface, direction, options)
+  local bounds = defs.get_square_bounds(planet:get_square_size(), planet:get_square_position())
+  local buffer_bounds = defs.get_square_bounds(planet:get_square_size(), {x = 0, y = 0})
+  local center = planet:get_square_position()
+  local to_buffer_offset = {x = -center.x, y = -center.y}
+  local to_destination_offset = defs.move_position(center, direction, 1)
+  local movable_entities = {}
+  local characters = {}
+
+  for _, entity in ipairs(collect_entities_inside(surface, bounds, true)) do
+    if entity.type == "character" then
+      characters[#characters + 1] = entity
+    else
+      movable_entities[#movable_entities + 1] = entity
+    end
+  end
+
+  local visible_tile_updates, hidden_tile_updates = get_contents_tile_updates(surface, planet, direction)
+  local buffer = create_buffer_surface(planet:get_square_size())
+  clone_tiles_to_buffer(surface, buffer, bounds, buffer_bounds)
+
+  surface.clone_entities({
+    entities = movable_entities,
+    destination_offset = to_buffer_offset,
+    destination_surface = buffer,
+    create_build_effect_smoke = false
+  })
+
+  local buffer_entities = collect_entities_inside(buffer, buffer_bounds, false)
+
+  if #buffer_entities ~= #movable_entities then
+    delete_buffer_surface(buffer)
+    return {
+      ok = false,
+      reason = "unmovable",
+      mode = square_move_runtime.MODE_CONTENTS,
+      direction = direction
+    }
+  end
+
+  destroy_entities(movable_entities)
+
+  if not teleport_characters(characters, surface, direction, 1) then
+    restore_entities_from_buffer(
+      surface,
+      buffer,
+      buffer_entities,
+      center,
+      bounds,
+      #movable_entities
+    )
+    delete_buffer_surface(buffer)
+    return {
+      ok = false,
+      reason = "unmovable",
+      mode = square_move_runtime.MODE_CONTENTS,
+      direction = direction
+    }
+  end
+
+  if not restore_entities_from_buffer(
+    surface,
+    buffer,
+    buffer_entities,
+    to_destination_offset,
+    bounds,
+    #movable_entities
+  ) then
+    destroy_entities(collect_entities_inside(surface, bounds, false))
+    teleport_characters(characters, surface, direction, -1)
+    restore_entities_from_buffer(
+      surface,
+      buffer,
+      buffer_entities,
+      center,
+      bounds,
+      #movable_entities
+    )
+    delete_buffer_surface(buffer)
+    return {
+      ok = false,
+      reason = "unmovable",
+      mode = square_move_runtime.MODE_CONTENTS,
+      direction = direction
+    }
+  end
+
+  apply_contents_tile_updates(surface, visible_tile_updates, hidden_tile_updates)
+  delete_buffer_surface(buffer)
+
+  if options.managed_line_runtime and options.managed_line_runtime.reconcile then
+    options.managed_line_runtime.reconcile(planet:get_name())
+  end
+
+  return {
+    ok = true,
+    mode = square_move_runtime.MODE_CONTENTS,
+    direction = direction,
+    planet_name = planet:get_name(),
+    square_position = copy_position(center),
+    moved_entity_count = #movable_entities,
+    moved_character_count = #characters
+  }
+end
+
+local function move_square(planet_name, direction, check, options)
   local planet = planet_instance.ensure(planet_name)
   local surface = game.surfaces[planet:get_surface_name()]
   local tile_updates = get_square_tile_updates(planet, check.target_position)
@@ -335,10 +655,30 @@ function square_move_runtime.move(planet_name, direction, options)
 
   return {
     ok = true,
+    mode = square_move_runtime.MODE_SQUARE,
     direction = direction,
     planet_name = planet_name,
     square_position = check.target_position
   }
+end
+
+function square_move_runtime.move(planet_name, direction, options)
+  options = options or {}
+  local mode = options.mode or square_move_runtime.MODE_SQUARE
+  local check = square_move_runtime.check(planet_name, direction, mode)
+
+  if not check.ok then
+    return check
+  end
+
+  if mode == square_move_runtime.MODE_CONTENTS then
+    local planet = planet_instance.ensure(planet_name)
+    local surface = game.surfaces[planet:get_surface_name()]
+
+    return move_contents(planet, surface, direction, options)
+  end
+
+  return move_square(planet_name, direction, check, options)
 end
 
 function square_move_runtime.move_for_player(player, direction, options)
