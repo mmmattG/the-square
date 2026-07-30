@@ -59,6 +59,9 @@ runtime_defs.DEV_ORBIT_TELEPORT_BUTTON_PREFIX = "the_square_dev_orbit_teleport__
 runtime_defs.DEBUG_FRAME_NAME = "the_square_debug_frame"
 runtime_defs.SHOP_BUTTON_NAME = "the_square_shop_button"
 runtime_defs.SCREENSHOT_BUTTON_NAME = "the_square_screenshot_button"
+runtime_defs.SQUARE_MOVE_BUTTON_NAME = "the_square_move_button"
+runtime_defs.SQUARE_MOVE_FRAME_NAME = "the_square_move_frame"
+runtime_defs.SQUARE_MOVE_DIRECTION_BUTTON_PREFIX = "the_square_move_direction__"
 runtime_defs.CLIFF_EXPLOSIVE_BUTTON_NAME = "the_square_cliff_explosive_button"
 runtime_defs.SHOP_FRAME_NAME = "the_square_shop_frame"
 runtime_defs.ANCHOR_CONFIG_FRAME_NAME = "the_square_anchor_config_frame"
@@ -652,8 +655,8 @@ function runtime_defs.is_logistic_network_automation_enabled()
   return get_setting_value(settings.global, runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION, false)
 end
 
-function runtime_defs.get_square_bounds(size)
-  return bootstrap_layout.get_square_bounds(size)
+function runtime_defs.get_square_bounds(size, center)
+  return bootstrap_layout.get_square_bounds(size, center)
 end
 
 function runtime_defs.get_surface_size(square_size)
@@ -672,8 +675,8 @@ function runtime_defs.is_screenshot_alt_mode_enabled()
   return get_setting_value(settings.global, runtime_defs.SETTING_SCREENSHOT_ALT_MODE, true)
 end
 
-function runtime_defs.get_anchor_bounds(square_size)
-  return bootstrap_layout.get_anchor_bounds(square_size)
+function runtime_defs.get_anchor_bounds(square_size, center)
+  return bootstrap_layout.get_anchor_bounds(square_size, center)
 end
 
 function runtime_defs.get_square_area(square_size)
@@ -774,8 +777,8 @@ function runtime_defs.is_inside_bounds(bounds, position)
   return bootstrap_layout.is_inside_bounds(bounds, position)
 end
 
-function runtime_defs.get_square_bounds(square_size)
-  return bootstrap_layout.get_square_bounds(square_size)
+function runtime_defs.get_square_bounds(square_size, center)
+  return bootstrap_layout.get_square_bounds(square_size, center)
 end
 
 function runtime_defs.get_position_key(position)
@@ -791,20 +794,20 @@ function runtime_defs.move_position(position, side, distance)
   }
 end
 
-function runtime_defs.get_anchor_side_for_position(square_size, position)
-  return bootstrap_layout.get_anchor_side_for_position(square_size, position)
+function runtime_defs.get_anchor_side_for_position(square_size, position, center)
+  return bootstrap_layout.get_anchor_side_for_position(square_size, position, center)
 end
 
-function runtime_defs.is_anchor_ring_position(square_size, position)
-  return bootstrap_layout.is_anchor_ring_position(square_size, position)
+function runtime_defs.is_anchor_ring_position(square_size, position, center)
+  return bootstrap_layout.is_anchor_ring_position(square_size, position, center)
 end
 
-function runtime_defs.get_managed_tile_name(square_size, surface_size, position, floor_tile_name)
+function runtime_defs.get_managed_tile_name(square_size, surface_size, position, floor_tile_name, center)
   local background_tile_name = floor_tile_name or runtime_defs.get_background_tile_name()
 
   if not floor_tile_name
     and background_tile_name == runtime_defs.CHECKERBOARD_BACKGROUND_TILE_NAME
-    and bootstrap_layout.is_inside_bounds(bootstrap_layout.get_square_bounds(square_size), position) then
+    and bootstrap_layout.is_inside_bounds(bootstrap_layout.get_square_bounds(square_size, center), position) then
     local parity = math.abs(position.x + position.y) % 2 == 0 and "even" or "odd"
 
     return runtime_defs.CHECKERBOARD_TILE_NAMES[parity]
@@ -815,7 +818,8 @@ function runtime_defs.get_managed_tile_name(square_size, surface_size, position,
     surface_size,
     background_tile_name,
     runtime_defs.VOID_TILE_NAME,
-    position
+    position,
+    center
   )
 end
 

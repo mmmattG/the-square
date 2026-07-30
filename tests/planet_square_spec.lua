@@ -106,6 +106,40 @@ run_test("Planet Square expands Nauvis through one interface and preserves Manag
   assert_equal(surface.map_gen_settings.width, 11, "surface dimensions should be resized")
 end)
 
+run_test("Planet Square expansion respects a previously moved Square position", function()
+  local surface = make_surface("nauvis")
+  install_game({nauvis = surface})
+  storage = {
+    bootstrap = {
+      square_size = 7,
+      surface_size = 9,
+      surface_name = "nauvis",
+      square_position = {x = 2, y = -1},
+      expansion_research_levels = 0
+    },
+    starter_anchors = {
+      anchors = {
+        {
+          resource = "iron-ore",
+          kind = "item",
+          flow = "ingress",
+          side = "north",
+          position = {x = 2, y = -5},
+          entity_name = "iron-ore-ingress"
+        }
+      }
+    }
+  }
+
+  planet_square.apply_square_expansion("nauvis")
+
+  assert_equal(storage.bootstrap.square_position.x, 2, "expansion should preserve the Square x offset")
+  assert_equal(storage.bootstrap.square_position.y, -1, "expansion should preserve the Square y offset")
+  assert_equal(storage.starter_anchors.anchors[1].position.y, -6, "Managed Lines should expand from the moved Boundary")
+  assert_equal(surface.map_gen_settings.width, 15, "surface width should include the moved Square offset")
+  assert_equal(surface.map_gen_settings.height, 13, "surface height should include the moved Square offset")
+end)
+
 run_test("Planet Square expands a non-Nauvis Planet with the same Managed Line Shift stubs", function()
   local vulcanus = make_surface("vulcanus")
   install_game({vulcanus = vulcanus})

@@ -5,11 +5,13 @@ local debug_platform_runtime = require("lib.debug_platform_runtime")
 local planet_square_runtime = require("lib.planet_square_runtime")
 local gui_runtime = require("lib.gui_runtime")
 local screenshot_runtime = require("lib.screenshot_runtime")
+local square_move_runtime = require("lib.square_move_runtime")
 local void_item_runtime = require("lib.void_item_runtime")
 
 local function sync_all_runtime_guis()
   gui_runtime.refresh_all_debug_guis()
   gui_runtime.sync_all_shop_guis(managed_line_runtime)
+  gui_runtime.sync_all_square_move_guis()
 end
 
 local function sync_research_runtime_state(force)
@@ -37,6 +39,7 @@ local function handle_player_join_or_respawn(event)
     bootstrap_runtime.grant_initial_managed_line_inventory(player)
     gui_runtime.sync_dev_gui(player)
     gui_runtime.sync_screenshot_gui(player)
+    gui_runtime.sync_square_move_gui(player)
     gui_runtime.sync_shop_gui(player, managed_line_runtime)
     gui_runtime.sync_cliff_explosive_gui(player)
   end
@@ -59,12 +62,18 @@ script.on_configuration_changed(function()
     local surface = game.surfaces[storage.bootstrap.surface_name]
 
     if surface then
-      bootstrap_runtime.refresh_all_generated_chunk_tiles(surface, storage.bootstrap.square_size, storage.bootstrap.surface_size)
+      bootstrap_runtime.refresh_all_generated_chunk_tiles(
+        surface,
+        storage.bootstrap.square_size,
+        storage.bootstrap.surface_size,
+        storage.bootstrap.square_position
+      )
       bootstrap_runtime.clear_surface_chart(surface)
     end
 
     gui_runtime.sync_all_dev_guis()
     gui_runtime.sync_all_screenshot_guis()
+    gui_runtime.sync_all_square_move_guis()
     gui_runtime.sync_all_shop_guis(managed_line_runtime)
     gui_runtime.sync_all_cliff_explosive_guis()
     bootstrap_runtime.refresh_spawn_routing(managed_line_runtime, gui_runtime)
@@ -107,6 +116,10 @@ end
 
 if defines.events.on_gui_closed then
   script.on_event(defines.events.on_gui_closed, function(event)
+    if event.element and gui_runtime.handle_square_move_gui_closed(game.get_player(event.player_index), event.element) then
+      return
+    end
+
     if event.element and managed_line_runtime.handle_config_gui_closed(game.get_player(event.player_index), event.element) then
       return
     end
@@ -193,6 +206,34 @@ script.on_event(defines.events.on_gui_click, function(event)
     return
   end
 
+  if event.element.name == defs.SQUARE_MOVE_BUTTON_NAME then
+    gui_runtime.toggle_square_move_gui(player, square_move_runtime)
+    return
+  end
+
+  local square_move_direction = square_move_runtime.parse_direction_button_name(event.element.name)
+
+  if square_move_direction then
+    local result = square_move_runtime.move_for_player(player, square_move_direction, {
+      managed_line_runtime = managed_line_runtime
+    })
+
+    if not result.ok and player then
+      if result.reason == "obstructed" then
+        player.print({
+          "message.the-square-move-obstructed",
+          {"the-square-direction." .. result.departing_side}
+        })
+      else
+        player.print({"message.the-square-move-unsupported"})
+      end
+    end
+
+    gui_runtime.refresh_all_square_move_guis(square_move_runtime)
+    gui_runtime.refresh_all_debug_guis()
+    return
+  end
+
   if event.element.name == defs.CLIFF_EXPLOSIVE_BUTTON_NAME then
     if player and gui_runtime.is_cliff_explosive_button_enabled(player) then
       player.insert({name = "cliff-explosives", count = 1})
@@ -235,7 +276,12 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
     local surface = storage.bootstrap and game.surfaces[storage.bootstrap.surface_name]
 
     if surface and storage.bootstrap then
-      bootstrap_runtime.refresh_all_generated_chunk_tiles(surface, storage.bootstrap.square_size, storage.bootstrap.surface_size)
+      bootstrap_runtime.refresh_all_generated_chunk_tiles(
+        surface,
+        storage.bootstrap.square_size,
+        storage.bootstrap.surface_size,
+        storage.bootstrap.square_position
+      )
     end
 
     gui_runtime.refresh_all_debug_guis()
@@ -291,6 +337,10 @@ end)
 
 script.on_nth_tick(defs.ITEM_ANCHOR_INTERVAL_TICKS, function()
   managed_line_runtime.ensure_all()
+end)
+
+script.on_nth_tick(30, function()
+  gui_runtime.refresh_all_square_move_guis(square_move_runtime)
 end)
 
 remote.add_interface("the-square", {

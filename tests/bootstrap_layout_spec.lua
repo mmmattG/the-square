@@ -71,3 +71,16 @@ run_test("anchor side detection still targets the ingress ring", function()
     "starter Managed Lines should still snap to the east ring"
   )
 end)
+
+run_test("Square bounds and anchor detection follow a moved center", function()
+  local center = {x = 2, y = -1}
+  local bounds = bootstrap_layout.get_square_bounds(7, center)
+
+  assert_equal(bounds.left_top.x, -1, "moved Square bounds should include the x offset")
+  assert_equal(bounds.left_top.y, -4, "moved Square bounds should include the y offset")
+  assert_equal(
+    bootstrap_layout.get_anchor_side_for_position(7, {x = 2, y = -5}, center),
+    "north",
+    "anchor detection should use the moved Square center"
+  )
+end)

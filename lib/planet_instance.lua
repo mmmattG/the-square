@@ -22,6 +22,7 @@ local function clear_managed_line_entity_refs(state)
 end
 
 local function ensure_bootstrap_defaults(bootstrap)
+  bootstrap.name = "nauvis"
   bootstrap.square_size = bootstrap.square_size or defs.get_square_size()
   local target_surface_size = get_target_surface_size(bootstrap.square_size)
 
@@ -34,6 +35,7 @@ local function ensure_bootstrap_defaults(bootstrap)
   bootstrap.ingress_tier = bootstrap.ingress_tier or 1
   bootstrap.expansion_research_levels = bootstrap.expansion_research_levels or 0
   bootstrap.uranium_ore_progress_carry = bootstrap.uranium_ore_progress_carry or 0
+  bootstrap.square_position = bootstrap.square_position or {x = 0, y = 0}
   bootstrap.growth_progress = nil
   bootstrap.expansion_speed_research_levels = nil
 
@@ -73,6 +75,7 @@ local function ensure_planet_defaults(planet_name, state)
   state.floor_tile_name = state.floor_tile_name or config.floor_tile_name
   state.expansions_completed = state.expansions_completed or 0
   state.expansion_research_levels = state.expansion_research_levels or 0
+  state.square_position = state.square_position or {x = 0, y = 0}
 
   return state
 end
@@ -151,6 +154,23 @@ end
 
 function planet_methods:get_square_size()
   return self.state.square_size
+end
+
+function planet_methods:get_name()
+  return self.state.name
+end
+
+function planet_methods:get_square_position()
+  local position = self.state.square_position or {x = 0, y = 0}
+
+  return {x = position.x, y = position.y}
+end
+
+function planet_methods:set_square_position(position)
+  self.state.square_position = {
+    x = position and position.x or 0,
+    y = position and position.y or 0
+  }
 end
 
 function planet_methods:set_square_size(square_size)

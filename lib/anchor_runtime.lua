@@ -258,7 +258,7 @@ local function try_unlock_uranium_processing(anchor, force, debug_recipient)
   try_unlock_ingress_technology(anchor, force, debug_recipient, "uranium-ore", "uranium-processing", "uranium ore")
 end
 
-local function entity_overlaps_anchor_ring(square_size, entity)
+local function entity_overlaps_anchor_ring(square_size, entity, square_position)
   if not (entity and entity.valid and entity.bounding_box) then
     return false
   end
@@ -271,7 +271,7 @@ local function entity_overlaps_anchor_ring(square_size, entity)
 
   for y = min_y, max_y do
     for x = min_x, max_x do
-      if defs.is_anchor_ring_position(square_size, {x = x, y = y}) then
+      if defs.is_anchor_ring_position(square_size, {x = x, y = y}, square_position) then
         return true
       end
     end
@@ -359,9 +359,9 @@ local function ensure_anchor_entity(surface, anchor, planet_name)
   return entity
 end
 
-local function get_anchor_ring_positions(square_size)
+local function get_anchor_ring_positions(square_size, square_position)
   local positions = {}
-  local bounds = defs.get_anchor_bounds(square_size)
+  local bounds = defs.get_anchor_bounds(square_size, square_position)
 
   for _, side in ipairs({"north", "east", "south", "west"}) do
     local side_positions = get_edge_positions(bounds, side)
@@ -374,7 +374,7 @@ local function get_anchor_ring_positions(square_size)
   return positions
 end
 
-local function ensure_anchor_slot_proxies(surface, square_size, starter_anchors)
+local function ensure_anchor_slot_proxies(surface, square_size, starter_anchors, square_position)
   if not (surface and starter_anchors) then
     return
   end
@@ -388,7 +388,7 @@ local function ensure_anchor_slot_proxies(surface, square_size, starter_anchors)
     end
   end
 
-  for _, position in ipairs(get_anchor_ring_positions(square_size)) do
+  for _, position in ipairs(get_anchor_ring_positions(square_size, square_position)) do
     local position_key = defs.get_position_key(position)
     valid_ring_positions[position_key] = true
     local proxy = find_entity_at_position(surface, defs.ANCHOR_SLOT_PROXY_NAME, get_tile_center_position(position))
@@ -420,7 +420,7 @@ function anchor_runtime.ensure_starter_anchor_state()
   return managed_line_state.ensure("nauvis")
 end
 
-local function ensure_anchor_set(surface, square_size, starter_anchors, planet_name)
+local function ensure_anchor_set(surface, square_size, starter_anchors, planet_name, square_position)
   if not (surface and starter_anchors) then
     return
   end
@@ -436,7 +436,7 @@ local function ensure_anchor_set(surface, square_size, starter_anchors, planet_n
     end
   end
 
-  ensure_anchor_slot_proxies(surface, square_size, starter_anchors)
+  ensure_anchor_slot_proxies(surface, square_size, starter_anchors, square_position)
 end
 
 local function fill_starter_entity_inventory(entity, inventory_config)
@@ -516,7 +516,13 @@ function anchor_runtime.ensure_starter_anchors()
 
   local starter_anchors = anchor_runtime.ensure_starter_anchor_state()
 
-  ensure_anchor_set(surface, bootstrap.square_size, starter_anchors, "nauvis")
+  ensure_anchor_set(
+    surface,
+    bootstrap.square_size,
+    starter_anchors,
+    "nauvis",
+    bootstrap.square_position or {x = 0, y = 0}
+  )
 end
 
 function anchor_runtime.ensure_planet_starter_anchor_state(planet_name)
@@ -537,7 +543,13 @@ function anchor_runtime.ensure_planet_starter_anchors(planet_name)
   end
 
   anchor_runtime.unlock_planet_bootstrap_research(planet_name, game.forces.player)
-  ensure_anchor_set(surface, planet:get_square_size(), anchor_runtime.ensure_planet_starter_anchor_state(planet_name), planet_name)
+  ensure_anchor_set(
+    surface,
+    planet:get_square_size(),
+    anchor_runtime.ensure_planet_starter_anchor_state(planet_name),
+    planet_name,
+    planet:get_square_position()
+  )
   ensure_planet_starter_entities(surface, planet_name, planet)
 end
 
@@ -1224,7 +1236,11 @@ function anchor_runtime.handle_managed_anchor_slot_click(player)
   end
 
   local tile_position = defs.snap_entity_position_to_tile(proxy.position)
-  local side = defs.get_anchor_side_for_position(planet:get_square_size(), tile_position)
+  local side = defs.get_anchor_side_for_position(
+    planet:get_square_size(),
+    tile_position,
+    planet:get_square_position()
+  )
 
   if not side then
     player.print({"message.the-square-managed-line-invalid-edge"})
@@ -1323,7 +1339,8 @@ function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
     placement_anchor,
     anchor.position,
     planet and planet:get_square_size() or storage.bootstrap and storage.bootstrap.square_size,
-    starter_anchors
+    starter_anchors,
+    planet and planet:get_square_position() or storage.bootstrap and storage.bootstrap.square_position
   )
 
   if not ok then
@@ -1504,7 +1521,8 @@ function anchor_runtime.handle_anchor_config_gui_click(player, element)
     },
     anchor.position,
     planet:get_square_size(),
-    starter_anchors
+    starter_anchors,
+    planet:get_square_position()
   )
 
   if not ok then
@@ -1598,12 +1616,15 @@ function anchor_runtime.handle_entity_built(event, gui_runtime)
   local player = event.player_index and game.get_player(event.player_index) or nil
   local robot = event.robot
   local actor = player or robot
-  local bootstrap = storage.bootstrap
+  local planet = entity.surface and planet_instance.for_surface(entity.surface.name)
 
-  if bootstrap
-    and entity.surface.name == bootstrap.surface_name
+  if planet
     and not anchor_runtime.is_managed_anchor_entity_name(entity.name)
-    and entity_overlaps_anchor_ring(bootstrap.square_size, entity)
+    and entity_overlaps_anchor_ring(
+      planet:get_square_size(),
+      entity,
+      planet:get_square_position()
+    )
   then
     reject_reserved_ring_placement(entity, actor, {"message.the-square-edge-reserved"})
     return
