@@ -136,7 +136,7 @@ local function get_anchor_state_for_surface(surface)
     return nil, nil, nil
   end
 
-  return managed_line_state.ensure(planet_name), planet, planet_name
+  return managed_line_state.get(planet_name), planet, planet_name
 end
 
 function anchor_runtime.is_managed_anchor_entity_name(entity_name)
@@ -416,10 +416,6 @@ local function ensure_anchor_slot_proxies(surface, square_size, starter_anchors,
   end
 end
 
-function anchor_runtime.ensure_starter_anchor_state()
-  return managed_line_state.ensure("nauvis")
-end
-
 local function ensure_anchor_set(surface, square_size, starter_anchors, planet_name, square_position)
   if not (surface and starter_anchors) then
     return
@@ -501,35 +497,7 @@ function anchor_runtime.unlock_planet_bootstrap_research(planet_name, force)
   end
 end
 
-function anchor_runtime.ensure_starter_anchors()
-  local bootstrap = storage.bootstrap
-
-  if not bootstrap then
-    return
-  end
-
-  local surface = game.surfaces[bootstrap.surface_name]
-
-  if not surface then
-    return
-  end
-
-  local starter_anchors = anchor_runtime.ensure_starter_anchor_state()
-
-  ensure_anchor_set(
-    surface,
-    bootstrap.square_size,
-    starter_anchors,
-    "nauvis",
-    bootstrap.square_position or {x = 0, y = 0}
-  )
-end
-
-function anchor_runtime.ensure_planet_starter_anchor_state(planet_name)
-  return managed_line_state.ensure(planet_name)
-end
-
-function anchor_runtime.ensure_planet_starter_anchors(planet_name)
+function anchor_runtime.reconcile_planet_managed_lines(planet_name)
   local planet = planet_instance.ensure(planet_name)
 
   if not planet then
@@ -542,21 +510,58 @@ function anchor_runtime.ensure_planet_starter_anchors(planet_name)
     return
   end
 
-  anchor_runtime.unlock_planet_bootstrap_research(planet_name, game.forces.player)
+  local managed_lines = managed_line_state.get(planet_name)
+
+  if not managed_lines then
+    return
+  end
+
   ensure_anchor_set(
     surface,
     planet:get_square_size(),
-    anchor_runtime.ensure_planet_starter_anchor_state(planet_name),
+    managed_lines,
     planet_name,
     planet:get_square_position()
   )
-  ensure_planet_starter_entities(surface, planet_name, planet)
 end
 
-function anchor_runtime.ensure_all_planet_starter_anchors()
-  for _, planet_name in ipairs(planet_config.SUPPORTED_PLANETS) do
-    anchor_runtime.ensure_planet_starter_anchors(planet_name)
+function anchor_runtime.refresh_planet_managed_lines(planet_name)
+  local planet = planet_instance.ensure(planet_name)
+
+  if not planet then
+    return
   end
+
+  local surface = game.surfaces[planet:get_surface_name()]
+
+  if not surface then
+    return
+  end
+
+  local managed_lines = managed_line_state.initialize(planet_name)
+
+  anchor_runtime.unlock_planet_bootstrap_research(planet_name, game.forces.player)
+  anchor_runtime.reconcile_planet_managed_lines(planet_name)
+  ensure_planet_starter_entities(surface, planet_name, planet)
+  planet.state.managed_lines_initialized = true
+
+  return managed_lines
+end
+
+function anchor_runtime.initialize_planet_managed_lines(planet_name)
+  local planet = planet_instance.ensure(planet_name)
+
+  if not planet then
+    return
+  end
+
+  local managed_lines = managed_line_state.get(planet_name)
+
+  if planet.state.managed_lines_initialized and managed_lines then
+    return managed_lines
+  end
+
+  return anchor_runtime.refresh_planet_managed_lines(planet_name)
 end
 
 function anchor_runtime.reset_rotated_anchor(entity)
@@ -790,8 +795,9 @@ function anchor_runtime.sync_anchor_tiers_from_research(force)
     return false
   end
 
-  anchor_runtime.ensure_starter_anchors()
-  anchor_runtime.ensure_all_planet_starter_anchors()
+  for _, planet_name in ipairs(planet_config.SUPPORTED_PLANETS) do
+    anchor_runtime.reconcile_planet_managed_lines(planet_name)
+  end
 
   return true
 end
@@ -1273,7 +1279,7 @@ function anchor_runtime.handle_anchor_mined(entity)
   if anchor then
     clear_anchor_managed_line(anchor)
 
-    anchor_runtime.ensure_planet_starter_anchors(planet_name)
+    anchor_runtime.reconcile_planet_managed_lines(planet_name)
   end
 end
 
@@ -1397,7 +1403,7 @@ function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
   try_unlock_oil_processing(anchor, entity.force, actor)
   try_unlock_uranium_processing(anchor, entity.force, actor)
 
-  anchor_runtime.ensure_planet_starter_anchors(planet_name)
+  anchor_runtime.reconcile_planet_managed_lines(planet_name)
 
   return true
 end
@@ -1413,7 +1419,7 @@ local function get_open_anchor_for_player(player)
     return nil, nil, nil, nil
   end
 
-  local starter_anchors = managed_line_state.ensure(open_config.planet_name)
+  local starter_anchors = managed_line_state.get(open_config.planet_name)
 
   if not starter_anchors then
     return nil, nil, nil, nil
@@ -1580,7 +1586,7 @@ function anchor_runtime.handle_anchor_config_gui_click(player, element)
   local force = player.force or game and game.forces and game.forces.player
   try_unlock_oil_processing(anchor, force, player)
   try_unlock_uranium_processing(anchor, force, player)
-  anchor_runtime.ensure_planet_starter_anchors(planet_name)
+  anchor_runtime.reconcile_planet_managed_lines(planet_name)
   destroy_anchor_config_gui(player)
 
   return true

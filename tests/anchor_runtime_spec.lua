@@ -782,7 +782,7 @@ run_test("unconfigured anchor points stay empty and keep their slot proxy", func
   local player_force = {valid = true, technologies = {}}
   local created_entities = {}
   local surface = {
-    name = "fes-bootstrap",
+    name = runtime_defs.SURFACE_NAME,
     find_entities_filtered = function()
       return {}
     end,
@@ -803,11 +803,11 @@ run_test("unconfigured anchor points stay empty and keep their slot proxy", func
   }
   game = {
     forces = {player = player_force},
-    surfaces = {["fes-bootstrap"] = surface},
+    surfaces = {[runtime_defs.SURFACE_NAME] = surface},
     players = {}
   }
   storage = {
-    bootstrap = {square_size = 12, surface_name = "fes-bootstrap", ingress_tier = 1},
+    bootstrap = {square_size = 12, surface_name = runtime_defs.SURFACE_NAME, ingress_tier = 1},
     starter_anchors = {layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION, anchors = {
       {
         kind = "fluid",
@@ -822,12 +822,16 @@ run_test("unconfigured anchor points stay empty and keep their slot proxy", func
     }}
   }
 
-  anchor_runtime.ensure_starter_anchors()
+  anchor_runtime.initialize_planet_managed_lines("nauvis")
 
   local anchor = storage.starter_anchors.anchors[1]
+  local initial_entity_count = #created_entities
+  anchor_runtime.initialize_planet_managed_lines("nauvis")
+
   assert_equal(anchor.resource, nil, "new generic Managed Lines should not configure a resource during placement")
   assert_equal(anchor.entity, nil, "unconfigured anchor points should not spawn a Managed Line entity")
   assert_equal(created_entities[1].name, runtime_defs.ANCHOR_SLOT_PROXY_NAME, "unconfigured anchor points should keep an anchor slot proxy")
+  assert_equal(#created_entities, initial_entity_count, "initialization should not reconcile a Planet more than once")
 end)
 
 run_test("existing generic item Managed Lines collapse back to anchor slot proxies", function()
@@ -845,7 +849,7 @@ run_test("existing generic item Managed Lines collapse back to anchor slot proxi
     end
   })
   local surface = {
-    name = "fes-bootstrap",
+    name = runtime_defs.SURFACE_NAME,
     find_entities_filtered = function(_, filter)
       filter = filter or _
       if filter and filter.name == generic_entity.name and filter.position then
@@ -861,11 +865,11 @@ run_test("existing generic item Managed Lines collapse back to anchor slot proxi
   }
   game = {
     forces = {player = player_force},
-    surfaces = {["fes-bootstrap"] = surface},
+    surfaces = {[runtime_defs.SURFACE_NAME] = surface},
     players = {}
   }
   storage = {
-    bootstrap = {square_size = 12, surface_name = "fes-bootstrap", ingress_tier = 1},
+    bootstrap = {square_size = 12, surface_name = runtime_defs.SURFACE_NAME, ingress_tier = 1},
     starter_anchors = {layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION, anchors = {
       {
         kind = "item",
@@ -881,7 +885,7 @@ run_test("existing generic item Managed Lines collapse back to anchor slot proxi
     }}
   }
 
-  anchor_runtime.ensure_starter_anchors()
+  anchor_runtime.initialize_planet_managed_lines("nauvis")
 
   assert_equal(storage.starter_anchors.anchors[1].entity, nil, "existing generic item Managed Line state should no longer own a visible generic entity")
 end)

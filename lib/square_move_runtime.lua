@@ -319,8 +319,8 @@ function square_move_runtime.move(planet_name, direction, options)
 
   planet:set_square_position(check.target_position)
 
-  if options.managed_line_runtime and options.managed_line_runtime.ensure then
-    options.managed_line_runtime.ensure(planet_name)
+  if options.managed_line_runtime and options.managed_line_runtime.reconcile then
+    options.managed_line_runtime.reconcile(planet_name)
   end
 
   local force = options.force or game.forces.player

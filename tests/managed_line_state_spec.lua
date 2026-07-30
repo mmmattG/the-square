@@ -20,11 +20,11 @@ local function run_test(name, fn)
   io.stdout:write("PASS " .. name .. "\n")
 end
 
-run_test("same Managed Line state seam ensures and reads Nauvis and Proof Planet lines", function()
+run_test("same Managed Line state seam initializes and reads Nauvis and Proof Planet lines", function()
   storage = {bootstrap = {square_size = 7, surface_name = "nauvis"}}
 
-  local nauvis_lines = managed_line_state.ensure("nauvis")
-  local vulcanus_lines = managed_line_state.ensure("vulcanus")
+  local nauvis_lines = managed_line_state.initialize("nauvis")
+  local vulcanus_lines = managed_line_state.initialize("vulcanus")
 
   assert_equal(managed_line_state.get("nauvis"), nauvis_lines, "Nauvis lines should be readable through the seam")
   assert_equal(managed_line_state.get("vulcanus"), vulcanus_lines, "Proof Planet lines should be readable through the seam")
@@ -36,6 +36,18 @@ end)
 run_test("seam returns nil for unsupported planets without creating Managed Lines", function()
   storage = {}
 
-  assert_equal(managed_line_state.ensure("not-a-planet"), nil, "unsupported Planet should not have Managed Lines")
+  assert_equal(managed_line_state.initialize("not-a-planet"), nil, "unsupported Planet should not have Managed Lines")
   assert_equal(managed_line_state.get("not-a-planet"), nil, "unsupported Planet should not read Managed Lines")
+end)
+
+run_test("starter Managed Lines initialize only once per Planet", function()
+  storage = {bootstrap = {square_size = 7, surface_name = "nauvis"}}
+
+  local initial_lines = managed_line_state.initialize("nauvis")
+  initial_lines.anchors[#initial_lines.anchors + 1] = {resource = "coal"}
+  local initialized_again = managed_line_state.initialize("nauvis")
+
+  assert_equal(initialized_again, initial_lines, "initialization should preserve the Planet's existing Managed Line state")
+  assert_equal(#initialized_again.anchors, 4, "initialization should not regenerate the Starter Layout")
+  assert_equal(initialized_again.anchors[4].resource, "coal", "initialization should preserve lines added after startup")
 end)

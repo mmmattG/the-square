@@ -7,6 +7,7 @@ game = {forces = {player = {valid = true, mining_drill_productivity_bonus = 0}}}
 
 local anchor_runtime = require("lib.anchor_runtime")
 local ingress_runtime = require("lib.ingress_runtime")
+local managed_line_state = require("lib.managed_line_state")
 local defs = require("lib.runtime_defs")
 
 local function assert_equal(actual, expected, message)
@@ -25,8 +26,8 @@ local function run_test(name, fn)
 end
 
 run_test("non-Nauvis planets start without free Managed Lines in isolated storage", function()
-  local vulcanus = anchor_runtime.ensure_planet_starter_anchor_state("vulcanus")
-  local gleba = anchor_runtime.ensure_planet_starter_anchor_state("gleba")
+  local vulcanus = managed_line_state.initialize("vulcanus")
+  local gleba = managed_line_state.initialize("gleba")
 
   assert_equal(#vulcanus.anchors, 0, "Vulcanus should not get free starter lines")
   assert_equal(#gleba.anchors, 0, "Gleba should not get free starter lines")

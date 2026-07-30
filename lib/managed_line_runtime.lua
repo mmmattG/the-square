@@ -2,6 +2,7 @@ local anchor_runtime = require("lib.anchor_runtime")
 local ingress_runtime = require("lib.ingress_runtime")
 local managed_line_state = require("lib.managed_line_state")
 local planet_config = require("lib.planet_config")
+local planet_instance = require("lib.planet_instance")
 
 local managed_line_runtime = {}
 
@@ -9,20 +10,23 @@ function managed_line_runtime.get(planet_name)
   return managed_line_state.get(planet_name)
 end
 
-function managed_line_runtime.ensure_state(planet_name)
-  return managed_line_state.ensure(planet_name or "nauvis")
-end
-
-function managed_line_runtime.ensure(planet_name)
+function managed_line_runtime.initialize(planet_name)
   planet_name = planet_name or "nauvis"
-  managed_line_state.ensure(planet_name)
-  return anchor_runtime.ensure_planet_starter_anchors(planet_name)
+  return anchor_runtime.initialize_planet_managed_lines(planet_name)
 end
 
-function managed_line_runtime.ensure_all()
+function managed_line_runtime.refresh_existing_planets()
   for _, planet_name in ipairs(planet_config.SUPPORTED_PLANETS) do
-    managed_line_runtime.ensure(planet_name)
+    local planet = planet_instance.ensure(planet_name)
+
+    if planet and game.surfaces[planet:get_surface_name()] then
+      anchor_runtime.refresh_planet_managed_lines(planet_name)
+    end
   end
+end
+
+function managed_line_runtime.reconcile(planet_name)
+  return anchor_runtime.reconcile_planet_managed_lines(planet_name or "nauvis")
 end
 
 function managed_line_runtime.pump(planet_name)
