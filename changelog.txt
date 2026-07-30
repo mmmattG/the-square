@@ -2,7 +2,7 @@
 Version: 0.1.5
 Date: 2026-07-30
   Features:
-    - Added a movement UI toggle that can shift factory contents, placed tiles, and characters while leaving the Square and its Boundary fixed.
+    - Added a movement UI toggle that can shift factory contents and placed tiles while leaving the Square and players fixed and keeping Managed Lines aligned along the Boundary.
   Changes:
     - Consolidated persisted Square state under the planet model.
     - Removed legacy Line Shop code now that Managed Lines are crafted and configured through Anchor slots.

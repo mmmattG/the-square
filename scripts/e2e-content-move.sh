@@ -64,6 +64,24 @@ end
 
 script.on_init(function()
   local surface = game.surfaces.nauvis
+  local west_anchor = {
+    resource = "iron-ore",
+    kind = "item",
+    flow = "ingress",
+    side = "west",
+    position = {x = -4, y = -1},
+    direction = defines.direction.east,
+    entity_name = "the-square-item-ingress-managed-anchor"
+  }
+  local north_anchor = {
+    resource = "water",
+    kind = "fluid",
+    flow = "ingress",
+    side = "north",
+    position = {x = 0, y = -4},
+    direction = defines.direction.north,
+    entity_name = "the-square-fluid-ingress-managed-anchor"
+  }
 
   storage.planets = {
     nauvis = {
@@ -71,7 +89,7 @@ script.on_init(function()
       surface_size = 9,
       surface_name = "nauvis",
       square_position = {x = 0, y = 0},
-      starter_anchors = {anchors = {}}
+      starter_anchors = {anchors = {west_anchor, north_anchor}}
     }
   }
 
@@ -92,9 +110,52 @@ script.on_init(function()
     force = game.forces.player
   })
   assert(character, "[the-square-content-move-validator] failed to create source character")
+  local connected_belt = surface.create_entity({
+    name = "transport-belt",
+    position = {x = -3, y = -1},
+    direction = defines.direction.east,
+    force = game.forces.player
+  })
+  assert(connected_belt, "[the-square-content-move-validator] failed to create edge belt")
+  local belt_start = {x = connected_belt.position.x, y = connected_belt.position.y}
+  local connected_pipe = surface.create_entity({
+    name = "pipe",
+    position = {x = 0, y = -3},
+    force = game.forces.player
+  })
+  assert(connected_pipe, "[the-square-content-move-validator] failed to create edge pipe")
+  local pipe_start = {x = connected_pipe.position.x, y = connected_pipe.position.y}
+  west_anchor.entity = surface.create_entity({
+    name = west_anchor.entity_name,
+    position = west_anchor.position,
+    direction = west_anchor.direction,
+    force = game.forces.player,
+    type = "input"
+  })
+  assert(west_anchor.entity, "[the-square-content-move-validator] failed to create west Managed Line")
+  north_anchor.entity = surface.create_entity({
+    name = north_anchor.entity_name,
+    position = north_anchor.position,
+    direction = north_anchor.direction,
+    force = game.forces.player
+  })
+  assert(north_anchor.entity, "[the-square-content-move-validator] failed to create north Managed Line")
+  local west_anchor_start = {x = west_anchor.entity.position.x, y = west_anchor.entity.position.y}
 
   local result = square_move_runtime.move("nauvis", "east", {
-    mode = square_move_runtime.MODE_CONTENTS
+    mode = square_move_runtime.MODE_CONTENTS,
+    managed_line_runtime = {
+      reconcile = function()
+        if not (north_anchor.entity and north_anchor.entity.valid) then
+          north_anchor.entity = surface.create_entity({
+            name = north_anchor.entity_name,
+            position = north_anchor.position,
+            direction = north_anchor.direction,
+            force = game.forces.player
+          })
+        end
+      end
+    }
   })
   assert(result.ok, "[the-square-content-move-validator] contents movement failed: " .. tostring(result.reason))
   assert_equal(storage.planets.nauvis.square_position.x, 0, "Square x position changed")
@@ -106,8 +167,38 @@ script.on_init(function()
   })[1]
   assert(moved_chest, "[the-square-content-move-validator] moved chest was not found")
   assert_equal(moved_chest.get_item_count("iron-plate"), 42, "chest inventory was not preserved")
-  assert_equal(character.position.x, 0, "character did not move east")
+  assert_equal(character.position.x, -1, "character x position changed")
   assert_equal(character.position.y, 1, "character y position changed")
+  assert(
+    surface.find_entities_filtered({
+      name = "transport-belt",
+      position = {x = belt_start.x + 1, y = belt_start.y}
+    })[1],
+    "[the-square-content-move-validator] edge belt did not move east"
+  )
+  assert(
+    surface.find_entities_filtered({
+      name = "pipe",
+      position = {x = pipe_start.x + 1, y = pipe_start.y}
+    })[1],
+    "[the-square-content-move-validator] edge pipe did not move east"
+  )
+  assert_equal(west_anchor.position.x, -4, "trailing Managed Line state moved")
+  assert_equal(west_anchor.entity.position.x, west_anchor_start.x, "trailing Managed Line entity moved")
+  assert(
+    surface.find_entities_filtered({
+      name = "transport-belt",
+      position = belt_start
+    })[1],
+    "[the-square-content-move-validator] trailing ingress belt stub was not restored"
+  )
+  assert_equal(north_anchor.position.x, 1, "north Managed Line state did not move east")
+  assert(north_anchor.entity and north_anchor.entity.valid, "north Managed Line entity was not reconciled")
+  assert_equal(
+    math.floor(north_anchor.entity.position.x),
+    1,
+    "north Managed Line entity did not follow its pipe east"
+  )
   assert_equal(surface.get_tile(1, 1).name, "refined-concrete", "placed tile did not move east")
   assert_equal(surface.get_tile(-3, 1).name, "grass-1", "vacated edge was not restored")
   storage.awaiting_buffer_cleanup = true

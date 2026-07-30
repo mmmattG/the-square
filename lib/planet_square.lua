@@ -167,6 +167,28 @@ local function leave_trailing_managed_line_stub(surface, anchor)
   })
 end
 
+local function ensure_managed_line_connection_stub(surface, anchor)
+  if not (surface and anchor and anchor.position and anchor.resource) then
+    return
+  end
+
+  local connection_position = defs.move_position(anchor.position, anchor.side, -1)
+  local connection_entity_name = get_trailing_entity_name(anchor)
+  local connection_direction = anchor.direction
+    or defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side)
+
+  if find_entity_at_position(surface, connection_entity_name, connection_position) then
+    return
+  end
+
+  surface.create_entity({
+    name = connection_entity_name,
+    position = connection_position,
+    direction = anchor.kind == "item" and connection_direction or anchor.direction,
+    force = game.forces.player
+  })
+end
+
 local function leave_trailing_stubs_for_expansion(surface, managed_lines)
   if not managed_lines then
     return
@@ -273,5 +295,6 @@ function planet_square.apply_square_expansion(planet_name, options)
 end
 
 planet_square.leave_trailing_managed_line_stub = leave_trailing_managed_line_stub
+planet_square.ensure_managed_line_connection_stub = ensure_managed_line_connection_stub
 
 return planet_square

@@ -39,14 +39,15 @@ end
 
 local function make_entity(entity_type, position, direction)
   local entity
+  local entity_position = {x = position.x + 0.5, y = position.y + 0.5}
   entity = {
     valid = true,
     type = entity_type,
-    position = {x = position.x, y = position.y},
+    position = entity_position,
     direction = direction,
     bounding_box = {
-      left_top = {x = position.x, y = position.y},
-      right_bottom = {x = position.x + 1, y = position.y + 1}
+      left_top = {x = entity_position.x - 0.4, y = entity_position.y - 0.4},
+      right_bottom = {x = entity_position.x + 0.4, y = entity_position.y + 0.4}
     },
     destroy = function()
       entity.valid = false
@@ -87,6 +88,21 @@ local function make_surface(area_entities, tile_names)
         return surface.area_entities
       end
 
+      if filter.position then
+        local matches = {}
+
+        for _, entity in ipairs(surface.area_entities) do
+          if entity.valid
+            and math.floor(entity.position.x) == filter.position.x
+            and math.floor(entity.position.y) == filter.position.y
+          then
+            matches[#matches + 1] = entity
+          end
+        end
+
+        return matches
+      end
+
       return {}
     end,
     set_tiles = function(tiles)
@@ -104,8 +120,8 @@ local function make_surface(area_entities, tile_names)
       for _, source in ipairs(spec.entities) do
         if source.valid then
           local clone = make_entity(source.type, {
-            x = source.position.x + spec.destination_offset.x,
-            y = source.position.y + spec.destination_offset.y
+            x = math.floor(source.position.x) + spec.destination_offset.x,
+            y = math.floor(source.position.y) + spec.destination_offset.y
           }, source.direction)
           spec.destination_surface.area_entities[#spec.destination_surface.area_entities + 1] = clone
         end
@@ -242,7 +258,7 @@ run_test("Moving the Square updates tiles and Boundary state without moving fact
     side = "west",
     position = {x = -4, y = 0},
     direction = defines.direction.east,
-    entity_name = "the-square-iron-ore-ingress-anchor",
+    entity_name = "the-square-item-ingress-managed-anchor",
     entity = west_anchor_entity
   }
   local east_anchor = {
@@ -280,8 +296,8 @@ run_test("Moving the Square updates tiles and Boundary state without moving fact
   assert_equal(result.ok, true, "an unobstructed move should succeed")
   assert_equal(storage.planets.nauvis.square_position.x, 1, "the Planet-local Square position should move east")
   assert_equal(storage.planets.nauvis.square_position.y, 0, "moving east should retain the Square y position")
-  assert_equal(assembler.position.x, 0, "factory entities should retain their world x coordinate")
-  assert_equal(assembler.position.y, 0, "factory entities should retain their world y coordinate")
+  assert_equal(assembler.position.x, 0.5, "factory entities should retain their world x coordinate")
+  assert_equal(assembler.position.y, 0.5, "factory entities should retain their world y coordinate")
   assert_equal(west_anchor.position.x, -3, "the departing Managed Line should move onto its connected belt")
   assert_equal(east_anchor.position.x, 5, "the arriving Managed Line should move outward with the Boundary")
   assert_equal(north_anchor.position.x, 0, "a Managed Line in an overlapping Boundary slot should stay connected")
@@ -305,16 +321,40 @@ run_test("Contents movement is obstructed when an entity would enter the Void", 
   assert_equal(result.obstructed_side, "east", "moving contents east should validate the east edge")
 end)
 
-run_test("Moving contents translates entities, characters, and placed tiles without moving the Square", function()
+run_test("Moving contents keeps characters fixed and includes edge belts and pipes", function()
   local assembler = make_entity("assembling-machine", {x = 0, y = 0})
   local character = make_entity("character", {x = -1, y = 1})
+  local connected_belt = make_entity("transport-belt", {x = -3, y = -1}, defines.direction.east)
+  local connected_pipe = make_entity("pipe", {x = 0, y = -3})
+  local west_managed_line = make_entity("underground-belt", {x = -4, y = -1}, defines.direction.east)
+  local north_managed_line = make_entity("pipe-to-ground", {x = 0, y = -4}, defines.direction.north)
+  local west_anchor = {
+    resource = "iron-ore",
+    kind = "item",
+    flow = "ingress",
+    side = "west",
+    position = {x = -4, y = -1},
+    direction = defines.direction.east,
+    entity_name = "the-square-item-ingress-managed-anchor",
+    entity = west_managed_line
+  }
+  local north_anchor = {
+    resource = "water",
+    kind = "fluid",
+    flow = "ingress",
+    side = "north",
+    position = {x = 0, y = -4},
+    direction = defines.direction.north,
+    entity_name = "the-square-fluid-ingress-managed-anchor",
+    entity = north_managed_line
+  }
   local surface = make_surface(
-    {assembler, character},
+    {assembler, character, connected_belt, connected_pipe, west_managed_line, north_managed_line},
     {
       ["0:0"] = "refined-concrete"
     }
   )
-  install_world(surface)
+  install_world(surface, {west_anchor, north_anchor})
   local reconciled_planet = nil
 
   local result = square_move_runtime.move("nauvis", "east", {
@@ -329,10 +369,9 @@ run_test("Moving contents translates entities, characters, and placed tiles with
   assert_equal(result.ok, true, "an unobstructed contents move should succeed")
   assert_equal(storage.planets.nauvis.square_position.x, 0, "the Square x position should stay fixed")
   assert_equal(storage.planets.nauvis.square_position.y, 0, "the Square y position should stay fixed")
-  assert_equal(character.position.x, 0, "characters should move with the factory")
-  assert_equal(character.position.y, 1, "moving east should retain character y position")
-  assert_equal(result.moved_entity_count, 1, "the factory entity should be cloned through the move buffer")
-  assert_equal(result.moved_character_count, 1, "the character should be teleported with the contents")
+  assert_equal(character.position.x, -0.5, "characters should stay at their world x position")
+  assert_equal(character.position.y, 1.5, "characters should stay at their world y position")
+  assert_equal(result.moved_entity_count, 3, "factory entities and edge connections should move")
   assert_equal(reconciled_planet, "nauvis", "Managed Lines should reconcile after contents move")
   for surface_name in pairs(game.surfaces) do
     assert_equal(
@@ -343,14 +382,28 @@ run_test("Moving contents translates entities, characters, and placed tiles with
   end
 
   local moved_assembler
+  local moved_belt
+  local moved_pipe
 
   for _, entity in ipairs(surface.area_entities) do
     if entity.valid and entity.type == "assembling-machine" then
       moved_assembler = entity
+    elseif entity.valid and entity.type == "transport-belt" then
+      moved_belt = entity
+    elseif entity.valid and entity.type == "pipe" then
+      moved_pipe = entity
     end
   end
 
-  assert_equal(moved_assembler.position.x, 1, "factory entities should move east by one tile")
+  assert_equal(moved_assembler.position.x, 1.5, "factory entities should move east by one tile")
+  assert_equal(moved_belt.position.x, -1.5, "a belt connected at the west edge should move east")
+  assert_equal(moved_pipe.position.x, 1.5, "a pipe connected at the north edge should move east")
+  assert_equal(west_anchor.position.x, -4, "the trailing Boundary Managed Line should remain fixed")
+  assert_equal(north_anchor.position.x, 1, "the north Managed Line should follow its connection east")
+  assert_equal(north_managed_line.valid, false, "the old north Managed Line entity should be replaced")
+  assert_equal(surface.created_entities[1].name, "transport-belt", "the trailing ingress should gain a belt stub")
+  assert_equal(surface.created_entities[1].position.x, -3, "the ingress belt stub should fill the vacated edge")
+  assert_equal(surface.created_entities[1].position.y, -1, "the ingress belt stub should stay aligned")
 
   local moved_concrete = false
   local vacated_floor = false
