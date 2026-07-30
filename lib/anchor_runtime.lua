@@ -102,9 +102,7 @@ local function get_required_underground_belt_type(anchor)
 end
 
 local function get_planet_name_for_surface_name(surface_name)
-  if surface_name == (storage.bootstrap and storage.bootstrap.surface_name)
-    or surface_name == defs.LEGACY_SURFACE_NAME
-  then
+  if surface_name == (storage.bootstrap and storage.bootstrap.surface_name) then
     return "nauvis"
   end
 

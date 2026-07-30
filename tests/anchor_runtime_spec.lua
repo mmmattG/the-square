@@ -126,7 +126,7 @@ local function build_player()
     force = {},
     position = {x = 0, y = 0},
     surface = {
-      name = "fes-bootstrap",
+      name = "nauvis",
       create_entity = create_entity,
       find_entities_filtered = function()
         return {}
@@ -311,7 +311,7 @@ run_test("uranium purchase also grants one sulfuric acid egress line", function(
 end)
 
 run_test("swapping anchor line type refunds the previous Managed Line item", function()
-  storage.bootstrap = {square_size = 12, surface_name = "fes-bootstrap"}
+  storage.bootstrap = {square_size = 12, surface_name = "nauvis"}
   storage.planets = nil
   storage.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
@@ -321,7 +321,7 @@ run_test("swapping anchor line type refunds the previous Managed Line item", fun
   }
 
   local player = build_player()
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
 
   player.insert({name = runtime_defs.get_generic_anchor_item_name("fluid", "ingress"), count = 1})
   anchor_runtime.handle_anchor_gui_opened({
@@ -343,7 +343,7 @@ run_test("swapping anchor line type refunds the previous Managed Line item", fun
 end)
 
 run_test("same item resource can be reselected when the selected tier differs", function()
-  storage.bootstrap = {square_size = 12, surface_name = "fes-bootstrap"}
+  storage.bootstrap = {square_size = 12, surface_name = "nauvis"}
   storage.planets = nil
   storage.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
@@ -359,7 +359,7 @@ run_test("same item resource can be reselected when the selected tier differs", 
       ["the-square-ingress-red"] = {researched = true}
     }
   }
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.insert({name = runtime_defs.get_generic_anchor_item_name_for_tier("item", "ingress", 3), count = 1})
 
   anchor_runtime.handle_anchor_gui_opened({
@@ -393,7 +393,7 @@ run_test("same item resource can be reselected when the selected tier differs", 
 end)
 
 run_test("swapping anchor line type is cancelled when previous Managed Line cannot be refunded", function()
-  storage.bootstrap = {square_size = 12, surface_name = "fes-bootstrap"}
+  storage.bootstrap = {square_size = 12, surface_name = "nauvis"}
   storage.planets = nil
   storage.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
@@ -403,7 +403,7 @@ run_test("swapping anchor line type is cancelled when previous Managed Line cann
   }
 
   local player = build_player()
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.can_insert = function()
     return false
   end
@@ -428,14 +428,14 @@ run_test("swapping anchor line type is cancelled when previous Managed Line cann
 end)
 
 run_test("closing the anchor configuration GUI destroys the screen frame", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.bootstrap.surface_name = "nauvis"
   storage.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {}
   }
 
   local player = build_player()
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -466,12 +466,12 @@ run_test("fluid egress faces inward on the managed border", function()
 end)
 
 run_test("placing crude oil ingress unlocks oil processing once prerequisites are researched", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.bootstrap.surface_name = "nauvis"
 
   local force = build_force_with_oil_processing(false)
   local player = build_player()
   player.force = force
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -537,12 +537,12 @@ run_test("placing crude oil ingress unlocks oil processing once prerequisites ar
 end)
 
 run_test("placing crude oil ingress unlocks oil processing immediately when prerequisites are already researched", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.bootstrap.surface_name = "nauvis"
 
   local force = build_force_with_oil_processing(true)
   local player = build_player()
   player.force = force
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -585,12 +585,12 @@ run_test("placing crude oil ingress unlocks oil processing immediately when prer
 end)
 
 run_test("placing non-crude ingress does not unlock oil processing", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.bootstrap.surface_name = "nauvis"
 
   local force = build_force_with_oil_processing(true)
   local player = build_player()
   player.force = force
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -622,12 +622,12 @@ run_test("placing non-crude ingress does not unlock oil processing", function()
 end)
 
 run_test("placing uranium ore ingress unlocks uranium processing once prerequisites are researched", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.bootstrap.surface_name = "nauvis"
 
   local force = build_force_with_uranium_processing(false)
   local player = build_player()
   player.force = force
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -692,12 +692,12 @@ run_test("placing uranium ore ingress unlocks uranium processing once prerequisi
 end)
 
 run_test("placing uranium ore ingress unlocks uranium processing immediately when prerequisites are already researched", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.bootstrap.surface_name = "nauvis"
 
   local force = build_force_with_uranium_processing(true)
   local player = build_player()
   player.force = force
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -738,12 +738,12 @@ run_test("placing uranium ore ingress unlocks uranium processing immediately whe
 end)
 
 run_test("placing non-uranium ingress does not unlock uranium processing", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.bootstrap.surface_name = "nauvis"
 
   local force = build_force_with_uranium_processing(true)
   local player = build_player()
   player.force = force
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -895,7 +895,7 @@ run_test("choosing a Managed Line recipe configures the Managed Line for its min
   local created_entities = {}
   local generic_entity
   local surface = {
-    name = "fes-bootstrap",
+    name = "nauvis",
     find_entities_filtered = function(_, filter)
       filter = filter or _
       if filter and filter.position and generic_entity and generic_entity.valid then
@@ -938,11 +938,11 @@ run_test("choosing a Managed Line recipe configures the Managed Line for its min
 
   game = {
     forces = {player = player_force},
-    surfaces = {["fes-bootstrap"] = surface},
+    surfaces = {["nauvis"] = surface},
     players = {}
   }
   storage = {
-    bootstrap = {square_size = 12, surface_name = "fes-bootstrap", ingress_tier = 1},
+    bootstrap = {square_size = 12, surface_name = "nauvis", ingress_tier = 1},
     starter_anchors = {layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION, anchors = {
       {
         kind = "item",
@@ -966,7 +966,7 @@ run_test("choosing a Managed Line recipe configures the Managed Line for its min
 end)
 
 run_test("anchor slot configuration fails when matching Managed Line item is missing", function()
-  storage.bootstrap = {square_size = 12, surface_name = "fes-bootstrap"}
+  storage.bootstrap = {square_size = 12, surface_name = "nauvis"}
   storage.planets = nil
   storage.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
@@ -974,7 +974,7 @@ run_test("anchor slot configuration fails when matching Managed Line item is mis
   }
 
   local player = build_player()
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,

@@ -56,26 +56,6 @@ run_test("Nauvis Planet Instance preserves existing bootstrap defaults", functio
   assert_equal(storage.bootstrap.growth_progress, nil, "removed legacy growth state should stay cleared")
 end)
 
-run_test("Nauvis Planet Instance migrates legacy bootstrap surface saves", function()
-  storage = {
-    bootstrap = {
-      square_size = 9,
-      surface_name = "fes-bootstrap"
-    },
-    starter_anchors = {
-      anchors = {
-        {entity = {valid = true}}
-      }
-    }
-  }
-
-  local nauvis = planet_instance.ensure_nauvis()
-
-  assert_equal(nauvis:get_surface_name(), "nauvis", "old saves should move their Planet Instance back to Nauvis")
-  assert_equal(storage.bootstrap.surface_name, "nauvis", "legacy storage should be migrated in place")
-  assert_equal(storage.starter_anchors.anchors[1].entity, nil, "legacy surface entity refs should be rebuilt on Nauvis")
-end)
-
 run_test("Space Age planet configs default to 17x17 thematic squares", function()
   settings.startup = {}
 

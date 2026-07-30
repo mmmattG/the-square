@@ -10,26 +10,12 @@ local function get_target_surface_size(square_size)
   return defs.get_surface_size(square_size)
 end
 
-local function clear_managed_line_entity_refs(state)
-  local starter_anchors = state and state.starter_anchors or storage and storage.starter_anchors
-  if not (starter_anchors and starter_anchors.anchors) then
-    return
-  end
-
-  for _, anchor in ipairs(starter_anchors.anchors) do
-    anchor.entity = nil
-  end
-end
-
 local function ensure_bootstrap_defaults(bootstrap)
   bootstrap.name = "nauvis"
   bootstrap.square_size = bootstrap.square_size or defs.get_square_size()
   local target_surface_size = get_target_surface_size(bootstrap.square_size)
 
-  if not bootstrap.surface_name or bootstrap.surface_name == defs.LEGACY_SURFACE_NAME then
-    bootstrap.surface_name = defs.SURFACE_NAME
-    clear_managed_line_entity_refs(bootstrap)
-  end
+  bootstrap.surface_name = bootstrap.surface_name or defs.SURFACE_NAME
   bootstrap.surface_size = target_surface_size
   bootstrap.expansions_completed = bootstrap.expansions_completed or 0
   bootstrap.ingress_tier = bootstrap.ingress_tier or 1
