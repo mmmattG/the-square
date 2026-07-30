@@ -268,12 +268,150 @@ script.on_init(function()
   assert_equal(surface.get_tile(1, 1).name, "refined-concrete", "placed tile did not move east")
   assert_equal(surface.get_hidden_tile({x = 1, y = 1}), "water", "hidden tile did not move east")
   assert_equal(surface.get_tile(-3, 1).name, "grass-1", "vacated edge was not restored")
-  storage.awaiting_staging_cleanup = true
+
+  for _, entity in ipairs(surface.find_entities()) do
+    entity.destroy()
+  end
+
+  storage.planets.nauvis.square_size = 13
+  storage.planets.nauvis.surface_size = 15
+  storage.planets.nauvis.starter_anchors = {anchors = {}}
+  local map_gen_settings = surface.map_gen_settings
+  map_gen_settings.width = 15
+  map_gen_settings.height = 15
+  surface.map_gen_settings = map_gen_settings
+  surface.request_to_generate_chunks({x = 0, y = 0}, 1)
+  surface.force_generate_chunk_requests()
+  local expanded_tiles = {}
+  for y = -6, 6 do
+    for x = -6, 6 do
+      expanded_tiles[#expanded_tiles + 1] = {name = "grass-1", position = {x = x, y = y}}
+    end
+  end
+  surface.set_tiles(expanded_tiles, false, false, false, false)
+  storage.awaiting_rocket_silo_move = true
   log("[the-square-content-move-validator] entity state and placed tile moved east")
 end)
 
 script.on_nth_tick(1, function()
-  if not storage.awaiting_staging_cleanup or game.tick == 0 then
+  if game.tick == 0 then
+    return
+  end
+
+  if storage.awaiting_rocket_silo_move then
+    local rocket_silo = game.surfaces.nauvis.find_entities_filtered({
+      name = "rocket-silo",
+      position = {x = 0, y = 0}
+    })[1]
+
+    if not rocket_silo then
+      rocket_silo = game.surfaces.nauvis.create_entity({
+        name = "rocket-silo",
+        position = {x = 0, y = 0},
+        force = game.forces.player
+      })
+      assert(rocket_silo, "[the-square-content-move-validator] failed to create rocket silo")
+      rocket_silo.rocket_parts = rocket_silo.prototype.rocket_parts_required
+      storage.rocket_silo_created_tick = game.tick
+      return
+    end
+
+    if not rocket_silo.rocket and game.tick - storage.rocket_silo_created_tick < 600 then
+      return
+    end
+    assert(rocket_silo.rocket, "[the-square-content-move-validator] rocket silo did not create a rocket")
+    for _, direction in ipairs({"north", "east", "south", "west"}) do
+      local direction_check = square_move_runtime.check(
+        "nauvis",
+        direction,
+        defs.SQUARE_MOVE_MODES.CONTENTS
+      )
+      local direction_obstructions = {}
+      for _, entity in ipairs(direction_check.obstructions or {}) do
+        direction_obstructions[#direction_obstructions + 1] = entity.name .. ":" .. entity.type
+      end
+      assert(
+        direction_check.ok,
+        "[the-square-content-move-validator] rocket silo blocked "
+          .. direction
+          .. ": "
+          .. table.concat(direction_obstructions, ",")
+      )
+    end
+    local rocket_silo_result = square_move_runtime.move("nauvis", "north", {
+      mode = defs.SQUARE_MOVE_MODES.CONTENTS
+    })
+    local obstruction_names = {}
+    for _, entity in ipairs(rocket_silo_result.obstructions or {}) do
+      obstruction_names[#obstruction_names + 1] = entity.name .. ":" .. entity.type
+    end
+    assert(
+      rocket_silo_result.ok,
+      "[the-square-content-move-validator] rocket silo contents movement failed: "
+        .. tostring(rocket_silo_result.reason)
+        .. "; obstructions="
+        .. table.concat(obstruction_names, ",")
+    )
+    local moved_rocket_silo = game.surfaces.nauvis.find_entities_filtered({
+      name = "rocket-silo",
+      position = {x = 0, y = -1}
+    })[1]
+    assert(moved_rocket_silo, "[the-square-content-move-validator] moved rocket silo was not found")
+    assert(moved_rocket_silo.rocket, "[the-square-content-move-validator] silo rocket was not preserved")
+    storage.awaiting_rocket_silo_move = nil
+    for _, entity in ipairs(game.surfaces.nauvis.find_entities()) do
+      entity.destroy()
+    end
+    local spidertron = game.surfaces.nauvis.create_entity({
+      name = "spidertron",
+      position = {x = 0, y = 0},
+      force = game.forces.player
+    })
+    assert(spidertron, "[the-square-content-move-validator] failed to create spidertron")
+    storage.awaiting_spidertron_move = true
+    log("[the-square-content-move-validator] rocket silo moved north")
+    return
+  end
+
+  if storage.awaiting_spidertron_move then
+    local source_spidertron = game.surfaces.nauvis.find_entities_filtered({
+      name = "spidertron",
+      position = {x = 0, y = 0}
+    })[1]
+    assert(source_spidertron, "[the-square-content-move-validator] source spidertron was not found")
+    assert(
+      #source_spidertron.get_spider_legs() > 0,
+      "[the-square-content-move-validator] spidertron did not create attached legs"
+    )
+    local spidertron_result = square_move_runtime.move("nauvis", "east", {
+      mode = defs.SQUARE_MOVE_MODES.CONTENTS
+    })
+    local obstruction_names = {}
+    for _, entity in ipairs(spidertron_result.obstructions or {}) do
+      obstruction_names[#obstruction_names + 1] = entity.name .. ":" .. entity.type
+    end
+    assert(
+      spidertron_result.ok,
+      "[the-square-content-move-validator] spidertron contents movement failed: "
+        .. tostring(spidertron_result.reason)
+        .. "; obstructions="
+        .. table.concat(obstruction_names, ",")
+    )
+    assert(
+      game.surfaces.nauvis.find_entities_filtered({
+        name = "spidertron",
+        position = {x = 1, y = 0}
+      })[1],
+      "[the-square-content-move-validator] moved spidertron was not found"
+    )
+    storage.awaiting_spidertron_move = nil
+    storage.awaiting_staging_cleanup_tick = game.tick + 1
+    log("[the-square-content-move-validator] spidertron moved east")
+  end
+
+  if not storage.awaiting_staging_cleanup_tick
+    or game.tick < storage.awaiting_staging_cleanup_tick
+  then
     return
   end
 
@@ -282,7 +420,7 @@ script.on_nth_tick(1, function()
       error("[the-square-content-move-validator] move staging surface was not deleted: " .. surface_name)
     end
   end
-  storage.awaiting_staging_cleanup = nil
+  storage.awaiting_staging_cleanup_tick = nil
   log("[the-square-content-move-validator] PASS deferred move staging cleanup completed")
 end)
 EOF
@@ -300,7 +438,7 @@ EOF
 
 "$factorio_bin" \
   --benchmark "$save_path" \
-  --benchmark-ticks 3 \
+  --benchmark-ticks 700 \
   --mod-directory "$mod_dir" \
   --disable-audio > "$benchmark_log_path" 2>&1 || {
   echo "FAIL Factorio contents movement cleanup validation failed" >&2
