@@ -5,8 +5,10 @@ This project is a mod for the game Factorio.
 control.lua is reloaded on world creation
 settings.lua and data.lua on game startup
 
-changelog.txt is a user-facing changelog. Include only changes that are visible to players.
-Do not include developer-only refactors, cleanup, tests, tooling, or other internal changes.
+changelog.txt is a user-facing changelog. Include changes that are visible to players.
+Significant internal refactors may be mentioned in broad, non-technical terms when useful for
+setting player expectations, but do not describe their implementation details. Do not include
+routine cleanup, tests, tooling, or other internal changes.
 Follow Factorio's changelog format: https://lua-api.factorio.com/latest/auxiliary/changelog-format.html
 
 ## Version and release flow
