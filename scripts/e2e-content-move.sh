@@ -91,6 +91,15 @@ script.on_init(function()
     direction = defines.direction.west,
     entity_name = "the-square-item-ingress-managed-anchor"
   }
+  local west_egress_anchor = {
+    resource = "sulfuric-acid",
+    kind = "fluid",
+    flow = "egress",
+    side = "west",
+    position = {x = -4, y = 2},
+    direction = defines.direction.east,
+    entity_name = "the-square-fluid-egress-managed-anchor"
+  }
 
   storage.planets = {
     nauvis = {
@@ -98,7 +107,7 @@ script.on_init(function()
       surface_size = 9,
       surface_name = "nauvis",
       square_position = {x = 0, y = 0},
-      starter_anchors = {anchors = {west_anchor, north_anchor, east_anchor}}
+      starter_anchors = {anchors = {west_anchor, north_anchor, east_anchor, west_egress_anchor}}
     }
   }
 
@@ -165,6 +174,16 @@ script.on_init(function()
     type = "input"
   })
   assert(east_anchor.entity, "[the-square-content-move-validator] failed to create east Managed Line")
+  west_egress_anchor.entity = surface.create_entity({
+    name = west_egress_anchor.entity_name,
+    position = west_egress_anchor.position,
+    direction = west_egress_anchor.direction,
+    force = game.forces.player
+  })
+  assert(
+    west_egress_anchor.entity,
+    "[the-square-content-move-validator] failed to create disconnected west egress"
+  )
   local west_anchor_start = {x = west_anchor.entity.position.x, y = west_anchor.entity.position.y}
 
   local result = square_move_runtime.move("nauvis", "east", {
@@ -225,6 +244,13 @@ script.on_init(function()
     "[the-square-content-move-validator] leading ingress belt connection was not retained"
   )
   assert(east_anchor.entity and east_anchor.entity.valid, "leading Managed Line entity was replaced")
+  assert(
+    surface.find_entities_filtered({
+      name = "pipe",
+      position = {x = -2.5, y = 2.5}
+    })[1],
+    "[the-square-content-move-validator] disconnected egress did not gain a pipe connection"
+  )
   assert_equal(north_anchor.position.x, 1, "north Managed Line state did not move east")
   assert(north_anchor.entity and north_anchor.entity.valid, "north Managed Line entity was not reconciled")
   assert_equal(

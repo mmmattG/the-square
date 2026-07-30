@@ -315,6 +315,13 @@ local function open_square_move_gui(player, square_move_runtime)
     allow_none_state = false
   })
 
+  titlebar.add({
+    type = "sprite",
+    name = defs.SQUARE_MOVE_MODE_INFO_NAME,
+    sprite = "utility/info",
+    tooltip = {"gui.the-square-move-mode-tooltip"}
+  })
+
   frame.add({
     type = "label",
     name = defs.SQUARE_MOVE_DESCRIPTION_NAME,

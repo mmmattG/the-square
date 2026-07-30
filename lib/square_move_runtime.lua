@@ -289,7 +289,7 @@ local function reposition_managed_lines(surface, planet, direction, target_posit
   end
 end
 
-local function reposition_managed_lines_for_contents(surface, planet, direction, connected_managed_lines)
+local function reposition_managed_lines_for_contents(surface, planet, direction)
   local managed_lines = planet:get_managed_lines()
 
   if not (managed_lines and managed_lines.anchors) then
@@ -298,11 +298,7 @@ local function reposition_managed_lines_for_contents(surface, planet, direction,
 
   for _, anchor in ipairs(managed_lines.anchors) do
     if anchor.resource and anchor.position and anchor.side then
-      if anchor.side == OPPOSITE_SIDE[direction] or anchor.side == direction then
-        if connected_managed_lines[anchor] then
-          planet_square.ensure_managed_line_connection_stub(surface, anchor)
-        end
-      else
+      if anchor.side ~= OPPOSITE_SIDE[direction] and anchor.side ~= direction then
         local target_position = defs.move_position(anchor.position, direction, 1)
         local target_side = defs.get_anchor_side_for_position(
           planet:get_square_size(),
@@ -316,6 +312,8 @@ local function reposition_managed_lines_for_contents(surface, planet, direction,
           anchor.direction = defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side)
         end
       end
+
+      planet_square.ensure_managed_line_connection_stub(surface, anchor)
     end
   end
 end
@@ -648,7 +646,7 @@ local function move_contents(planet, surface, direction, options)
   end
 
   apply_contents_tile_updates(surface, visible_tile_updates, hidden_tile_updates)
-  reposition_managed_lines_for_contents(surface, planet, direction, connected_managed_lines)
+  reposition_managed_lines_for_contents(surface, planet, direction)
   delete_buffer_surface(buffer)
 
   if options.managed_line_runtime and options.managed_line_runtime.reconcile then

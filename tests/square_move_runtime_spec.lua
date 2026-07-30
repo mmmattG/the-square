@@ -358,6 +358,7 @@ run_test("Moving contents keeps characters fixed and includes edge belts and pip
   local north_managed_line = make_entity("pipe-to-ground", {x = 0, y = -4}, defines.direction.north)
   local east_connected_belt = make_entity("transport-belt", {x = 3, y = 1}, defines.direction.west)
   local east_managed_line = make_entity("underground-belt", {x = 4, y = 1}, defines.direction.west)
+  local west_disconnected_egress = make_entity("pipe-to-ground", {x = -4, y = 2}, defines.direction.east)
   local west_anchor = {
     resource = "iron-ore",
     kind = "item",
@@ -388,6 +389,16 @@ run_test("Moving contents keeps characters fixed and includes edge belts and pip
     entity_name = "the-square-item-ingress-managed-anchor",
     entity = east_managed_line
   }
+  local west_egress_anchor = {
+    resource = "sulfuric-acid",
+    kind = "fluid",
+    flow = "egress",
+    side = "west",
+    position = {x = -4, y = 2},
+    direction = defines.direction.east,
+    entity_name = "the-square-fluid-egress-managed-anchor",
+    entity = west_disconnected_egress
+  }
   local surface = make_surface(
     {
       assembler,
@@ -397,13 +408,14 @@ run_test("Moving contents keeps characters fixed and includes edge belts and pip
       east_connected_belt,
       west_managed_line,
       north_managed_line,
-      east_managed_line
+      east_managed_line,
+      west_disconnected_egress
     },
     {
       ["0:0"] = "refined-concrete"
     }
   )
-  install_world(surface, {west_anchor, north_anchor, east_anchor})
+  install_world(surface, {west_anchor, north_anchor, east_anchor, west_egress_anchor})
   local reconciled_planet = nil
 
   local result = square_move_runtime.move("nauvis", "east", {
@@ -456,6 +468,9 @@ run_test("Moving contents keeps characters fixed and includes edge belts and pip
   assert_equal(surface.created_entities[2].name, "transport-belt", "the leading ingress should retain a belt")
   assert_equal(surface.created_entities[2].position.x, 3, "the leading ingress belt should remain on the edge")
   assert_equal(surface.created_entities[2].position.y, 1, "the leading ingress belt should stay aligned")
+  assert_equal(surface.created_entities[3].name, "pipe", "a disconnected Managed Line should gain a pipe")
+  assert_equal(surface.created_entities[3].position.x, -3, "the new egress pipe should enter the Square")
+  assert_equal(surface.created_entities[3].position.y, 2, "the new egress pipe should stay aligned")
 
   local moved_concrete = false
   local vacated_floor = false
