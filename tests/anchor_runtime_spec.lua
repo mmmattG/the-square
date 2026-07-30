@@ -284,36 +284,6 @@ local function find_gui_child(parent, name)
   return nil
 end
 
-run_test("uranium purchase also grants one sulfuric acid egress line", function()
-  local player = build_player()
-  local crude_oil_definition = runtime_defs.get_input_definition("crude-oil", "nauvis")
-
-  storage.planets.nauvis.starter_anchors = {
-    layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = {
-      runtime_defs.create_managed_anchor(crude_oil_definition, "ingress", nil, nil)
-    }
-  }
-
-  anchor_runtime.purchase_managed_line_for_resource(player, "uranium-ore", "nauvis")
-
-  assert_equal(anchor_runtime.get_owned_line_counts("uranium-ore", "nauvis").owned, 1, "uranium should be owned after purchase")
-  assert_equal(
-    anchor_runtime.get_owned_line_counts("sulfuric-acid", "nauvis").owned,
-    1,
-    "first uranium purchase should also grant sulfuric acid egress ownership"
-  )
-
-  local inventory = player.get_inventory_names()
-
-  assert_equal(inventory[1], runtime_defs.get_ingress_item_name("uranium-ore", "nauvis"), "player should receive the uranium ingress item")
-  assert_equal(
-    inventory[2],
-    runtime_defs.get_egress_item_name("sulfuric-acid", "nauvis"),
-    "player should also receive the sulfuric acid egress item"
-  )
-end)
-
 run_test("swapping anchor line type refunds the previous Managed Line item", function()
   storage.planets.nauvis = {square_size = 12, surface_name = "nauvis"}
   storage.planets.nauvis.starter_anchors = {
@@ -575,8 +545,8 @@ run_test("placing crude oil ingress unlocks oil processing immediately when prer
     true,
     "crude oil placement should unlock oil processing immediately when prerequisites are already researched"
   )
-  assert_equal(anchor_runtime.get_owned_line_counts("crude-oil", "nauvis").owned, 1, "placing a purchased line should not duplicate ownership")
-  assert_equal(anchor_runtime.get_owned_line_counts("crude-oil", "nauvis").placed, 1, "placing a purchased line should move the stashed ownership record")
+  assert_equal(anchor_runtime.get_owned_line_counts("crude-oil", "nauvis").owned, 1, "placing a stashed line should not duplicate ownership")
+  assert_equal(anchor_runtime.get_owned_line_counts("crude-oil", "nauvis").placed, 1, "placing a stashed line should move the stashed ownership record")
   assert_equal(#force.get_played_sounds(), 1, "immediate unlock should play the research-complete sound once")
   assert_equal(
     force.get_played_sounds()[1].path,

@@ -3,52 +3,11 @@ local debug_platform_runtime = require("lib.debug_platform_runtime")
 
 local gui_runtime = {}
 
-local LEGACY_TOP_GUI_NAMES = {
-  "fes_shop_button",
-  "fes_screenshot_button",
-  "fes_dev_expand_button"
-}
-
-local LEGACY_LEFT_GUI_NAMES = {
-  "fes_shop_frame",
-  "fes_debug_frame"
-}
-
 local function destroy_child(parent, name)
   local child = parent and parent[name]
 
   if child and child.valid then
     child.destroy()
-  end
-end
-
-function gui_runtime.destroy_legacy_guis(player)
-  local removed = {
-    shop_frame = false,
-    debug_frame = false
-  }
-
-  if not (player and player.valid and player.gui) then
-    return removed
-  end
-
-  removed.shop_frame = player.gui.left and player.gui.left.fes_shop_frame ~= nil
-  removed.debug_frame = player.gui.left and player.gui.left.fes_debug_frame ~= nil
-
-  for _, name in ipairs(LEGACY_TOP_GUI_NAMES) do
-    destroy_child(player.gui.top, name)
-  end
-
-  for _, name in ipairs(LEGACY_LEFT_GUI_NAMES) do
-    destroy_child(player.gui.left, name)
-  end
-
-  return removed
-end
-
-function gui_runtime.destroy_all_legacy_guis()
-  for _, player in pairs(game.players) do
-    gui_runtime.destroy_legacy_guis(player)
   end
 end
 
@@ -214,20 +173,6 @@ function gui_runtime.refresh_all_debug_guis()
   for _, player in pairs(game.players) do
     gui_runtime.refresh_debug_gui(player)
   end
-end
-
-local function ensure_shop_button(player)
-  local button = player.gui.top[defs.SHOP_BUTTON_NAME]
-
-  if button then
-    return button
-  end
-
-  return player.gui.top.add({
-    type = "button",
-    name = defs.SHOP_BUTTON_NAME,
-    caption = {"gui.the-square-shop-button"}
-  })
 end
 
 local function ensure_screenshot_button(player)
@@ -405,68 +350,11 @@ function gui_runtime.handle_square_move_gui_closed(player, element)
   return true
 end
 
-local function build_shop_status_caption(resource, anchor_runtime)
-  local definition = defs.get_input_definition(resource, "nauvis") or defs.get_output_definition(resource, "nauvis")
-  local counts = anchor_runtime.get_owned_line_counts(resource, "nauvis")
-
-  if not definition then
-    return "Unavailable"
-  end
-
-  if counts.owned > 0 then
-    return "Owned: " .. counts.owned .. " (" .. counts.placed .. " placed, " .. counts.stashed .. " stashed)"
-  end
-
-  if definition.prerequisite_resource
-    and not anchor_runtime.is_resource_unlocked(definition.prerequisite_resource, "nauvis")
-  then
-    return "Locked until " .. defs.format_resource_name(definition.prerequisite_resource) .. " is unlocked"
-  end
-
-  return "Not yet unlocked"
-end
-
-local function ensure_shop_frame(player)
-  local frame = player.gui.left[defs.SHOP_FRAME_NAME]
-
-  if frame then
-    return frame
-  end
-
-  return player.gui.left.add({
-    type = "frame",
-    name = defs.SHOP_FRAME_NAME,
-    direction = "vertical",
-    caption = {"gui.the-square-shop-title"}
-  })
-end
-
-function gui_runtime.refresh_shop_gui(player, anchor_runtime)
-  if player and player.valid then
-    destroy_child(player.gui.top, defs.SHOP_BUTTON_NAME)
-    destroy_child(player.gui.left, defs.SHOP_FRAME_NAME)
-  end
-end
-
-function gui_runtime.toggle_shop_gui(player, anchor_runtime)
-  gui_runtime.refresh_shop_gui(player, anchor_runtime)
-end
-
-function gui_runtime.sync_shop_gui(player, anchor_runtime)
-  if not (player and player.valid) then
-    return
-  end
-
-  gui_runtime.destroy_legacy_guis(player)
-  gui_runtime.refresh_shop_gui(player, anchor_runtime)
-end
-
 function gui_runtime.sync_screenshot_gui(player)
   if not (player and player.valid) then
     return
   end
 
-  gui_runtime.destroy_legacy_guis(player)
   ensure_screenshot_button(player)
 end
 
@@ -475,7 +363,6 @@ function gui_runtime.sync_square_move_gui(player)
     return
   end
 
-  gui_runtime.destroy_legacy_guis(player)
   ensure_square_move_button(player)
 end
 
@@ -523,18 +410,11 @@ function gui_runtime.refresh_all_square_move_guis(square_move_runtime)
   end
 end
 
-function gui_runtime.sync_all_shop_guis(anchor_runtime)
-  for _, player in pairs(game.players) do
-    gui_runtime.sync_shop_gui(player, anchor_runtime)
-  end
-end
-
 function gui_runtime.sync_dev_gui(player)
   if not (player and player.valid) then
     return
   end
 
-  local removed_legacy = gui_runtime.destroy_legacy_guis(player)
   local button = player.gui.top[defs.DEV_EXPAND_BUTTON_NAME]
   local frame = player.gui.left[defs.DEBUG_FRAME_NAME]
 

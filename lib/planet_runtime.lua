@@ -478,7 +478,6 @@ function planet_runtime.initialize_world(anchor_runtime, gui_runtime)
     gui_runtime.sync_all_dev_guis()
     gui_runtime.sync_all_screenshot_guis()
     gui_runtime.sync_all_square_move_guis()
-    gui_runtime.sync_all_shop_guis(anchor_runtime)
   end
 end
 
@@ -518,7 +517,6 @@ function planet_runtime.refresh_spawn_routing(planet_name, anchor_runtime, gui_r
   if gui_runtime then
     gui_runtime.sync_all_dev_guis()
     gui_runtime.sync_all_square_move_guis()
-    gui_runtime.sync_all_shop_guis(anchor_runtime)
   end
 end
 

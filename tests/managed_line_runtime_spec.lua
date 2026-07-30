@@ -27,12 +27,8 @@ run_test("managed_line_runtime exposes only the deep Managed Line interface", fu
   assert_equal(type(managed_line_runtime.initialize), "function", "Managed Line runtime should expose initialization")
   assert_equal(type(managed_line_runtime.reconcile), "function", "Managed Line runtime should expose event-driven reconciliation")
   assert_equal(type(managed_line_runtime.pump), "function", "Managed Line runtime should expose pump")
-  assert_equal(type(managed_line_runtime.purchase), "function", "Managed Line runtime should expose purchase")
   assert_equal(type(managed_line_runtime.sync_tier), "function", "Managed Line runtime should expose sync_tier")
   assert_equal(type(managed_line_runtime.handle_built), "function", "Managed Line runtime should expose explicit event handlers")
-  assert_equal(type(managed_line_runtime.get_owned_line_counts), "function", "Managed Line runtime should expose shop queries")
-  assert_equal(type(managed_line_runtime.purchase_managed_line_for_resource), "nil", "legacy purchase export should not leak through the seam")
-  assert_equal(type(managed_line_runtime.sync_ingress_tier_from_research), "nil", "legacy tier export should not leak through the seam")
 end)
 
 run_test("control does not schedule recurring Managed Line reconciliation", function()

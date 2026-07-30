@@ -1,5 +1,7 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 
+game = {players = {}}
+
 local function assert_equal(actual, expected, message)
   if actual ~= expected then
     error((message or "values differ") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(actual))
@@ -102,4 +104,56 @@ run_test("0.1.5 migration preserves already canonical planet storage", function(
   run_migration()
 
   assert_equal(storage.planets.nauvis, nauvis_state, "canonical state should be unchanged")
+end)
+
+run_test("0.1.5 migration removes obsolete player GUIs", function()
+  local function add_gui_element(parent, name)
+    local element = {
+      valid = true,
+      destroyed = false
+    }
+
+    element.destroy = function()
+      element.valid = false
+      element.destroyed = true
+      parent[name] = nil
+    end
+    parent[name] = element
+
+    return element
+  end
+
+  local top = {}
+  local left = {}
+  local obsolete_elements = {
+    add_gui_element(top, "fes_shop_button"),
+    add_gui_element(top, "fes_screenshot_button"),
+    add_gui_element(top, "fes_dev_expand_button"),
+    add_gui_element(top, "the_square_shop_button"),
+    add_gui_element(left, "fes_shop_frame"),
+    add_gui_element(left, "fes_debug_frame"),
+    add_gui_element(left, "the_square_shop_frame")
+  }
+  local current_button = add_gui_element(top, "the_square_screenshot_button")
+
+  storage = {}
+  game = {
+    players = {
+      {
+        valid = true,
+        gui = {
+          top = top,
+          left = left
+        }
+      }
+    }
+  }
+
+  run_migration()
+
+  for _, element in ipairs(obsolete_elements) do
+    assert_equal(element.destroyed, true, "migration should destroy every obsolete GUI element")
+  end
+
+  assert_equal(current_button.destroyed, false, "migration should preserve current GUI elements")
 end)
