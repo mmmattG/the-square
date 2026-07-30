@@ -143,3 +143,61 @@ run_test("0.1.3 migration falls back to researched ingress tier for legacy item 
   )
 end)
 
+run_test("0.1.3 migration moves the legacy bootstrap surface to Nauvis", function()
+  local clone_spec
+  local deleted_surface
+  local teleported_surface
+  local legacy_surface = {
+    clone_area = function(spec)
+      clone_spec = spec
+    end
+  }
+  local nauvis_surface = {
+    map_gen_settings = {width = 11, height = 11},
+    destroy_decoratives = function()
+    end,
+    clear_hidden_tiles = function()
+    end,
+    find_entities = function()
+      return {}
+    end,
+    get_chunks = function()
+      return function()
+        return nil
+      end
+    end
+  }
+
+  storage = {
+    bootstrap = {
+      square_size = 9,
+      surface_size = 11,
+      surface_name = "fes-bootstrap"
+    }
+  }
+  game = {
+    surfaces = {
+      ["fes-bootstrap"] = legacy_surface,
+      nauvis = nauvis_surface
+    },
+    forces = {},
+    players = {
+      {
+        valid = true,
+        teleport = function(_, surface)
+          teleported_surface = surface
+        end
+      }
+    },
+    delete_surface = function(surface)
+      deleted_surface = surface
+    end
+  }
+
+  run_migration()
+
+  assert_equal(storage.bootstrap.surface_name, "nauvis", "migration should update the stored surface name")
+  assert_equal(clone_spec.destination_surface, nauvis_surface, "migration should clone the Square to Nauvis")
+  assert_equal(teleported_surface, nauvis_surface, "migration should move players to Nauvis")
+  assert_equal(deleted_surface, legacy_surface, "migration should delete the legacy surface")
+end)

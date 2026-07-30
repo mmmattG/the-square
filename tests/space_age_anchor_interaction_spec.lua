@@ -89,8 +89,8 @@ run_test("Vulcanus anchor slots open a Managed Line configuration menu using pla
   }
   game.surfaces.vulcanus = surface
   storage = {
-    bootstrap = {square_size = 7, surface_name = "nauvis"},
     planets = {
+      nauvis = {square_size = 7, surface_name = "nauvis"},
       vulcanus = {
         square_size = 17,
         surface_size = 19,
@@ -163,8 +163,9 @@ run_test("Space Age item ingress mining matches centered entity positions after 
     }
     game.surfaces[case.planet] = surface
     storage = {
-      bootstrap = {square_size = 7, surface_name = "nauvis"},
-      planets = {}
+      planets = {
+        nauvis = {square_size = 7, surface_name = "nauvis"}
+      }
     }
     storage.planets[case.planet] = {
       square_size = 17,

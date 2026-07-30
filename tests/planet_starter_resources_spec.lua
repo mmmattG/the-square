@@ -4,7 +4,7 @@ defines = {direction = {south = 1, west = 2, north = 3, east = 4}}
 settings = {global = {}, startup = {}}
 
 local defs = require("lib.runtime_defs")
-local bootstrap_runtime = require("lib.bootstrap_runtime")
+local planet_runtime = require("lib.planet_runtime")
 
 local function assert_equal(actual, expected, message)
   if actual ~= expected then
@@ -74,7 +74,7 @@ run_test("starter config includes Fulgora placed entities and Gleba seed chest",
 end)
 
 run_test("starter layout includes planet-local Gleba seed egresses", function()
-  local anchors = bootstrap_runtime.build_starter_anchor_layout(17, "gleba")
+  local anchors = planet_runtime.build_starter_anchor_layout(17, "gleba")
   local seen = {}
   for _, anchor in ipairs(anchors) do
     seen[anchor.flow .. ":" .. anchor.resource] = true

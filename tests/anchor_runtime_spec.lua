@@ -18,8 +18,10 @@ settings = {
 }
 
 storage = {
-  bootstrap = {
-    square_size = 12
+  planets = {
+    nauvis = {
+      square_size = 12
+    }
   }
 }
 
@@ -126,7 +128,7 @@ local function build_player()
     force = {},
     position = {x = 0, y = 0},
     surface = {
-      name = "fes-bootstrap",
+      name = "nauvis",
       create_entity = create_entity,
       find_entities_filtered = function()
         return {}
@@ -169,8 +171,10 @@ local function build_player()
 end
 
 local function configure_selected_slot(player, resource, flow)
-  storage.bootstrap.square_size = storage.bootstrap.square_size or 12
-  local definition = flow == "egress" and runtime_defs.get_output_definition(resource) or runtime_defs.get_input_definition(resource)
+  storage.planets.nauvis.square_size = storage.planets.nauvis.square_size or 12
+  local definition = flow == "egress"
+    and runtime_defs.get_output_definition(resource, "nauvis")
+    or runtime_defs.get_input_definition(resource, "nauvis")
   player.insert({name = runtime_defs.get_generic_anchor_item_name(definition.kind, flow), count = 1})
   player.surface.create_entity = player.surface.create_entity or function(_, spec)
     spec = spec or _
@@ -282,46 +286,45 @@ end
 
 run_test("uranium purchase also grants one sulfuric acid egress line", function()
   local player = build_player()
-  local crude_oil_definition = runtime_defs.get_input_definition("crude-oil")
+  local crude_oil_definition = runtime_defs.get_input_definition("crude-oil", "nauvis")
 
-  storage.starter_anchors = {
+  storage.planets.nauvis.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {
       runtime_defs.create_managed_anchor(crude_oil_definition, "ingress", nil, nil)
     }
   }
 
-  anchor_runtime.purchase_managed_line_for_resource(player, "uranium-ore")
+  anchor_runtime.purchase_managed_line_for_resource(player, "uranium-ore", "nauvis")
 
-  assert_equal(anchor_runtime.get_owned_line_counts("uranium-ore").owned, 1, "uranium should be owned after purchase")
+  assert_equal(anchor_runtime.get_owned_line_counts("uranium-ore", "nauvis").owned, 1, "uranium should be owned after purchase")
   assert_equal(
-    anchor_runtime.get_owned_line_counts("sulfuric-acid").owned,
+    anchor_runtime.get_owned_line_counts("sulfuric-acid", "nauvis").owned,
     1,
     "first uranium purchase should also grant sulfuric acid egress ownership"
   )
 
   local inventory = player.get_inventory_names()
 
-  assert_equal(inventory[1], runtime_defs.get_ingress_item_name("uranium-ore"), "player should receive the uranium ingress item")
+  assert_equal(inventory[1], runtime_defs.get_ingress_item_name("uranium-ore", "nauvis"), "player should receive the uranium ingress item")
   assert_equal(
     inventory[2],
-    runtime_defs.get_egress_item_name("sulfuric-acid"),
+    runtime_defs.get_egress_item_name("sulfuric-acid", "nauvis"),
     "player should also receive the sulfuric acid egress item"
   )
 end)
 
 run_test("swapping anchor line type refunds the previous Managed Line item", function()
-  storage.bootstrap = {square_size = 12, surface_name = "fes-bootstrap"}
-  storage.planets = nil
-  storage.starter_anchors = {
+  storage.planets.nauvis = {square_size = 12, surface_name = "nauvis"}
+  storage.planets.nauvis.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", "north", {x = -6, y = -7})
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore", "nauvis"), "ingress", "north", {x = -6, y = -7})
     }
   }
 
   local player = build_player()
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
 
   player.insert({name = runtime_defs.get_generic_anchor_item_name("fluid", "ingress"), count = 1})
   anchor_runtime.handle_anchor_gui_opened({
@@ -336,19 +339,18 @@ run_test("swapping anchor line type refunds the previous Managed Line item", fun
     name = runtime_defs.ANCHOR_CONFIG_BUTTON_PREFIX .. "pick__ingress__water"
   }), true, "swap click should be handled")
 
-  local anchor = storage.starter_anchors.anchors[1]
+  local anchor = storage.planets.nauvis.starter_anchors.anchors[1]
   assert_equal(anchor.resource, "water", "anchor should switch to the selected fluid ingress")
   assert_equal(player.get_item_count(runtime_defs.get_generic_anchor_item_name("fluid", "ingress")), 0, "new fluid line item should be consumed")
   assert_equal(player.get_item_count(runtime_defs.get_generic_anchor_item_name("item", "ingress")), 1, "previous item line should be refunded")
 end)
 
 run_test("same item resource can be reselected when the selected tier differs", function()
-  storage.bootstrap = {square_size = 12, surface_name = "fes-bootstrap"}
-  storage.planets = nil
-  storage.starter_anchors = {
+  storage.planets.nauvis = {square_size = 12, surface_name = "nauvis"}
+  storage.planets.nauvis.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", "north", {x = -6, y = -7}, 1)
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore", "nauvis"), "ingress", "north", {x = -6, y = -7}, 1)
     }
   }
 
@@ -359,7 +361,7 @@ run_test("same item resource can be reselected when the selected tier differs", 
       ["the-square-ingress-red"] = {researched = true}
     }
   }
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.insert({name = runtime_defs.get_generic_anchor_item_name_for_tier("item", "ingress", 3), count = 1})
 
   anchor_runtime.handle_anchor_gui_opened({
@@ -385,7 +387,7 @@ run_test("same item resource can be reselected when the selected tier differs", 
     name = runtime_defs.ANCHOR_CONFIG_BUTTON_PREFIX .. "pick__ingress__iron-ore"
   }), true, "same-resource tier upgrade should be handled")
 
-  local anchor = storage.starter_anchors.anchors[1]
+  local anchor = storage.planets.nauvis.starter_anchors.anchors[1]
   assert_equal(anchor.resource, "iron-ore", "anchor should keep the selected item resource")
   assert_equal(anchor.tier_level, 3, "anchor should move to the selected tier")
   assert_equal(player.get_item_count(runtime_defs.get_generic_anchor_item_name_for_tier("item", "ingress", 3)), 0, "new tier line item should be consumed")
@@ -393,17 +395,16 @@ run_test("same item resource can be reselected when the selected tier differs", 
 end)
 
 run_test("swapping anchor line type is cancelled when previous Managed Line cannot be refunded", function()
-  storage.bootstrap = {square_size = 12, surface_name = "fes-bootstrap"}
-  storage.planets = nil
-  storage.starter_anchors = {
+  storage.planets.nauvis = {square_size = 12, surface_name = "nauvis"}
+  storage.planets.nauvis.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", "north", {x = -6, y = -7})
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore", "nauvis"), "ingress", "north", {x = -6, y = -7})
     }
   }
 
   local player = build_player()
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.can_insert = function()
     return false
   end
@@ -421,21 +422,21 @@ run_test("swapping anchor line type is cancelled when previous Managed Line cann
     name = runtime_defs.ANCHOR_CONFIG_BUTTON_PREFIX .. "pick__ingress__water"
   }), true, "failed swap click should still be handled")
 
-  local anchor = storage.starter_anchors.anchors[1]
+  local anchor = storage.planets.nauvis.starter_anchors.anchors[1]
   assert_equal(anchor.resource, "iron-ore", "anchor should keep the previous item ingress")
   assert_equal(player.get_item_count(runtime_defs.get_generic_anchor_item_name("fluid", "ingress")), 1, "new fluid line item should not be consumed")
   assert_equal(player.get_messages()[1][1], "message.the-square-managed-line-refund-inventory-full", "player should see the full-inventory refund error")
 end)
 
 run_test("closing the anchor configuration GUI destroys the screen frame", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
-  storage.starter_anchors = {
+  storage.planets.nauvis.surface_name = "nauvis"
+  storage.planets.nauvis.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {}
   }
 
   local player = build_player()
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -466,12 +467,12 @@ run_test("fluid egress faces inward on the managed border", function()
 end)
 
 run_test("placing crude oil ingress unlocks oil processing once prerequisites are researched", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.planets.nauvis.surface_name = "nauvis"
 
   local force = build_force_with_oil_processing(false)
   local player = build_player()
   player.force = force
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -479,7 +480,7 @@ run_test("placing crude oil ingress unlocks oil processing once prerequisites ar
   }
   local first_cursor_stack = {
     valid_for_read = true,
-    name = runtime_defs.get_ingress_item_name("crude-oil"),
+    name = runtime_defs.get_ingress_item_name("crude-oil", "nauvis"),
     count = 1
   }
   first_cursor_stack.clear = function()
@@ -489,10 +490,10 @@ run_test("placing crude oil ingress unlocks oil processing once prerequisites ar
   end
   player.cursor_stack = first_cursor_stack
 
-  storage.starter_anchors = {
+  storage.planets.nauvis.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("crude-oil"), "ingress", nil, nil)
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("crude-oil", "nauvis"), "ingress", nil, nil)
     }
   }
 
@@ -513,7 +514,7 @@ run_test("placing crude oil ingress unlocks oil processing once prerequisites ar
 
   local second_cursor_stack = {
     valid_for_read = true,
-    name = runtime_defs.get_ingress_item_name("crude-oil"),
+    name = runtime_defs.get_ingress_item_name("crude-oil", "nauvis"),
     count = 1
   }
   second_cursor_stack.clear = function()
@@ -537,12 +538,12 @@ run_test("placing crude oil ingress unlocks oil processing once prerequisites ar
 end)
 
 run_test("placing crude oil ingress unlocks oil processing immediately when prerequisites are already researched", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.planets.nauvis.surface_name = "nauvis"
 
   local force = build_force_with_oil_processing(true)
   local player = build_player()
   player.force = force
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -550,7 +551,7 @@ run_test("placing crude oil ingress unlocks oil processing immediately when prer
   }
   local cursor_stack = {
     valid_for_read = true,
-    name = runtime_defs.get_ingress_item_name("crude-oil"),
+    name = runtime_defs.get_ingress_item_name("crude-oil", "nauvis"),
     count = 1
   }
   cursor_stack.clear = function()
@@ -560,10 +561,10 @@ run_test("placing crude oil ingress unlocks oil processing immediately when prer
   end
   player.cursor_stack = cursor_stack
 
-  storage.starter_anchors = {
+  storage.planets.nauvis.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("crude-oil"), "ingress", nil, nil)
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("crude-oil", "nauvis"), "ingress", nil, nil)
     }
   }
 
@@ -574,8 +575,8 @@ run_test("placing crude oil ingress unlocks oil processing immediately when prer
     true,
     "crude oil placement should unlock oil processing immediately when prerequisites are already researched"
   )
-  assert_equal(anchor_runtime.get_owned_line_counts("crude-oil").owned, 1, "placing a purchased line should not duplicate ownership")
-  assert_equal(anchor_runtime.get_owned_line_counts("crude-oil").placed, 1, "placing a purchased line should move the stashed ownership record")
+  assert_equal(anchor_runtime.get_owned_line_counts("crude-oil", "nauvis").owned, 1, "placing a purchased line should not duplicate ownership")
+  assert_equal(anchor_runtime.get_owned_line_counts("crude-oil", "nauvis").placed, 1, "placing a purchased line should move the stashed ownership record")
   assert_equal(#force.get_played_sounds(), 1, "immediate unlock should play the research-complete sound once")
   assert_equal(
     force.get_played_sounds()[1].path,
@@ -585,12 +586,12 @@ run_test("placing crude oil ingress unlocks oil processing immediately when prer
 end)
 
 run_test("placing non-crude ingress does not unlock oil processing", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.planets.nauvis.surface_name = "nauvis"
 
   local force = build_force_with_oil_processing(true)
   local player = build_player()
   player.force = force
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -598,7 +599,7 @@ run_test("placing non-crude ingress does not unlock oil processing", function()
   }
   local cursor_stack = {
     valid_for_read = true,
-    name = runtime_defs.get_ingress_item_name("iron-ore"),
+    name = runtime_defs.get_ingress_item_name("iron-ore", "nauvis"),
     count = 1
   }
   cursor_stack.clear = function()
@@ -608,10 +609,10 @@ run_test("placing non-crude ingress does not unlock oil processing", function()
   end
   player.cursor_stack = cursor_stack
 
-  storage.starter_anchors = {
+  storage.planets.nauvis.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", nil, nil)
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore", "nauvis"), "ingress", nil, nil)
     }
   }
 
@@ -622,12 +623,12 @@ run_test("placing non-crude ingress does not unlock oil processing", function()
 end)
 
 run_test("placing uranium ore ingress unlocks uranium processing once prerequisites are researched", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.planets.nauvis.surface_name = "nauvis"
 
   local force = build_force_with_uranium_processing(false)
   local player = build_player()
   player.force = force
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -635,7 +636,7 @@ run_test("placing uranium ore ingress unlocks uranium processing once prerequisi
   }
   local first_cursor_stack = {
     valid_for_read = true,
-    name = runtime_defs.get_ingress_item_name("uranium-ore"),
+    name = runtime_defs.get_ingress_item_name("uranium-ore", "nauvis"),
     count = 1
   }
   first_cursor_stack.clear = function()
@@ -645,10 +646,10 @@ run_test("placing uranium ore ingress unlocks uranium processing once prerequisi
   end
   player.cursor_stack = first_cursor_stack
 
-  storage.starter_anchors = {
+  storage.planets.nauvis.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("uranium-ore"), "ingress", nil, nil)
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("uranium-ore", "nauvis"), "ingress", nil, nil)
     }
   }
 
@@ -669,7 +670,7 @@ run_test("placing uranium ore ingress unlocks uranium processing once prerequisi
 
   local second_cursor_stack = {
     valid_for_read = true,
-    name = runtime_defs.get_ingress_item_name("uranium-ore"),
+    name = runtime_defs.get_ingress_item_name("uranium-ore", "nauvis"),
     count = 1
   }
   second_cursor_stack.clear = function()
@@ -692,12 +693,12 @@ run_test("placing uranium ore ingress unlocks uranium processing once prerequisi
 end)
 
 run_test("placing uranium ore ingress unlocks uranium processing immediately when prerequisites are already researched", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.planets.nauvis.surface_name = "nauvis"
 
   local force = build_force_with_uranium_processing(true)
   local player = build_player()
   player.force = force
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -705,7 +706,7 @@ run_test("placing uranium ore ingress unlocks uranium processing immediately whe
   }
   local cursor_stack = {
     valid_for_read = true,
-    name = runtime_defs.get_ingress_item_name("uranium-ore"),
+    name = runtime_defs.get_ingress_item_name("uranium-ore", "nauvis"),
     count = 1
   }
   cursor_stack.clear = function()
@@ -715,10 +716,10 @@ run_test("placing uranium ore ingress unlocks uranium processing immediately whe
   end
   player.cursor_stack = cursor_stack
 
-  storage.starter_anchors = {
+  storage.planets.nauvis.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("uranium-ore"), "ingress", nil, nil)
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("uranium-ore", "nauvis"), "ingress", nil, nil)
     }
   }
 
@@ -738,12 +739,12 @@ run_test("placing uranium ore ingress unlocks uranium processing immediately whe
 end)
 
 run_test("placing non-uranium ingress does not unlock uranium processing", function()
-  storage.bootstrap.surface_name = "fes-bootstrap"
+  storage.planets.nauvis.surface_name = "nauvis"
 
   local force = build_force_with_uranium_processing(true)
   local player = build_player()
   player.force = force
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -751,7 +752,7 @@ run_test("placing non-uranium ingress does not unlock uranium processing", funct
   }
   local cursor_stack = {
     valid_for_read = true,
-    name = runtime_defs.get_ingress_item_name("iron-ore"),
+    name = runtime_defs.get_ingress_item_name("iron-ore", "nauvis"),
     count = 1
   }
   cursor_stack.clear = function()
@@ -761,10 +762,10 @@ run_test("placing non-uranium ingress does not unlock uranium processing", funct
   end
   player.cursor_stack = cursor_stack
 
-  storage.starter_anchors = {
+  storage.planets.nauvis.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", nil, nil)
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore", "nauvis"), "ingress", nil, nil)
     }
   }
 
@@ -807,24 +808,30 @@ run_test("unconfigured anchor points stay empty and keep their slot proxy", func
     players = {}
   }
   storage = {
-    bootstrap = {square_size = 12, surface_name = runtime_defs.SURFACE_NAME, ingress_tier = 1},
-    starter_anchors = {layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION, anchors = {
-      {
-        kind = "fluid",
-        flow = "ingress",
-        side = "north",
-        position = {x = -6, y = -7},
-        direction = defines.direction.north,
-        entity_name = runtime_defs.get_generic_anchor_entity_name("fluid", "ingress"),
-        item_name = runtime_defs.get_generic_anchor_item_name("fluid", "ingress"),
-        item_progress = {0, 0}
+    planets = {
+      nauvis = {
+        square_size = 12,
+        surface_name = runtime_defs.SURFACE_NAME,
+        ingress_tier = 1,
+        starter_anchors = {layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION, anchors = {
+          {
+            kind = "fluid",
+            flow = "ingress",
+            side = "north",
+            position = {x = -6, y = -7},
+            direction = defines.direction.north,
+            entity_name = runtime_defs.get_generic_anchor_entity_name("fluid", "ingress"),
+            item_name = runtime_defs.get_generic_anchor_item_name("fluid", "ingress"),
+            item_progress = {0, 0}
+          }
+        }}
       }
-    }}
+    }
   }
 
   anchor_runtime.initialize_planet_managed_lines("nauvis")
 
-  local anchor = storage.starter_anchors.anchors[1]
+  local anchor = storage.planets.nauvis.starter_anchors.anchors[1]
   local initial_entity_count = #created_entities
   anchor_runtime.initialize_planet_managed_lines("nauvis")
 
@@ -869,25 +876,31 @@ run_test("existing generic item Managed Lines collapse back to anchor slot proxi
     players = {}
   }
   storage = {
-    bootstrap = {square_size = 12, surface_name = runtime_defs.SURFACE_NAME, ingress_tier = 1},
-    starter_anchors = {layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION, anchors = {
-      {
-        kind = "item",
-        flow = "ingress",
-        side = "north",
-        position = {x = -6, y = -7},
-        direction = defines.direction.south,
-        entity = generic_entity,
-        entity_name = runtime_defs.get_generic_anchor_entity_name("item", "ingress"),
-        item_name = runtime_defs.get_generic_anchor_item_name("item", "ingress"),
-        item_progress = {0, 0}
+    planets = {
+      nauvis = {
+        square_size = 12,
+        surface_name = runtime_defs.SURFACE_NAME,
+        ingress_tier = 1,
+        starter_anchors = {layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION, anchors = {
+          {
+            kind = "item",
+            flow = "ingress",
+            side = "north",
+            position = {x = -6, y = -7},
+            direction = defines.direction.south,
+            entity = generic_entity,
+            entity_name = runtime_defs.get_generic_anchor_entity_name("item", "ingress"),
+            item_name = runtime_defs.get_generic_anchor_item_name("item", "ingress"),
+            item_progress = {0, 0}
+          }
+        }}
       }
-    }}
+    }
   }
 
   anchor_runtime.initialize_planet_managed_lines("nauvis")
 
-  assert_equal(storage.starter_anchors.anchors[1].entity, nil, "existing generic item Managed Line state should no longer own a visible generic entity")
+  assert_equal(storage.planets.nauvis.starter_anchors.anchors[1].entity, nil, "existing generic item Managed Line state should no longer own a visible generic entity")
 end)
 
 run_test("choosing a Managed Line recipe configures the Managed Line for its minable base entity", function()
@@ -895,7 +908,7 @@ run_test("choosing a Managed Line recipe configures the Managed Line for its min
   local created_entities = {}
   local generic_entity
   local surface = {
-    name = "fes-bootstrap",
+    name = "nauvis",
     find_entities_filtered = function(_, filter)
       filter = filter or _
       if filter and filter.position and generic_entity and generic_entity.valid then
@@ -938,43 +951,48 @@ run_test("choosing a Managed Line recipe configures the Managed Line for its min
 
   game = {
     forces = {player = player_force},
-    surfaces = {["fes-bootstrap"] = surface},
+    surfaces = {["nauvis"] = surface},
     players = {}
   }
   storage = {
-    bootstrap = {square_size = 12, surface_name = "fes-bootstrap", ingress_tier = 1},
-    starter_anchors = {layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION, anchors = {
-      {
-        kind = "item",
-        flow = "ingress",
-        side = "north",
-        position = {x = -6, y = -7},
-        direction = defines.direction.south,
-        entity = generic_entity,
-        entity_name = runtime_defs.get_generic_anchor_entity_name("item", "ingress"),
-        item_progress = {0, 0}
+    planets = {
+      nauvis = {
+        square_size = 12,
+        surface_name = "nauvis",
+        ingress_tier = 1,
+        starter_anchors = {layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION, anchors = {
+          {
+            kind = "item",
+            flow = "ingress",
+            side = "north",
+            position = {x = -6, y = -7},
+            direction = defines.direction.south,
+            entity = generic_entity,
+            entity_name = runtime_defs.get_generic_anchor_entity_name("item", "ingress"),
+            item_progress = {0, 0}
+          }
+        }}
       }
-    }}
+    }
   }
 
   assert_equal(anchor_runtime.handle_anchor_recipe_changed(generic_entity), true, "recipe selection should be accepted")
 
-  local anchor = storage.starter_anchors.anchors[1]
+  local anchor = storage.planets.nauvis.starter_anchors.anchors[1]
   assert_equal(anchor.resource, "iron-ore", "selected recipe should configure the resource")
   assert_equal(anchor.entity_name, runtime_defs.get_ingress_entity_name("iron-ore", 1), "configured Managed Lines should use the minable base entity instead of a top overlay")
   assert_equal(generic_entity.active, false, "selected recipes should stop crafting before the generic Managed Line is replaced")
 end)
 
 run_test("anchor slot configuration fails when matching Managed Line item is missing", function()
-  storage.bootstrap = {square_size = 12, surface_name = "fes-bootstrap"}
-  storage.planets = nil
-  storage.starter_anchors = {
+  storage.planets.nauvis = {square_size = 12, surface_name = "nauvis"}
+  storage.planets.nauvis.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {}
   }
 
   local player = build_player()
-  player.surface = {name = "fes-bootstrap"}
+  player.surface = {name = "nauvis"}
   player.selected = {
     valid = true,
     name = runtime_defs.ANCHOR_SLOT_PROXY_NAME,
@@ -1008,7 +1026,7 @@ run_test("anchor slot configuration fails when matching Managed Line item is mis
     name = runtime_defs.ANCHOR_CONFIG_BUTTON_PREFIX .. "ingress__iron-ore"
   }), true, "missing inventory should be handled by the anchor configuration menu")
   assert_equal(player.get_messages()[1][1], "message.the-square-managed-line-missing-inventory", "missing inventory should explain the failure")
-  assert_equal(anchor_runtime.get_owned_line_counts("iron-ore").owned, 0, "failed placement should not create owned lines")
+  assert_equal(anchor_runtime.get_owned_line_counts("iron-ore", "nauvis").owned, 0, "failed placement should not create owned lines")
 end)
 
 run_test("ingress tier research sync keeps planet starter Managed Lines as minable base entities", function()
@@ -1064,9 +1082,8 @@ run_test("ingress tier research sync keeps planet starter Managed Lines as minab
     players = {}
   }
   storage = {
-    bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
-    starter_anchors = nil,
     planets = {
+      nauvis = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
       fulgora = {
         square_size = 17,
         surface_name = "fulgora",
@@ -1087,7 +1104,7 @@ run_test("ingress tier research sync keeps planet starter Managed Lines as minab
   }
 
   assert_equal(anchor_runtime.sync_ingress_tier_from_research(player_force), true, "research sync should update the stored tier")
-  assert_equal(storage.bootstrap.ingress_tier, 3, "red ingress research should set tier 3")
+  assert_equal(storage.planets.nauvis.ingress_tier, 3, "red ingress research should set tier 3")
   assert_equal(destroyed_yellow, true, "legacy planet ingress Managed Line should be destroyed")
   assert_equal(created_entities[1].name, runtime_defs.get_ingress_entity_name("scrap", 3), "planet ingress Managed Line should be recreated as the upgraded minable base entity")
   assert_equal(created_entities[1].active, true, "configured Managed Lines should stay active after replacement")
@@ -1095,17 +1112,16 @@ run_test("ingress tier research sync keeps planet starter Managed Lines as minab
 end)
 
 run_test("direct Managed Line placement tells players to use anchor slots", function()
-  storage.bootstrap = {
+  storage.planets.nauvis = {
     square_size = 12,
     surface_name = "nauvis"
   }
-  storage.planets = nil
-  storage.starter_anchors = {
+  storage.planets.nauvis.starter_anchors = {
     layout_version = runtime_defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore"), "ingress", nil, nil),
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("crude-oil"), "ingress", nil, nil),
-      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("crude-oil"), "ingress", "north", {x = -1, y = -7})
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("iron-ore", "nauvis"), "ingress", nil, nil),
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("crude-oil", "nauvis"), "ingress", nil, nil),
+      runtime_defs.create_managed_anchor(runtime_defs.get_input_definition("crude-oil", "nauvis"), "ingress", "north", {x = -1, y = -7})
     }
   }
 

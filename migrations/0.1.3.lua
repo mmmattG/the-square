@@ -1,5 +1,6 @@
-local bootstrap_runtime = require("lib.bootstrap_runtime")
+local planet_runtime = require("lib.planet_runtime")
 local defs = require("lib.runtime_defs")
+local LEGACY_SURFACE_NAME = "fes-bootstrap"
 
 local function clear_managed_anchor_refs()
   if storage.starter_anchors and storage.starter_anchors.anchors then
@@ -30,11 +31,11 @@ end
 local function migrate_legacy_bootstrap_surface()
   local bootstrap = storage.bootstrap
 
-  if not bootstrap or not (not bootstrap.surface_name or bootstrap.surface_name == defs.LEGACY_SURFACE_NAME) then
+  if not bootstrap or not (not bootstrap.surface_name or bootstrap.surface_name == LEGACY_SURFACE_NAME) then
     return
   end
 
-  local legacy_surface = game.surfaces[defs.LEGACY_SURFACE_NAME]
+  local legacy_surface = game.surfaces[LEGACY_SURFACE_NAME]
   local square_size = bootstrap.square_size or defs.get_square_size()
   local surface_size = bootstrap.surface_size or defs.get_surface_size(square_size)
   local target_surface = game.surfaces[defs.SURFACE_NAME]
@@ -75,8 +76,8 @@ local function migrate_legacy_bootstrap_surface()
   bootstrap.surface_name = defs.SURFACE_NAME
   bootstrap.surface_size = surface_size
   clear_managed_anchor_refs()
-  bootstrap_runtime.refresh_all_generated_chunk_tiles(target_surface, square_size, surface_size)
-  bootstrap_runtime.clear_surface_chart(target_surface)
+  planet_runtime.refresh_all_generated_chunk_tiles(target_surface, square_size, surface_size)
+  planet_runtime.clear_surface_chart(target_surface)
 
   for _, player in pairs(game.players) do
     if player.valid then

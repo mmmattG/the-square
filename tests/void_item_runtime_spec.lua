@@ -2,7 +2,7 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 defines = {direction = {south = 1, west = 2, north = 3, east = 4}}
 settings = {global = {}, startup = {}}
-storage = {bootstrap = {square_size = 7, surface_name = "nauvis"}}
+storage = {planets = {nauvis = {square_size = 7, surface_name = "nauvis"}}}
 
 local void_item_runtime = require("lib.void_item_runtime")
 

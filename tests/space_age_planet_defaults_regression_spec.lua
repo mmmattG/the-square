@@ -2,12 +2,12 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 defines = {direction = {south = 1, west = 2, north = 3, east = 4}}
 settings = {global = {}, startup = {}}
-storage = {bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1}}
+storage = {planets = {nauvis = {square_size = 7, surface_name = "nauvis", ingress_tier = 1}}}
 game = {forces = {player = {valid = true, mining_drill_productivity_bonus = 0}}}
 
 local defs = require("lib.runtime_defs")
 local planet_config = require("lib.planet_config")
-local bootstrap_runtime = require("lib.bootstrap_runtime")
+local planet_runtime = require("lib.planet_runtime")
 local ingress_runtime = require("lib.ingress_runtime")
 local void_item_runtime = require("lib.void_item_runtime")
 
@@ -45,7 +45,7 @@ run_test("Space Age planet defaults match the expected matrix", function()
 
   for planet_name, planet_expectation in pairs(expected) do
     local config = planet_config.get(planet_name)
-    local anchors = bootstrap_runtime.build_starter_anchor_layout(config.square_size, planet_name)
+    local anchors = planet_runtime.build_starter_anchor_layout(config.square_size, planet_name)
 
     assert_equal(config.square_size, 17, planet_name .. " should default to a 17x17 square")
     assert_equal(config.floor_tile_name, planet_expectation.tile, planet_name .. " should use its thematic tile")
@@ -89,11 +89,13 @@ run_test("Gleba ingresses and egresses use normal item Managed Line cadence", fu
   end
 
   storage = {
-    bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
-    planets = {gleba = {square_size = 17, surface_name = "gleba", starter_anchors = {anchors = {
-      {resource = "yumako", kind = "item", flow = "ingress", position = {x = 0, y = 9}, entity = entity(), item_progress = {0, 0}},
-      {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = entity(), item_progress = {0, 0}}
-    }}}}
+    planets = {
+      nauvis = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
+      gleba = {square_size = 17, surface_name = "gleba", starter_anchors = {anchors = {
+        {resource = "yumako", kind = "item", flow = "ingress", position = {x = 0, y = 9}, entity = entity(), item_progress = {0, 0}},
+        {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = entity(), item_progress = {0, 0}}
+      }}}
+    }
   }
 
   for _ = 1, defs.ITEM_ANCHOR_INTERVAL_TICKS do
@@ -106,8 +108,9 @@ end)
 
 run_test("void item destruction applies across supported planets", function()
   for _, planet_name in ipairs({"nauvis", "vulcanus", "fulgora", "gleba", "aquilo"}) do
-    storage.bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1}
-    storage.planets = {}
+    storage.planets = {
+      nauvis = {square_size = 7, surface_name = "nauvis", ingress_tier = 1}
+    }
     local destroyed = false
     local entity = {
       valid = true,

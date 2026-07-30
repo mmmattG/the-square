@@ -132,13 +132,13 @@ local function get_mining_productivity_bonus()
   return player_force.mining_drill_productivity_bonus or 0
 end
 
-local function drain_uranium_acid_buffer(starter_anchors, bootstrap)
-  if not (starter_anchors and bootstrap) then
+local function drain_uranium_acid_buffer(starter_anchors, planet_state)
+  if not (starter_anchors and planet_state) then
     return 0
   end
 
   local buffer_capacity = throughput_policy.URANIUM_SULFURIC_ACID_BUFFER_CAPACITY
-  local buffer = math.min(buffer_capacity, math.max(0, bootstrap.uranium_sulfuric_acid_buffer or 0))
+  local buffer = math.min(buffer_capacity, math.max(0, planet_state.uranium_sulfuric_acid_buffer or 0))
 
   for _, anchor in ipairs(starter_anchors.anchors) do
     local entity = anchor.position and anchor.entity or nil
@@ -162,7 +162,7 @@ local function drain_uranium_acid_buffer(starter_anchors, bootstrap)
     end
   end
 
-  bootstrap.uranium_sulfuric_acid_buffer = buffer
+  planet_state.uranium_sulfuric_acid_buffer = buffer
   return buffer
 end
 
@@ -204,8 +204,8 @@ local function get_uranium_anchors(ingress_tier, starter_anchors)
   return anchors
 end
 
-local function get_active_uranium_budget_per_interval(uranium_anchors, starter_anchors, bootstrap)
-  if not bootstrap or not starter_anchors or #uranium_anchors == 0 then
+local function get_active_uranium_budget_per_interval(uranium_anchors, starter_anchors, planet_state)
+  if not planet_state or not starter_anchors or #uranium_anchors == 0 then
     return 0
   end
 
@@ -220,7 +220,7 @@ local function get_active_uranium_budget_per_interval(uranium_anchors, starter_a
     return 0
   end
 
-  local available_acid = math.max(0, bootstrap.uranium_sulfuric_acid_buffer or 0)
+  local available_acid = math.max(0, planet_state.uranium_sulfuric_acid_buffer or 0)
   local sulfuric_acid_to_spend = math.min(available_acid, total_capacity / (
     throughput_policy.URANIUM_ORE_PER_SULFURIC_ACID * (1 + mining_productivity_bonus)
   ))
@@ -228,11 +228,11 @@ local function get_active_uranium_budget_per_interval(uranium_anchors, starter_a
   local budget = throughput_policy.compute_uranium_budget(
     sulfuric_acid_to_spend,
     mining_productivity_bonus,
-    bootstrap.uranium_ore_progress_carry or 0
+    planet_state.uranium_ore_progress_carry or 0
   )
 
-  bootstrap.uranium_sulfuric_acid_buffer = available_acid - sulfuric_acid_to_spend
-  bootstrap.uranium_ore_progress_carry = budget.remaining_ore_progress
+  planet_state.uranium_sulfuric_acid_buffer = available_acid - sulfuric_acid_to_spend
+  planet_state.uranium_ore_progress_carry = budget.remaining_ore_progress
   return budget.ore_budget
 end
 
@@ -345,8 +345,8 @@ local function pump_anchor_set(starter_anchors, ingress_tier, uranium_context, p
   end
 end
 
-local function get_uranium_context(ingress_tier, starter_anchors, bootstrap)
-  local sulfuric_acid_buffer = drain_uranium_acid_buffer(starter_anchors, bootstrap)
+local function get_uranium_context(ingress_tier, starter_anchors, planet_state)
+  local sulfuric_acid_buffer = drain_uranium_acid_buffer(starter_anchors, planet_state)
   local uranium_anchors = get_uranium_anchors(ingress_tier, starter_anchors)
 
   if #uranium_anchors == 0 then
@@ -358,7 +358,7 @@ local function get_uranium_context(ingress_tier, starter_anchors, bootstrap)
     }
   end
 
-  local uranium_budget = get_active_uranium_budget_per_interval(uranium_anchors, starter_anchors, bootstrap)
+  local uranium_budget = get_active_uranium_budget_per_interval(uranium_anchors, starter_anchors, planet_state)
   local uranium_capacities = {}
 
   for index, uranium_anchor in ipairs(uranium_anchors) do
@@ -377,24 +377,21 @@ local function get_uranium_context(ingress_tier, starter_anchors, bootstrap)
     anchors = uranium_anchors,
     allocations = allocations,
     by_anchor = by_anchor,
-    sulfuric_acid_buffer = bootstrap.uranium_sulfuric_acid_buffer or 0
+    sulfuric_acid_buffer = planet_state.uranium_sulfuric_acid_buffer or 0
   }
 end
 
 function ingress_runtime.pump_planet_anchors(planet_name)
+  assert(planet_name, "planet_name is required")
   local planet = storage.planets and storage.planets[planet_name] and planet_instance.ensure(planet_name) or nil
-  local starter_anchors = planet and planet:get_bootstrap_storage().starter_anchors or nil
+  local starter_anchors = planet and planet:get_state().starter_anchors or nil
 
   if not starter_anchors then
     return
   end
 
-  local ingress_tier = defs.get_current_ingress_tier()
-  pump_anchor_set(starter_anchors, ingress_tier, get_uranium_context(ingress_tier, starter_anchors, planet:get_bootstrap_storage()), planet_name)
-end
-
-function ingress_runtime.pump_starter_anchors()
-  ingress_runtime.pump_planet_anchors("nauvis")
+  local ingress_tier = defs.get_current_ingress_tier("nauvis")
+  pump_anchor_set(starter_anchors, ingress_tier, get_uranium_context(ingress_tier, starter_anchors, planet:get_state()), planet_name)
 end
 
 function ingress_runtime.pump_planet_starter_anchors()

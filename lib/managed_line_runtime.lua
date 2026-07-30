@@ -11,7 +11,6 @@ function managed_line_runtime.get(planet_name)
 end
 
 function managed_line_runtime.initialize(planet_name)
-  planet_name = planet_name or "nauvis"
   return anchor_runtime.initialize_planet_managed_lines(planet_name)
 end
 
@@ -26,11 +25,10 @@ function managed_line_runtime.refresh_existing_planets()
 end
 
 function managed_line_runtime.reconcile(planet_name)
-  return anchor_runtime.reconcile_planet_managed_lines(planet_name or "nauvis")
+  return anchor_runtime.reconcile_planet_managed_lines(planet_name)
 end
 
 function managed_line_runtime.pump(planet_name)
-  planet_name = planet_name or "nauvis"
   return ingress_runtime.pump_planet_anchors(planet_name)
 end
 
@@ -40,8 +38,8 @@ function managed_line_runtime.pump_all()
   end
 end
 
-function managed_line_runtime.purchase(player, resource)
-  return anchor_runtime.purchase_managed_line_for_resource(player, resource)
+function managed_line_runtime.purchase(player, resource, planet_name)
+  return anchor_runtime.purchase_managed_line_for_resource(player, resource, planet_name)
 end
 
 function managed_line_runtime.sync_tier(force)
@@ -88,16 +86,16 @@ function managed_line_runtime.apply_logistic_network_setting_to_force(force)
   return anchor_runtime.apply_logistic_network_setting_to_force(force)
 end
 
-function managed_line_runtime.get_owned_line_counts(resource)
-  return anchor_runtime.get_owned_line_counts(resource)
+function managed_line_runtime.get_owned_line_counts(resource, planet_name)
+  return anchor_runtime.get_owned_line_counts(resource, planet_name)
 end
 
-function managed_line_runtime.is_resource_unlocked(resource)
-  return anchor_runtime.is_resource_unlocked(resource)
+function managed_line_runtime.is_resource_unlocked(resource, planet_name)
+  return anchor_runtime.is_resource_unlocked(resource, planet_name)
 end
 
-function managed_line_runtime.unlock_planet_bootstrap_research(planet_name, force)
-  return anchor_runtime.unlock_planet_bootstrap_research(planet_name, force)
+function managed_line_runtime.unlock_planet_starter_research(planet_name, force)
+  return anchor_runtime.unlock_planet_starter_research(planet_name, force)
 end
 
 return managed_line_runtime

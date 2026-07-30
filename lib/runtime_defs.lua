@@ -1,4 +1,4 @@
-local bootstrap_layout = require("lib.bootstrap_layout")
+local square_layout = require("lib.square_layout")
 local expansion_research = require("lib.expansion_research")
 local item_ingress = require("lib.item_ingress")
 local planet_catalog = require("lib.planet_catalog")
@@ -6,7 +6,6 @@ local planet_catalog = require("lib.planet_catalog")
 local runtime_defs = {}
 
 runtime_defs.SURFACE_NAME = "nauvis"
-runtime_defs.LEGACY_SURFACE_NAME = "fes-bootstrap"
 runtime_defs.BASE_SCREENSHOT_MARGIN_TILES = 2
 runtime_defs.BASE_SCREENSHOT_DIRECTORY = "the-square"
 runtime_defs.SETTING_NAUVIS_STARTING_SQUARE_SIZE = "the-square-nauvis-starting-square-size"
@@ -398,8 +397,8 @@ function runtime_defs.get_config_definition(resource, flow, planet_name)
   return nil
 end
 
-function runtime_defs.get_ingress_item_name(resource)
-  local definition = runtime_defs.get_input_definition(resource)
+function runtime_defs.get_ingress_item_name(resource, planet_name)
+  local definition = runtime_defs.get_input_definition(resource, planet_name)
   return runtime_defs.get_generic_anchor_item_name(definition and definition.kind or "item", "ingress")
 end
 
@@ -464,11 +463,13 @@ function runtime_defs.is_ingress_entity_name_for_resource(resource, entity_name)
 end
 
 function runtime_defs.get_input_definitions(planet_name)
-  return runtime_defs.INPUT_DEFINITIONS_BY_PLANET[planet_name or "nauvis"] or runtime_defs.INPUT_DEFINITIONS
+  assert(planet_name, "planet_name is required")
+  return runtime_defs.INPUT_DEFINITIONS_BY_PLANET[planet_name] or {}
 end
 
 function runtime_defs.get_output_definitions(planet_name)
-  return runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET[planet_name or "nauvis"] or runtime_defs.OUTPUT_DEFINITIONS
+  assert(planet_name, "planet_name is required")
+  return runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET[planet_name] or {}
 end
 
 function runtime_defs.get_input_definition(resource, planet_name)
@@ -507,8 +508,8 @@ function runtime_defs.get_line_definition(resource, planet_name)
   return nil, nil
 end
 
-function runtime_defs.get_egress_item_name(resource)
-  local definition = runtime_defs.get_output_definition(resource)
+function runtime_defs.get_egress_item_name(resource, planet_name)
+  local definition = runtime_defs.get_output_definition(resource, planet_name)
   return runtime_defs.get_generic_anchor_item_name(definition and definition.kind or "item", "egress")
 end
 
@@ -656,11 +657,11 @@ function runtime_defs.is_logistic_network_automation_enabled()
 end
 
 function runtime_defs.get_square_bounds(size, center)
-  return bootstrap_layout.get_square_bounds(size, center)
+  return square_layout.get_square_bounds(size, center)
 end
 
 function runtime_defs.get_surface_size(square_size)
-  return bootstrap_layout.get_surface_size(square_size, runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH)
+  return square_layout.get_surface_size(square_size, runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH)
 end
 
 function runtime_defs.get_background_tile_name()
@@ -676,7 +677,7 @@ function runtime_defs.is_screenshot_alt_mode_enabled()
 end
 
 function runtime_defs.get_anchor_bounds(square_size, center)
-  return bootstrap_layout.get_anchor_bounds(square_size, center)
+  return square_layout.get_anchor_bounds(square_size, center)
 end
 
 function runtime_defs.get_square_area(square_size)
@@ -687,14 +688,15 @@ function runtime_defs.get_ingress_tier_definition(tier_level)
   return runtime_defs.INGRESS_TIER_DEFINITIONS[tier_level] or runtime_defs.INGRESS_TIER_DEFINITIONS[1]
 end
 
-function runtime_defs.get_current_ingress_tier_level()
-  local bootstrap = storage.bootstrap
+function runtime_defs.get_current_ingress_tier_level(planet_name)
+  assert(planet_name, "planet_name is required")
+  local planet_state = storage.planets and storage.planets[planet_name]
 
-  if not bootstrap then
+  if not planet_state then
     return 1
   end
 
-  local tier_level = bootstrap.ingress_tier or 1
+  local tier_level = planet_state.ingress_tier or 1
 
   if tier_level < 1 then
     return 1
@@ -707,8 +709,8 @@ function runtime_defs.get_current_ingress_tier_level()
   return tier_level
 end
 
-function runtime_defs.get_current_ingress_tier()
-  return runtime_defs.get_ingress_tier_definition(runtime_defs.get_current_ingress_tier_level())
+function runtime_defs.get_current_ingress_tier(planet_name)
+  return runtime_defs.get_ingress_tier_definition(runtime_defs.get_current_ingress_tier_level(planet_name))
 end
 
 local function get_researched_tier_level_for_force(force, research_definitions)
@@ -743,12 +745,15 @@ function runtime_defs.get_next_expansion_tile_reward(square_size)
   return runtime_defs.get_square_area(next_square_size) - runtime_defs.get_square_area(square_size)
 end
 
-function runtime_defs.get_completed_expansion_research_levels()
-  if not storage.bootstrap then
+function runtime_defs.get_completed_expansion_research_levels(planet_name)
+  assert(planet_name, "planet_name is required")
+  local planet_state = storage.planets and storage.planets[planet_name]
+
+  if not planet_state then
     return 0
   end
 
-  return storage.bootstrap.expansion_research_levels or 0
+  return planet_state.expansion_research_levels or 0
 end
 
 function runtime_defs.get_expansion_research_band_for_level(level)
@@ -766,6 +771,10 @@ function runtime_defs.get_expansion_research_band_for_level(level)
 end
 
 function runtime_defs.get_expansion_research_planet_name(research_name)
+  if expansion_research.get_level_from_technology_name(research_name) then
+    return "nauvis"
+  end
+
   return expansion_research.get_planet_from_technology_name(research_name)
 end
 
@@ -774,11 +783,11 @@ function runtime_defs.is_expansion_research_name(research_name)
 end
 
 function runtime_defs.is_inside_bounds(bounds, position)
-  return bootstrap_layout.is_inside_bounds(bounds, position)
+  return square_layout.is_inside_bounds(bounds, position)
 end
 
 function runtime_defs.get_square_bounds(square_size, center)
-  return bootstrap_layout.get_square_bounds(square_size, center)
+  return square_layout.get_square_bounds(square_size, center)
 end
 
 function runtime_defs.get_position_key(position)
@@ -795,11 +804,11 @@ function runtime_defs.move_position(position, side, distance)
 end
 
 function runtime_defs.get_anchor_side_for_position(square_size, position, center)
-  return bootstrap_layout.get_anchor_side_for_position(square_size, position, center)
+  return square_layout.get_anchor_side_for_position(square_size, position, center)
 end
 
 function runtime_defs.is_anchor_ring_position(square_size, position, center)
-  return bootstrap_layout.is_anchor_ring_position(square_size, position, center)
+  return square_layout.is_anchor_ring_position(square_size, position, center)
 end
 
 function runtime_defs.get_managed_tile_name(square_size, surface_size, position, floor_tile_name, center)
@@ -807,13 +816,13 @@ function runtime_defs.get_managed_tile_name(square_size, surface_size, position,
 
   if not floor_tile_name
     and background_tile_name == runtime_defs.CHECKERBOARD_BACKGROUND_TILE_NAME
-    and bootstrap_layout.is_inside_bounds(bootstrap_layout.get_square_bounds(square_size, center), position) then
+    and square_layout.is_inside_bounds(square_layout.get_square_bounds(square_size, center), position) then
     local parity = math.abs(position.x + position.y) % 2 == 0 and "even" or "odd"
 
     return runtime_defs.CHECKERBOARD_TILE_NAMES[parity]
   end
 
-  return bootstrap_layout.get_managed_tile_name(
+  return square_layout.get_managed_tile_name(
     square_size,
     surface_size,
     background_tile_name,
@@ -868,14 +877,15 @@ function runtime_defs.snap_entity_position_to_tile(position)
   }
 end
 
-function runtime_defs.get_current_egress_tier_level()
-  local bootstrap = storage.bootstrap
+function runtime_defs.get_current_egress_tier_level(planet_name)
+  assert(planet_name, "planet_name is required")
+  local planet_state = storage.planets and storage.planets[planet_name]
 
-  if not bootstrap then
+  if not planet_state then
     return 1
   end
 
-  local tier_level = bootstrap.egress_tier or runtime_defs.get_current_ingress_tier_level()
+  local tier_level = planet_state.egress_tier or runtime_defs.get_current_ingress_tier_level(planet_name)
 
   if tier_level < 1 then
     return 1
@@ -898,11 +908,17 @@ function runtime_defs.get_anchor_entity_name_for_current_tier(anchor)
   end
 
   if anchor.flow == "egress" then
-    return runtime_defs.get_egress_entity_name(anchor.resource, anchor.tier_level or runtime_defs.get_current_egress_tier_level())
+    return runtime_defs.get_egress_entity_name(
+      anchor.resource,
+      anchor.tier_level or runtime_defs.get_current_egress_tier_level("nauvis")
+    )
   end
 
   if anchor.kind == "item" then
-    return runtime_defs.get_ingress_entity_name(anchor.resource, anchor.tier_level or runtime_defs.get_current_ingress_tier_level())
+    return runtime_defs.get_ingress_entity_name(
+      anchor.resource,
+      anchor.tier_level or runtime_defs.get_current_ingress_tier_level("nauvis")
+    )
   end
 
   return runtime_defs.get_ingress_entity_name(anchor.resource, 1)
@@ -911,7 +927,7 @@ end
 function runtime_defs.get_effective_ingress_tier_for_anchor(anchor)
   local tier_level = anchor and anchor.tier_level or 1
 
-  if tier_level == 1 and runtime_defs.get_current_ingress_tier_level() >= 2 then
+  if tier_level == 1 and runtime_defs.get_current_ingress_tier_level("nauvis") >= 2 then
     tier_level = 2
   end
 
@@ -919,7 +935,7 @@ function runtime_defs.get_effective_ingress_tier_for_anchor(anchor)
 end
 
 function runtime_defs.build_ingress_tier_summary()
-  local tier = runtime_defs.get_current_ingress_tier()
+  local tier = runtime_defs.get_current_ingress_tier("nauvis")
   local item_rate_per_second = runtime_defs.get_ingress_item_rate_per_second()
   local fluid_rate_per_second = runtime_defs.get_ingress_fluid_rate_per_second()
 
@@ -931,7 +947,7 @@ function runtime_defs.build_ingress_tier_summary()
 end
 
 function runtime_defs.get_ingress_item_rate_per_second()
-  local tier = runtime_defs.get_current_ingress_tier()
+  local tier = runtime_defs.get_current_ingress_tier("nauvis")
 
   return item_ingress.get_total_items_per_second(
     tier.item_lane_counts or {0, 0},
@@ -940,7 +956,7 @@ function runtime_defs.get_ingress_item_rate_per_second()
 end
 
 function runtime_defs.get_ingress_fluid_rate_per_second()
-  local tier = runtime_defs.get_current_ingress_tier()
+  local tier = runtime_defs.get_current_ingress_tier("nauvis")
   return (tier.fluid_amount_per_interval or 0) * (60 / runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS)
 end
 

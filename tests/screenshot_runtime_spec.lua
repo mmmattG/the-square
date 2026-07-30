@@ -82,13 +82,13 @@ local aquilo = make_surface("aquilo")
 local platform = make_surface("space-platform-1")
 
 storage = {
-  bootstrap = {
-    square_size = 9,
-    surface_name = "nauvis",
-    expansions_completed = 1,
-    expansion_research_levels = 1
-  },
   planets = {
+    nauvis = {
+      square_size = 9,
+      surface_name = "nauvis",
+      expansions_completed = 1,
+      expansion_research_levels = 1
+    },
     vulcanus = {
       square_size = 19,
       surface_name = "vulcanus",
