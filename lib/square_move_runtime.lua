@@ -130,7 +130,7 @@ local function get_connected_managed_lines(surface, managed_lines)
 
       for _, entity in ipairs(surface.find_entities_filtered({area = connection_area})) do
         if entity.valid and is_permitted_departing_connection(entity, permitted_connections) then
-          connected[anchor] = true
+          connected[anchor] = entity
           break
         end
       end
@@ -298,9 +298,11 @@ local function reposition_managed_lines_for_contents(surface, planet, direction,
 
   for _, anchor in ipairs(managed_lines.anchors) do
     if anchor.resource and anchor.position and anchor.side then
-      if anchor.side == OPPOSITE_SIDE[direction] and connected_managed_lines[anchor] then
-        planet_square.ensure_managed_line_connection_stub(surface, anchor)
-      elseif anchor.side ~= direction then
+      if anchor.side == OPPOSITE_SIDE[direction] or anchor.side == direction then
+        if connected_managed_lines[anchor] then
+          planet_square.ensure_managed_line_connection_stub(surface, anchor)
+        end
+      else
         local target_position = defs.move_position(anchor.position, direction, 1)
         local target_side = defs.get_anchor_side_for_position(
           planet:get_square_size(),
@@ -365,6 +367,7 @@ end
 local function check_contents_move(planet, surface, direction)
   local bounds = defs.get_square_bounds(planet:get_square_size(), planet:get_square_position())
   local obstructions = {}
+  local permitted_connections = build_permitted_connections(planet:get_managed_lines(), direction)
   local leading_area = get_departing_area(
     planet:get_square_size(),
     planet:get_square_position(),
@@ -376,7 +379,9 @@ local function check_contents_move(planet, surface, direction)
       and entity.type ~= "character"
       and is_content_entity_inside_bounds(entity, bounds)
     then
-      if not is_entity_inside_bounds_after_move(entity, bounds, direction) then
+      if not is_entity_inside_bounds_after_move(entity, bounds, direction)
+        and not is_permitted_departing_connection(entity, permitted_connections)
+      then
         obstructions[#obstructions + 1] = entity
       end
     end
@@ -569,8 +574,19 @@ local function move_contents(planet, surface, direction, options)
   local center = planet:get_square_position()
   local to_buffer_offset = {x = -center.x, y = -center.y}
   local to_destination_offset = defs.move_position(center, direction, 1)
-  local movable_entities = collect_contents_entities(surface, bounds)
-  local connected_managed_lines = get_connected_managed_lines(surface, planet:get_managed_lines())
+  local managed_lines = planet:get_managed_lines()
+  local connected_managed_lines = get_connected_managed_lines(surface, managed_lines)
+  local permitted_leading_connections = build_permitted_connections(managed_lines, direction)
+  local movable_entities = {}
+  local held_leading_connections = {}
+
+  for _, entity in ipairs(collect_contents_entities(surface, bounds)) do
+    if is_permitted_departing_connection(entity, permitted_leading_connections) then
+      held_leading_connections[#held_leading_connections + 1] = entity
+    else
+      movable_entities[#movable_entities + 1] = entity
+    end
+  end
 
   local visible_tile_updates, hidden_tile_updates = get_contents_tile_updates(surface, planet, direction)
   local buffer = create_buffer_surface(planet:get_square_size())
@@ -596,6 +612,7 @@ local function move_contents(planet, surface, direction, options)
   end
 
   destroy_entities(movable_entities)
+  destroy_entities(held_leading_connections)
 
   if not restore_entities_from_buffer(
     surface,
@@ -614,6 +631,13 @@ local function move_contents(planet, surface, direction, options)
       bounds,
       #movable_entities
     )
+
+    for anchor, connection in pairs(connected_managed_lines) do
+      if connection and anchor.side == direction then
+        planet_square.ensure_managed_line_connection_stub(surface, anchor)
+      end
+    end
+
     delete_buffer_surface(buffer)
     return {
       ok = false,

@@ -321,6 +321,34 @@ run_test("Contents movement is obstructed when an entity would enter the Void", 
   assert_equal(result.obstructed_side, "east", "moving contents east should validate the east edge")
 end)
 
+run_test("Contents movement permits belts and pipes connected to leading Managed Lines", function()
+  local east_belt = make_entity("transport-belt", {x = 3, y = -1}, defines.direction.west)
+  local east_pipe = make_entity("pipe", {x = 3, y = 2})
+  local east_item_anchor = {
+    resource = "iron-ore",
+    kind = "item",
+    flow = "ingress",
+    side = "east",
+    position = {x = 4, y = -1},
+    direction = defines.direction.west
+  }
+  local east_fluid_anchor = {
+    resource = "water",
+    kind = "fluid",
+    flow = "ingress",
+    side = "east",
+    position = {x = 4, y = 2},
+    direction = defines.direction.east
+  }
+  local surface = make_surface({east_belt, east_pipe})
+  install_world(surface, {east_item_anchor, east_fluid_anchor})
+
+  local result = square_move_runtime.check("nauvis", "east", square_move_runtime.MODE_CONTENTS)
+
+  assert_equal(result.ok, true, "valid leading Managed Line connections should not disable the move")
+  assert_equal(#result.obstructions, 0, "valid belts and pipes should not be reported as obstructions")
+end)
+
 run_test("Moving contents keeps characters fixed and includes edge belts and pipes", function()
   local assembler = make_entity("assembling-machine", {x = 0, y = 0})
   local character = make_entity("character", {x = -1, y = 1})
@@ -328,6 +356,8 @@ run_test("Moving contents keeps characters fixed and includes edge belts and pip
   local connected_pipe = make_entity("pipe", {x = 0, y = -3})
   local west_managed_line = make_entity("underground-belt", {x = -4, y = -1}, defines.direction.east)
   local north_managed_line = make_entity("pipe-to-ground", {x = 0, y = -4}, defines.direction.north)
+  local east_connected_belt = make_entity("transport-belt", {x = 3, y = 1}, defines.direction.west)
+  local east_managed_line = make_entity("underground-belt", {x = 4, y = 1}, defines.direction.west)
   local west_anchor = {
     resource = "iron-ore",
     kind = "item",
@@ -348,13 +378,32 @@ run_test("Moving contents keeps characters fixed and includes edge belts and pip
     entity_name = "the-square-fluid-ingress-managed-anchor",
     entity = north_managed_line
   }
+  local east_anchor = {
+    resource = "copper-ore",
+    kind = "item",
+    flow = "ingress",
+    side = "east",
+    position = {x = 4, y = 1},
+    direction = defines.direction.west,
+    entity_name = "the-square-item-ingress-managed-anchor",
+    entity = east_managed_line
+  }
   local surface = make_surface(
-    {assembler, character, connected_belt, connected_pipe, west_managed_line, north_managed_line},
+    {
+      assembler,
+      character,
+      connected_belt,
+      connected_pipe,
+      east_connected_belt,
+      west_managed_line,
+      north_managed_line,
+      east_managed_line
+    },
     {
       ["0:0"] = "refined-concrete"
     }
   )
-  install_world(surface, {west_anchor, north_anchor})
+  install_world(surface, {west_anchor, north_anchor, east_anchor})
   local reconciled_planet = nil
 
   local result = square_move_runtime.move("nauvis", "east", {
@@ -404,6 +453,9 @@ run_test("Moving contents keeps characters fixed and includes edge belts and pip
   assert_equal(surface.created_entities[1].name, "transport-belt", "the trailing ingress should gain a belt stub")
   assert_equal(surface.created_entities[1].position.x, -3, "the ingress belt stub should fill the vacated edge")
   assert_equal(surface.created_entities[1].position.y, -1, "the ingress belt stub should stay aligned")
+  assert_equal(surface.created_entities[2].name, "transport-belt", "the leading ingress should retain a belt")
+  assert_equal(surface.created_entities[2].position.x, 3, "the leading ingress belt should remain on the edge")
+  assert_equal(surface.created_entities[2].position.y, 1, "the leading ingress belt should stay aligned")
 
   local moved_concrete = false
   local vacated_floor = false

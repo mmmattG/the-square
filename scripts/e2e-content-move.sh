@@ -82,6 +82,15 @@ script.on_init(function()
     direction = defines.direction.north,
     entity_name = "the-square-fluid-ingress-managed-anchor"
   }
+  local east_anchor = {
+    resource = "copper-ore",
+    kind = "item",
+    flow = "ingress",
+    side = "east",
+    position = {x = 4, y = 1},
+    direction = defines.direction.west,
+    entity_name = "the-square-item-ingress-managed-anchor"
+  }
 
   storage.planets = {
     nauvis = {
@@ -89,7 +98,7 @@ script.on_init(function()
       surface_size = 9,
       surface_name = "nauvis",
       square_position = {x = 0, y = 0},
-      starter_anchors = {anchors = {west_anchor, north_anchor}}
+      starter_anchors = {anchors = {west_anchor, north_anchor, east_anchor}}
     }
   }
 
@@ -125,6 +134,14 @@ script.on_init(function()
   })
   assert(connected_pipe, "[the-square-content-move-validator] failed to create edge pipe")
   local pipe_start = {x = connected_pipe.position.x, y = connected_pipe.position.y}
+  local leading_belt = surface.create_entity({
+    name = "transport-belt",
+    position = {x = 3, y = 1},
+    direction = defines.direction.west,
+    force = game.forces.player
+  })
+  assert(leading_belt, "[the-square-content-move-validator] failed to create leading ingress belt")
+  local leading_belt_start = {x = leading_belt.position.x, y = leading_belt.position.y}
   west_anchor.entity = surface.create_entity({
     name = west_anchor.entity_name,
     position = west_anchor.position,
@@ -140,6 +157,14 @@ script.on_init(function()
     force = game.forces.player
   })
   assert(north_anchor.entity, "[the-square-content-move-validator] failed to create north Managed Line")
+  east_anchor.entity = surface.create_entity({
+    name = east_anchor.entity_name,
+    position = east_anchor.position,
+    direction = east_anchor.direction,
+    force = game.forces.player,
+    type = "input"
+  })
+  assert(east_anchor.entity, "[the-square-content-move-validator] failed to create east Managed Line")
   local west_anchor_start = {x = west_anchor.entity.position.x, y = west_anchor.entity.position.y}
 
   local result = square_move_runtime.move("nauvis", "east", {
@@ -192,6 +217,14 @@ script.on_init(function()
     })[1],
     "[the-square-content-move-validator] trailing ingress belt stub was not restored"
   )
+  assert(
+    surface.find_entities_filtered({
+      name = "transport-belt",
+      position = leading_belt_start
+    })[1],
+    "[the-square-content-move-validator] leading ingress belt connection was not retained"
+  )
+  assert(east_anchor.entity and east_anchor.entity.valid, "leading Managed Line entity was replaced")
   assert_equal(north_anchor.position.x, 1, "north Managed Line state did not move east")
   assert(north_anchor.entity and north_anchor.entity.valid, "north Managed Line entity was not reconciled")
   assert_equal(
