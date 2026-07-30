@@ -150,6 +150,41 @@ run_test("Only a correctly aligned belt connected to a departing Managed Line is
   )
 end)
 
+run_test("A pipe connected to a departing fluid ingress or egress Managed Line is permitted", function()
+  local west_anchor = {
+    resource = "water",
+    kind = "fluid",
+    flow = "ingress",
+    side = "west",
+    position = {x = -4, y = 0},
+    direction = defines.direction.west
+  }
+  local pipe = make_entity("pipe", {x = -3, y = 0})
+  local surface = make_surface({pipe})
+  install_world(surface, {west_anchor})
+
+  assert_equal(
+    square_move_runtime.check("nauvis", "east").ok,
+    true,
+    "the pipe directly connected to a fluid Managed Line should be allowed"
+  )
+
+  west_anchor.flow = "egress"
+  west_anchor.direction = defines.direction.east
+  assert_equal(
+    square_move_runtime.check("nauvis", "east").ok,
+    true,
+    "the connected pipe exception should apply to fluid egress as well"
+  )
+
+  pipe.type = "storage-tank"
+  assert_equal(
+    square_move_runtime.check("nauvis", "east").ok,
+    false,
+    "another fluid entity in the same position should still obstruct the move"
+  )
+end)
+
 run_test("Moving the Square updates tiles and Boundary state without moving factory entities", function()
   local west_anchor_entity = make_entity("underground-belt", {x = -4, y = 0}, defines.direction.east)
   local east_anchor_entity = make_entity("underground-belt", {x = 4, y = 0}, defines.direction.west)

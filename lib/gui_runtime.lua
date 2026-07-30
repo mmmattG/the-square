@@ -319,7 +319,15 @@ local function open_square_move_gui(player, square_move_runtime)
     caption = {"gui.the-square-move-description"}
   })
 
-  local directions = frame.add({
+  local direction_flow = frame.add({
+    type = "flow",
+    name = "the_square_move_direction_flow",
+    direction = "horizontal"
+  })
+  direction_flow.style.horizontally_stretchable = true
+  direction_flow.style.horizontal_align = "center"
+
+  local directions = direction_flow.add({
     type = "table",
     name = "the_square_move_direction_table",
     column_count = 3
@@ -349,7 +357,8 @@ function gui_runtime.refresh_square_move_gui(player, square_move_runtime)
   end
 
   local frame = player.gui.screen[defs.SQUARE_MOVE_FRAME_NAME]
-  local directions = frame and frame.the_square_move_direction_table
+  local direction_flow = frame and frame.the_square_move_direction_flow
+  local directions = direction_flow and direction_flow.the_square_move_direction_table
 
   if not directions then
     return

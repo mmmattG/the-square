@@ -41,7 +41,7 @@ local function is_entity_inside_bounds(entity, bounds)
   return defs.is_inside_bounds(bounds, get_entity_tile_position(entity))
 end
 
-local function build_permitted_belts(managed_lines, departing_side)
+local function build_permitted_connections(managed_lines, departing_side)
   local permitted = {}
 
   if not (managed_lines and managed_lines.anchors) then
@@ -52,25 +52,31 @@ local function build_permitted_belts(managed_lines, departing_side)
     if anchor.resource
       and anchor.position
       and anchor.side == departing_side
-      and anchor.kind == "item"
     then
-      local belt_position = defs.move_position(anchor.position, anchor.side, -1)
-      permitted[defs.get_position_key(belt_position)] = anchor.direction
-        or defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side)
+      local connection_position = defs.move_position(anchor.position, anchor.side, -1)
+      permitted[defs.get_position_key(connection_position)] = {
+        kind = anchor.kind,
+        direction = anchor.direction
+          or defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side)
+      }
     end
   end
 
   return permitted
 end
 
-local function is_permitted_departing_belt(entity, permitted_belts)
-  if entity.type ~= "transport-belt" then
+local function is_permitted_departing_connection(entity, permitted_connections)
+  local connection = permitted_connections[defs.get_position_key(get_entity_tile_position(entity))]
+
+  if not connection then
     return false
   end
 
-  local required_direction = permitted_belts[defs.get_position_key(get_entity_tile_position(entity))]
+  if connection.kind == "fluid" then
+    return entity.type == "pipe"
+  end
 
-  return required_direction ~= nil and entity.direction == required_direction
+  return entity.type == "transport-belt" and entity.direction == connection.direction
 end
 
 local function get_departing_area(square_size, square_position, direction)
@@ -251,7 +257,7 @@ function square_move_runtime.check(planet_name, direction)
   local target_position = square_move_runtime.get_target_position(square_position, direction)
   local target_bounds = defs.get_square_bounds(planet:get_square_size(), target_position)
   local departing_side = square_move_runtime.get_departing_side(direction)
-  local permitted_belts = build_permitted_belts(planet:get_managed_lines(), departing_side)
+  local permitted_connections = build_permitted_connections(planet:get_managed_lines(), departing_side)
   local obstructions = {}
   local entities = surface.find_entities_filtered({
     area = get_departing_area(planet:get_square_size(), square_position, direction)
@@ -260,7 +266,7 @@ function square_move_runtime.check(planet_name, direction)
   for _, entity in ipairs(entities) do
     if entity.valid
       and not is_entity_inside_bounds(entity, target_bounds)
-      and not is_permitted_departing_belt(entity, permitted_belts)
+      and not is_permitted_departing_connection(entity, permitted_connections)
     then
       obstructions[#obstructions + 1] = entity
     end
