@@ -2,7 +2,7 @@ package.path = "./?.lua;./?/init.lua;" .. package.path
 
 defines = {direction = {south = 1, west = 2, north = 3, east = 4}, inventory = {chest = 1}}
 settings = {global = {}, startup = {}}
-storage = {bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1}}
+storage = {planets = {nauvis = {square_size = 7, surface_name = "nauvis", ingress_tier = 1}}}
 game = {forces = {player = {valid = true, mining_drill_productivity_bonus = 0}}}
 
 local anchor_runtime = require("lib.anchor_runtime")
@@ -31,7 +31,7 @@ run_test("non-Nauvis planets start without free Managed Lines in isolated storag
 
   assert_equal(#vulcanus.anchors, 0, "Vulcanus should not get free starter lines")
   assert_equal(#gleba.anchors, 0, "Gleba should not get free starter lines")
-  assert_equal(storage.starter_anchors, nil, "planet starter creation should not mutate Nauvis Managed Lines")
+  assert_equal(storage.planets.nauvis.starter_anchors, nil, "planet starter creation should not mutate Nauvis Managed Lines")
   assert_equal(storage.planets.vulcanus.starter_anchors, vulcanus, "Vulcanus Managed Lines should live under Vulcanus state")
   assert_equal(storage.planets.gleba.starter_anchors, gleba, "Gleba Managed Lines should live under Gleba state")
 end)
@@ -99,22 +99,28 @@ end)
 
 run_test("generic configured item Managed Lines do not crash the pump loop", function()
   storage = {
-    bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
-    starter_anchors = {anchors = {
-      {
-        resource = "iron-ore",
-        kind = "item",
-        flow = "ingress",
-        position = {x = 0, y = -4},
-        entity = {
-          valid = true,
-          get_transport_line = function()
-            error("Entity is not transport-belt-connectable.")
-          end
-        },
-        item_progress = {0.875, 0}
+    planets = {
+      nauvis = {
+        square_size = 7,
+        surface_name = "nauvis",
+        ingress_tier = 1,
+        starter_anchors = {anchors = {
+          {
+            resource = "iron-ore",
+            kind = "item",
+            flow = "ingress",
+            position = {x = 0, y = -4},
+            entity = {
+              valid = true,
+              get_transport_line = function()
+                error("Entity is not transport-belt-connectable.")
+              end
+            },
+            item_progress = {0.875, 0}
+          }
+        }}
       }
-    }}
+    }
   }
 
   ingress_runtime.pump_starter_anchors()
@@ -148,13 +154,15 @@ run_test("Gleba fruit ingresses require matching seed egress", function()
   local function run_case(has_items)
     counts = {inserted = {}, removed = {}}
     storage = {
-      bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
-      planets = {gleba = {square_size = 17, surface_name = "gleba", starter_anchors = {anchors = {
-        {resource = "yumako", kind = "item", flow = "ingress", position = {x = 0, y = 9}, entity = belt_entity(has_items), item_progress = {0, 0}},
-        {resource = "jellynut", kind = "item", flow = "ingress", position = {x = 9, y = 0}, entity = belt_entity(has_items), item_progress = {0, 0}},
-        {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = belt_entity(has_items), item_progress = {0, 0}},
-        {resource = "jellynut-seed", kind = "item", flow = "egress", position = {x = 9, y = 0}, entity = belt_entity(has_items), item_progress = {0, 0}}
-      }}}}
+      planets = {
+        nauvis = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
+        gleba = {square_size = 17, surface_name = "gleba", starter_anchors = {anchors = {
+          {resource = "yumako", kind = "item", flow = "ingress", position = {x = 0, y = 9}, entity = belt_entity(has_items), item_progress = {0, 0}},
+          {resource = "jellynut", kind = "item", flow = "ingress", position = {x = 9, y = 0}, entity = belt_entity(has_items), item_progress = {0, 0}},
+          {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = belt_entity(has_items), item_progress = {0, 0}},
+          {resource = "jellynut-seed", kind = "item", flow = "egress", position = {x = 9, y = 0}, entity = belt_entity(has_items), item_progress = {0, 0}}
+        }}}
+      }
     }
 
     for _ = 1, defs.ITEM_ANCHOR_INTERVAL_TICKS do
@@ -209,11 +217,13 @@ run_test("Gleba fruit ingresses only budget fruit from actually drained seeds", 
   end
 
   storage = {
-    bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
-    planets = {gleba = {square_size = 17, surface_name = "gleba", starter_anchors = {anchors = {
-      {resource = "yumako", kind = "item", flow = "ingress", position = {x = 0, y = 9}, entity = belt_entity(0), item_progress = {0, 0}},
-      {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = belt_entity(0), item_progress = {0, 0}}
-    }}}}
+    planets = {
+      nauvis = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
+      gleba = {square_size = 17, surface_name = "gleba", starter_anchors = {anchors = {
+        {resource = "yumako", kind = "item", flow = "ingress", position = {x = 0, y = 9}, entity = belt_entity(0), item_progress = {0, 0}},
+        {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = belt_entity(0), item_progress = {0, 0}}
+      }}}
+    }
   }
   yumako_entity = storage.planets.gleba.starter_anchors.anchors[1].entity
 
@@ -270,7 +280,7 @@ run_test("uranium ore ingress requires actually drained sulfuric acid egress", f
         return fluid.amount
       end
     }
-    local bootstrap = {
+    local planet_state = {
       square_size = 7,
       surface_name = "nauvis",
       ingress_tier = 1,
@@ -280,14 +290,10 @@ run_test("uranium ore ingress requires actually drained sulfuric acid egress", f
         {resource = "sulfuric-acid", kind = "fluid", flow = "egress", position = {x = 0, y = 4}, entity = acid_entity}
       }}
     }
-    storage = {
-      bootstrap = bootstrap,
-      starter_anchors = bootstrap.starter_anchors,
-      planets = {nauvis = bootstrap}
-    }
+    storage = {planets = {nauvis = planet_state}}
 
     ingress_runtime.pump_planet_anchors("nauvis")
-    return inserted, acid_removed, uranium_entity.active, bootstrap.starter_anchors.anchors[1].input_budget_active
+    return inserted, acid_removed, uranium_entity.active, planet_state.starter_anchors.anchors[1].input_budget_active
   end
 
   local no_acid_inserted, no_acid_removed, no_acid_active, no_acid_budget_active = run_case(false)
@@ -312,7 +318,7 @@ run_test("uranium sulfuric acid egress buffers up to one thousand acid", functio
       return fluid.amount
     end
   }
-  local bootstrap = {
+  local planet_state = {
     square_size = 7,
     surface_name = "nauvis",
     ingress_tier = 1,
@@ -321,18 +327,14 @@ run_test("uranium sulfuric acid egress buffers up to one thousand acid", functio
       {resource = "sulfuric-acid", kind = "fluid", flow = "egress", position = {x = 0, y = 4}, entity = acid_entity}
     }}
   }
-  storage = {
-    bootstrap = bootstrap,
-    starter_anchors = bootstrap.starter_anchors,
-    planets = {nauvis = bootstrap}
-  }
+  storage = {planets = {nauvis = planet_state}}
 
   for _ = 1, 10 do
     ingress_runtime.pump_planet_anchors("nauvis")
   end
 
   assert_equal(acid_removed, 1000, "sulfuric acid egress should stop draining once the buffer is full")
-  assert_equal(bootstrap.uranium_sulfuric_acid_buffer, 1000, "uranium acid buffer should cap at one thousand")
+  assert_equal(planet_state.uranium_sulfuric_acid_buffer, 1000, "uranium acid buffer should cap at one thousand")
 end)
 
 run_test("buffered sulfuric acid activates uranium before the next ore emission", function()
@@ -357,7 +359,7 @@ run_test("buffered sulfuric acid activates uranium before the next ore emission"
       return fluid.amount
     end
   }
-  local bootstrap = {
+  local planet_state = {
     square_size = 7,
     surface_name = "nauvis",
     ingress_tier = 1,
@@ -367,16 +369,12 @@ run_test("buffered sulfuric acid activates uranium before the next ore emission"
       {resource = "sulfuric-acid", kind = "fluid", flow = "egress", position = {x = 0, y = 4}, entity = acid_entity}
     }}
   }
-  storage = {
-    bootstrap = bootstrap,
-    starter_anchors = bootstrap.starter_anchors,
-    planets = {nauvis = bootstrap}
-  }
+  storage = {planets = {nauvis = planet_state}}
 
   ingress_runtime.pump_planet_anchors("nauvis")
 
   assert_equal(acid_removed, 160, "acid egress should fill the buffer immediately")
-  assert_equal(bootstrap.uranium_sulfuric_acid_buffer, 160, "acid should stay buffered until uranium requests ore")
+  assert_equal(planet_state.uranium_sulfuric_acid_buffer, 160, "acid should stay buffered until uranium requests ore")
   assert_equal(inserted["uranium-ore"], nil, "buffered acid should not force an early uranium emission")
   assert_equal(uranium_entity.active, true, "buffered acid should make the uranium line active")
 end)
@@ -395,7 +393,7 @@ run_test("blocked uranium ingress does not consume buffered sulfuric acid", func
       }
     end
   }
-  local bootstrap = {
+  local planet_state = {
     square_size = 7,
     surface_name = "nauvis",
     ingress_tier = 1,
@@ -405,16 +403,12 @@ run_test("blocked uranium ingress does not consume buffered sulfuric acid", func
       {resource = "uranium-ore", kind = "item", flow = "ingress", position = {x = 0, y = -4}, entity = uranium_entity, item_progress = {0.875, 0}}
     }}
   }
-  storage = {
-    bootstrap = bootstrap,
-    starter_anchors = bootstrap.starter_anchors,
-    planets = {nauvis = bootstrap}
-  }
+  storage = {planets = {nauvis = planet_state}}
 
   ingress_runtime.pump_planet_anchors("nauvis")
 
   assert_equal(inserted["uranium-ore"], nil, "blocked uranium ingress should not insert ore")
-  assert_equal(bootstrap.uranium_sulfuric_acid_buffer, 1, "blocked uranium ingress should not spend buffered acid")
+  assert_equal(planet_state.uranium_sulfuric_acid_buffer, 1, "blocked uranium ingress should not spend buffered acid")
 end)
 
 run_test("uranium ore ingress never falls through to regular item ingress", function()
@@ -431,7 +425,7 @@ run_test("uranium ore ingress never falls through to regular item ingress", func
       }
     end
   }
-  local bootstrap = {
+  local planet_state = {
     square_size = 7,
     surface_name = "nauvis",
     ingress_tier = 1,
@@ -440,17 +434,13 @@ run_test("uranium ore ingress never falls through to regular item ingress", func
       {resource = "uranium-ore", kind = "item", flow = "ingress", position = {x = 0, y = -4}, entity = uranium_entity, item_progress = {0, 0}}
     }}
   }
-  storage = {
-    bootstrap = bootstrap,
-    starter_anchors = bootstrap.starter_anchors,
-    planets = {nauvis = bootstrap}
-  }
+  storage = {planets = {nauvis = planet_state}}
 
   ingress_runtime.pump_planet_anchors("nauvis")
 
   assert_equal(inserted["uranium-ore"], nil, "uranium should not emit through the regular ingress branch")
   assert_equal(uranium_entity.active, false, "uranium should become inactive without an acid budget")
-  assert_equal(bootstrap.starter_anchors.anchors[1].item_progress[1], 0.125, "uranium progress should advance only once per tick")
+  assert_equal(planet_state.starter_anchors.anchors[1].item_progress[1], 0.125, "uranium progress should advance only once per tick")
 end)
 
 run_test("Gleba seed egress buffers up to twenty seeds", function()
@@ -468,10 +458,12 @@ run_test("Gleba seed egress buffers up to twenty seeds", function()
     end
   }
   storage = {
-    bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
-    planets = {gleba = {square_size = 17, surface_name = "gleba", starter_anchors = {anchors = {
-      {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = seed_entity, item_progress = {0, 0}}
-    }}}}
+    planets = {
+      nauvis = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
+      gleba = {square_size = 17, surface_name = "gleba", starter_anchors = {anchors = {
+        {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = seed_entity, item_progress = {0, 0}}
+      }}}
+    }
   }
 
   for _ = 1, defs.ITEM_ANCHOR_INTERVAL_TICKS * 21 do
@@ -510,11 +502,13 @@ run_test("one Gleba seed budgets fifty matching fruit", function()
   end
 
   storage = {
-    bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
-    planets = {gleba = {square_size = 17, surface_name = "gleba", starter_anchors = {anchors = {
-      {resource = "yumako", kind = "item", flow = "ingress", position = {x = 0, y = 9}, entity = belt_entity(), item_progress = {0, 0}},
-      {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = belt_entity(), item_progress = {0, 0}}
-    }}}}
+    planets = {
+      nauvis = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
+      gleba = {square_size = 17, surface_name = "gleba", starter_anchors = {anchors = {
+        {resource = "yumako", kind = "item", flow = "ingress", position = {x = 0, y = 9}, entity = belt_entity(), item_progress = {0, 0}},
+        {resource = "yumako-seed", kind = "item", flow = "egress", position = {x = 0, y = 9}, entity = belt_entity(), item_progress = {0, 0}}
+      }}}
+    }
   }
 
   for _ = 1, defs.ITEM_ANCHOR_INTERVAL_TICKS * 50 do
@@ -547,8 +541,8 @@ run_test("Gleba fruit ingresses and seed egresses use normal Managed Line rates"
   end
 
   storage = {
-    bootstrap = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
     planets = {
+      nauvis = {square_size = 7, surface_name = "nauvis", ingress_tier = 1},
       gleba = {
         square_size = 17,
         surface_name = "gleba",
@@ -574,28 +568,28 @@ run_test("Gleba fruit ingresses and seed egresses use normal Managed Line rates"
   assert_equal(counts.inserted.jellynut, 1, "Jellynut ingress should emit at the normal yellow single-lane rate")
 end)
 
-run_test("planet bootstrap research unlocks are planet-specific", function()
+run_test("planet planet_state research unlocks are planet-specific", function()
   local techs = {}
   for _, name in ipairs({"recycling", "heating-tower", "agriculture", "jellynut", "yumako", "calcite-processing", "tungsten-carbide", "lithium-processing"}) do
     techs[name] = {researched = false}
   end
 
   local force = {technologies = techs}
-  anchor_runtime.unlock_planet_bootstrap_research("fulgora", force)
+  anchor_runtime.unlock_planet_starter_research("fulgora", force)
   assert_equal(techs.recycling.researched, true, "Fulgora should unlock recycling")
   assert_equal(techs.agriculture.researched, false, "Fulgora should not unlock Gleba research")
 
-  anchor_runtime.unlock_planet_bootstrap_research("gleba", force)
+  anchor_runtime.unlock_planet_starter_research("gleba", force)
   assert_equal(techs["heating-tower"].researched, true, "Gleba should unlock heating tower")
   assert_equal(techs.agriculture.researched, true, "Gleba should unlock agriculture")
   assert_equal(techs.jellynut.researched, true, "Gleba should unlock jellynut")
   assert_equal(techs.yumako.researched, true, "Gleba should unlock yumako")
 
-  anchor_runtime.unlock_planet_bootstrap_research("vulcanus", force)
+  anchor_runtime.unlock_planet_starter_research("vulcanus", force)
   assert_equal(techs["calcite-processing"].researched, true, "Vulcanus should unlock calcite processing")
   assert_equal(techs["tungsten-carbide"].researched, true, "Vulcanus should unlock tungsten carbide")
 
-  anchor_runtime.unlock_planet_bootstrap_research("aquilo", force)
+  anchor_runtime.unlock_planet_starter_research("aquilo", force)
   assert_equal(techs["lithium-processing"].researched, true, "Aquilo should unlock lithium processing")
 end)
 

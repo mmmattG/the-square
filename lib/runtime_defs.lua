@@ -1,4 +1,4 @@
-local bootstrap_layout = require("lib.bootstrap_layout")
+local square_layout = require("lib.square_layout")
 local expansion_research = require("lib.expansion_research")
 local item_ingress = require("lib.item_ingress")
 local planet_catalog = require("lib.planet_catalog")
@@ -655,11 +655,11 @@ function runtime_defs.is_logistic_network_automation_enabled()
 end
 
 function runtime_defs.get_square_bounds(size, center)
-  return bootstrap_layout.get_square_bounds(size, center)
+  return square_layout.get_square_bounds(size, center)
 end
 
 function runtime_defs.get_surface_size(square_size)
-  return bootstrap_layout.get_surface_size(square_size, runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH)
+  return square_layout.get_surface_size(square_size, runtime_defs.STARTER_ANCHOR_OUTER_RING_WIDTH)
 end
 
 function runtime_defs.get_background_tile_name()
@@ -675,7 +675,7 @@ function runtime_defs.is_screenshot_alt_mode_enabled()
 end
 
 function runtime_defs.get_anchor_bounds(square_size, center)
-  return bootstrap_layout.get_anchor_bounds(square_size, center)
+  return square_layout.get_anchor_bounds(square_size, center)
 end
 
 function runtime_defs.get_square_area(square_size)
@@ -686,14 +686,14 @@ function runtime_defs.get_ingress_tier_definition(tier_level)
   return runtime_defs.INGRESS_TIER_DEFINITIONS[tier_level] or runtime_defs.INGRESS_TIER_DEFINITIONS[1]
 end
 
-function runtime_defs.get_current_ingress_tier_level()
-  local bootstrap = storage.bootstrap
+function runtime_defs.get_current_ingress_tier_level(planet_name)
+  local planet_state = storage.planets and storage.planets[planet_name or "nauvis"]
 
-  if not bootstrap then
+  if not planet_state then
     return 1
   end
 
-  local tier_level = bootstrap.ingress_tier or 1
+  local tier_level = planet_state.ingress_tier or 1
 
   if tier_level < 1 then
     return 1
@@ -742,12 +742,14 @@ function runtime_defs.get_next_expansion_tile_reward(square_size)
   return runtime_defs.get_square_area(next_square_size) - runtime_defs.get_square_area(square_size)
 end
 
-function runtime_defs.get_completed_expansion_research_levels()
-  if not storage.bootstrap then
+function runtime_defs.get_completed_expansion_research_levels(planet_name)
+  local planet_state = storage.planets and storage.planets[planet_name or "nauvis"]
+
+  if not planet_state then
     return 0
   end
 
-  return storage.bootstrap.expansion_research_levels or 0
+  return planet_state.expansion_research_levels or 0
 end
 
 function runtime_defs.get_expansion_research_band_for_level(level)
@@ -773,11 +775,11 @@ function runtime_defs.is_expansion_research_name(research_name)
 end
 
 function runtime_defs.is_inside_bounds(bounds, position)
-  return bootstrap_layout.is_inside_bounds(bounds, position)
+  return square_layout.is_inside_bounds(bounds, position)
 end
 
 function runtime_defs.get_square_bounds(square_size, center)
-  return bootstrap_layout.get_square_bounds(square_size, center)
+  return square_layout.get_square_bounds(square_size, center)
 end
 
 function runtime_defs.get_position_key(position)
@@ -794,11 +796,11 @@ function runtime_defs.move_position(position, side, distance)
 end
 
 function runtime_defs.get_anchor_side_for_position(square_size, position, center)
-  return bootstrap_layout.get_anchor_side_for_position(square_size, position, center)
+  return square_layout.get_anchor_side_for_position(square_size, position, center)
 end
 
 function runtime_defs.is_anchor_ring_position(square_size, position, center)
-  return bootstrap_layout.is_anchor_ring_position(square_size, position, center)
+  return square_layout.is_anchor_ring_position(square_size, position, center)
 end
 
 function runtime_defs.get_managed_tile_name(square_size, surface_size, position, floor_tile_name, center)
@@ -806,13 +808,13 @@ function runtime_defs.get_managed_tile_name(square_size, surface_size, position,
 
   if not floor_tile_name
     and background_tile_name == runtime_defs.CHECKERBOARD_BACKGROUND_TILE_NAME
-    and bootstrap_layout.is_inside_bounds(bootstrap_layout.get_square_bounds(square_size, center), position) then
+    and square_layout.is_inside_bounds(square_layout.get_square_bounds(square_size, center), position) then
     local parity = math.abs(position.x + position.y) % 2 == 0 and "even" or "odd"
 
     return runtime_defs.CHECKERBOARD_TILE_NAMES[parity]
   end
 
-  return bootstrap_layout.get_managed_tile_name(
+  return square_layout.get_managed_tile_name(
     square_size,
     surface_size,
     background_tile_name,
@@ -867,14 +869,14 @@ function runtime_defs.snap_entity_position_to_tile(position)
   }
 end
 
-function runtime_defs.get_current_egress_tier_level()
-  local bootstrap = storage.bootstrap
+function runtime_defs.get_current_egress_tier_level(planet_name)
+  local planet_state = storage.planets and storage.planets[planet_name or "nauvis"]
 
-  if not bootstrap then
+  if not planet_state then
     return 1
   end
 
-  local tier_level = bootstrap.egress_tier or runtime_defs.get_current_ingress_tier_level()
+  local tier_level = planet_state.egress_tier or runtime_defs.get_current_ingress_tier_level(planet_name)
 
   if tier_level < 1 then
     return 1

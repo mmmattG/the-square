@@ -87,15 +87,16 @@ end
 
 local function install_world(surface, anchors)
   storage = {
-    bootstrap = {
-      square_size = 7,
-      surface_size = 9,
-      surface_name = "nauvis",
-      square_position = {x = 0, y = 0},
-      starter_anchors = {anchors = anchors or {}}
+    planets = {
+      nauvis = {
+        square_size = 7,
+        surface_size = 9,
+        surface_name = "nauvis",
+        square_position = {x = 0, y = 0},
+        starter_anchors = {anchors = anchors or {}}
+      }
     }
   }
-  storage.starter_anchors = storage.bootstrap.starter_anchors
 
   game = {
     surfaces = {nauvis = surface},
@@ -231,8 +232,8 @@ run_test("Moving the Square updates tiles and Boundary state without moving fact
   })
 
   assert_equal(result.ok, true, "an unobstructed move should succeed")
-  assert_equal(storage.bootstrap.square_position.x, 1, "the Planet-local Square position should move east")
-  assert_equal(storage.bootstrap.square_position.y, 0, "moving east should retain the Square y position")
+  assert_equal(storage.planets.nauvis.square_position.x, 1, "the Planet-local Square position should move east")
+  assert_equal(storage.planets.nauvis.square_position.y, 0, "moving east should retain the Square y position")
   assert_equal(assembler.position.x, 0, "factory entities should retain their world x coordinate")
   assert_equal(assembler.position.y, 0, "factory entities should retain their world y coordinate")
   assert_equal(west_anchor.position.x, -3, "the departing Managed Line should move onto its connected belt")

@@ -25,7 +25,7 @@ settings = {
   }
 }
 
-local bootstrap_runtime = require("lib.bootstrap_runtime")
+local planet_runtime = require("lib.planet_runtime")
 local defs = require("lib.runtime_defs")
 
 local function assert_equal(actual, expected, message)
@@ -46,7 +46,7 @@ local function run_test(name, fn)
 end
 
 run_test("generated chunks outside managed surface are painted void", function()
-  local tiles = bootstrap_runtime.build_generated_chunk_tiles(7, 9, {
+  local tiles = planet_runtime.build_generated_chunk_tiles(7, 9, {
     left_top = {x = 64, y = 64},
     right_bottom = {x = 66, y = 66}
   })
@@ -59,7 +59,7 @@ run_test("generated chunks outside managed surface are painted void", function()
 end)
 
 run_test("generated chunks follow a moved Square position", function()
-  local tiles = bootstrap_runtime.build_generated_chunk_tiles(7, 9, {
+  local tiles = planet_runtime.build_generated_chunk_tiles(7, 9, {
     left_top = {x = -4, y = -4},
     right_bottom = {x = 6, y = 5}
   }, "grass-1", {x = 1, y = 0})
@@ -74,8 +74,8 @@ run_test("generated chunks follow a moved Square position", function()
 end)
 
 run_test("new worlds start with stashed Nauvis Managed Lines only", function()
-  local nauvis_lines = bootstrap_runtime.build_initial_managed_line_state("nauvis")
-  local vulcanus_lines = bootstrap_runtime.build_initial_managed_line_state("vulcanus")
+  local nauvis_lines = planet_runtime.build_initial_managed_line_state("nauvis")
+  local vulcanus_lines = planet_runtime.build_initial_managed_line_state("vulcanus")
 
   assert_equal(#nauvis_lines.anchors, 3, "Nauvis should start with three owned Managed Lines")
   assert_equal(#vulcanus_lines.anchors, 0, "other planets should not start with owned Managed Lines")
@@ -95,8 +95,8 @@ run_test("initial Managed Line inventory is granted once", function()
     end
   }
 
-  bootstrap_runtime.grant_initial_managed_line_inventory(player)
-  bootstrap_runtime.grant_initial_managed_line_inventory(player)
+  planet_runtime.grant_initial_managed_line_inventory(player, "nauvis")
+  planet_runtime.grant_initial_managed_line_inventory(player, "nauvis")
 
   assert_equal(inserted[defs.get_generic_anchor_item_name("fluid", "ingress")], 1, "player should receive one fluid ingress")
   assert_equal(inserted[defs.get_generic_anchor_item_name("item", "ingress")], 2, "player should receive two item ingresses")
@@ -112,7 +112,7 @@ run_test("generated chunks on supported Space Age planet surfaces are routed thr
     end
   }
 
-  local handled = bootstrap_runtime.refresh_generated_chunk_for_planet_surface(surface, {
+  local handled = planet_runtime.refresh_generated_chunk_for_planet_surface(surface, {
     left_top = {x = 0, y = 0},
     right_bottom = {x = 1, y = 1}
   })
@@ -124,9 +124,11 @@ end)
 
 run_test("generated chunks on Nauvis keep using the legacy background tile setting", function()
   storage = {
-    bootstrap = {
-      square_size = 7,
-      surface_name = "nauvis"
+    planets = {
+      nauvis = {
+        square_size = 7,
+        surface_name = "nauvis"
+      }
     }
   }
   settings.global["the-square-background-tile"] = {value = "sand-3"}
@@ -138,12 +140,12 @@ run_test("generated chunks on Nauvis keep using the legacy background tile setti
     end
   }
 
-  local handled = bootstrap_runtime.refresh_generated_chunk_for_planet_surface(surface, {
+  local handled = planet_runtime.refresh_generated_chunk_for_planet_surface(surface, {
     left_top = {x = 0, y = 0},
     right_bottom = {x = 1, y = 1}
   })
 
-  assert_equal(handled, true, "Nauvis should still be routed through compatibility storage")
+  assert_equal(handled, true, "Nauvis should be routed through planet state")
   assert_equal(painted_tiles[1].name, "sand-3", "Nauvis should keep honoring the legacy global background tile")
   settings.global["the-square-background-tile"] = {value = "grass-1"}
 end)

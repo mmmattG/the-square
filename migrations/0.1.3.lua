@@ -1,4 +1,4 @@
-local bootstrap_runtime = require("lib.bootstrap_runtime")
+local planet_runtime = require("lib.planet_runtime")
 local defs = require("lib.runtime_defs")
 local LEGACY_SURFACE_NAME = "fes-bootstrap"
 
@@ -76,8 +76,8 @@ local function migrate_legacy_bootstrap_surface()
   bootstrap.surface_name = defs.SURFACE_NAME
   bootstrap.surface_size = surface_size
   clear_managed_anchor_refs()
-  bootstrap_runtime.refresh_all_generated_chunk_tiles(target_surface, square_size, surface_size)
-  bootstrap_runtime.clear_surface_chart(target_surface)
+  planet_runtime.refresh_all_generated_chunk_tiles(target_surface, square_size, surface_size)
+  planet_runtime.clear_surface_chart(target_surface)
 
   for _, player in pairs(game.players) do
     if player.valid then

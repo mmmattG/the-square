@@ -1,4 +1,4 @@
-local bootstrap_runtime = require("lib.bootstrap_runtime")
+local planet_runtime = require("lib.planet_runtime")
 local defs = require("lib.runtime_defs")
 local planet_instance = require("lib.planet_instance")
 
@@ -37,38 +37,6 @@ local function normalize_anchor(anchor, square_size, square_position)
   migrate_anchor_to_anchor_ring(square_size, anchor, square_position)
 end
 
-local function migrate_legacy_nauvis_state(bootstrap)
-  if not (storage.starter_anchors and storage.starter_anchors.layout_version ~= defs.STARTER_ANCHOR_LAYOUT_VERSION) then
-    return
-  end
-
-  local migrated_anchors = storage.starter_anchors.anchors or {}
-
-  for _, anchor in ipairs(migrated_anchors) do
-    anchor.flow = anchor.flow or "ingress"
-    anchor.tier_level = anchor.tier_level or 1
-    anchor.item_progress = anchor.item_progress or {0, 0}
-    anchor.direction = anchor.side and defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side) or nil
-    anchor.item_name = anchor.item_name or (
-      anchor.flow == "egress"
-        and defs.get_generic_anchor_item_name_for_tier(anchor.kind or "item", "egress", anchor.tier_level)
-        or defs.get_generic_anchor_item_name_for_tier(anchor.kind or "item", "ingress", anchor.tier_level)
-    )
-    anchor.entity_name = anchor.entity_name or (
-      anchor.flow == "egress"
-        and defs.get_egress_entity_name(anchor.resource)
-        or defs.get_ingress_entity_name(anchor.resource, 1)
-    )
-    anchor.entity = nil
-    migrate_anchor_to_anchor_ring(bootstrap.square_size, anchor)
-  end
-
-  storage.starter_anchors = {
-    layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = migrated_anchors
-  }
-end
-
 function managed_line_state.get(planet_name)
   planet_name = planet_name or "nauvis"
 
@@ -84,28 +52,23 @@ function managed_line_state.initialize(planet_name)
     return nil
   end
 
-  local bootstrap = planet:get_bootstrap_storage()
-  local is_legacy_aliased_state = storage.planets and storage.planets.nauvis == bootstrap
-
-  if is_legacy_aliased_state then
-    migrate_legacy_nauvis_state(bootstrap)
-    if storage.starter_anchors and not bootstrap.starter_anchors then
-      bootstrap.starter_anchors = storage.starter_anchors
-    end
-  end
-
-  bootstrap.starter_anchors = bootstrap.starter_anchors or {
+  local planet_state = planet:get_state()
+  planet_state.starter_anchors = planet_state.starter_anchors or {
     layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = bootstrap_runtime.build_initial_managed_line_state(planet_name).anchors
+    anchors = planet_runtime.build_initial_managed_line_state(planet_name).anchors
   }
-  if is_legacy_aliased_state then
-    storage.starter_anchors = bootstrap.starter_anchors
-  end
-  local state = bootstrap.starter_anchors
+  local state = planet_state.starter_anchors
+  local layout_changed = state.layout_version ~= defs.STARTER_ANCHOR_LAYOUT_VERSION
 
   for _, anchor in ipairs(state.anchors) do
+    if layout_changed then
+      anchor.entity = nil
+    end
+
     normalize_anchor(anchor, planet:get_square_size(), planet:get_square_position())
   end
+
+  state.layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION
 
   return state
 end

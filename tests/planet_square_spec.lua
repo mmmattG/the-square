@@ -83,16 +83,23 @@ run_test("Planet Square expands Nauvis through one interface and preserves Manag
   local surface = make_surface("nauvis")
   install_game({nauvis = surface})
   storage = {
-    bootstrap = {square_size = 7, surface_size = 9, surface_name = "nauvis", expansion_research_levels = 0},
-    starter_anchors = {
-      anchors = {
-        {
-          resource = "iron-ore",
-          kind = "item",
-          flow = "ingress",
-          side = "north",
-          position = {x = 0, y = -4},
-          entity_name = "iron-ore-ingress"
+    planets = {
+      nauvis = {
+        square_size = 7,
+        surface_size = 9,
+        surface_name = "nauvis",
+        expansion_research_levels = 0,
+        starter_anchors = {
+          anchors = {
+            {
+              resource = "iron-ore",
+              kind = "item",
+              flow = "ingress",
+              side = "north",
+              position = {x = 0, y = -4},
+              entity_name = "iron-ore-ingress"
+            }
+          }
         }
       }
     }
@@ -101,7 +108,7 @@ run_test("Planet Square expands Nauvis through one interface and preserves Manag
   local result = planet_square.apply_square_expansion("nauvis")
 
   assert_equal(result.square_size, 9, "Nauvis should grow by one Ring")
-  assert_equal(storage.starter_anchors.anchors[1].position.y, -5, "Managed Lines should shift outward")
+  assert_equal(storage.planets.nauvis.starter_anchors.anchors[1].position.y, -5, "Managed Lines should shift outward")
   assert_equal(surface.created_entities[1].name, "transport-belt", "Nauvis expansion should leave trailing ingress stubs")
   assert_equal(surface.map_gen_settings.width, 11, "surface dimensions should be resized")
 end)
@@ -110,22 +117,24 @@ run_test("Planet Square expansion respects a previously moved Square position", 
   local surface = make_surface("nauvis")
   install_game({nauvis = surface})
   storage = {
-    bootstrap = {
-      square_size = 7,
-      surface_size = 9,
-      surface_name = "nauvis",
-      square_position = {x = 2, y = -1},
-      expansion_research_levels = 0
-    },
-    starter_anchors = {
-      anchors = {
-        {
-          resource = "iron-ore",
-          kind = "item",
-          flow = "ingress",
-          side = "north",
-          position = {x = 2, y = -5},
-          entity_name = "iron-ore-ingress"
+    planets = {
+      nauvis = {
+        square_size = 7,
+        surface_size = 9,
+        surface_name = "nauvis",
+        square_position = {x = 2, y = -1},
+        expansion_research_levels = 0,
+        starter_anchors = {
+          anchors = {
+            {
+              resource = "iron-ore",
+              kind = "item",
+              flow = "ingress",
+              side = "north",
+              position = {x = 2, y = -5},
+              entity_name = "iron-ore-ingress"
+            }
+          }
         }
       }
     }
@@ -133,9 +142,9 @@ run_test("Planet Square expansion respects a previously moved Square position", 
 
   planet_square.apply_square_expansion("nauvis")
 
-  assert_equal(storage.bootstrap.square_position.x, 2, "expansion should preserve the Square x offset")
-  assert_equal(storage.bootstrap.square_position.y, -1, "expansion should preserve the Square y offset")
-  assert_equal(storage.starter_anchors.anchors[1].position.y, -6, "Managed Lines should expand from the moved Boundary")
+  assert_equal(storage.planets.nauvis.square_position.x, 2, "expansion should preserve the Square x offset")
+  assert_equal(storage.planets.nauvis.square_position.y, -1, "expansion should preserve the Square y offset")
+  assert_equal(storage.planets.nauvis.starter_anchors.anchors[1].position.y, -6, "Managed Lines should expand from the moved Boundary")
   assert_equal(surface.map_gen_settings.width, 15, "surface width should include the moved Square offset")
   assert_equal(surface.map_gen_settings.height, 13, "surface height should include the moved Square offset")
 end)
@@ -144,7 +153,6 @@ run_test("Planet Square expands a non-Nauvis Planet with the same Managed Line S
   local vulcanus = make_surface("vulcanus")
   install_game({vulcanus = vulcanus})
   storage = {
-    bootstrap = {square_size = 7, surface_size = 9, surface_name = "nauvis"},
     planets = {
       vulcanus = {
         square_size = 5,
@@ -219,10 +227,17 @@ run_test("Planet Square expansion does not leave belt stubs for deleted Managed 
   local surface = make_surface("nauvis")
   install_game({nauvis = surface})
   storage = {
-    bootstrap = {square_size = 7, surface_size = 9, surface_name = "nauvis", expansion_research_levels = 0},
-    starter_anchors = {
-      anchors = {
-        {side = "north", position = {x = 0, y = -4}, item_progress = {0, 0}}
+    planets = {
+      nauvis = {
+        square_size = 7,
+        surface_size = 9,
+        surface_name = "nauvis",
+        expansion_research_levels = 0,
+        starter_anchors = {
+          anchors = {
+            {side = "north", position = {x = 0, y = -4}, item_progress = {0, 0}}
+          }
+        }
       }
     }
   }
@@ -230,15 +245,15 @@ run_test("Planet Square expansion does not leave belt stubs for deleted Managed 
   planet_square.apply_square_expansion("nauvis")
 
   assert_equal(#surface.created_entities, 0, "deleted Managed Line slots should not leave trailing belt stubs")
-  assert_equal(storage.starter_anchors.anchors[1].position.y, -5, "empty anchor slots should still shift outward")
+  assert_equal(storage.planets.nauvis.starter_anchors.anchors[1].position.y, -5, "empty anchor slots should still shift outward")
 end)
 
 run_test("Planet Square expansion leaves turbo belt stubs at turbo Managed Line tier", function()
   local gleba = make_surface("gleba")
   install_game({gleba = gleba})
   storage = {
-    bootstrap = {ingress_tier = 5, egress_tier = 5},
     planets = {
+      nauvis = {ingress_tier = 5, egress_tier = 5},
       gleba = {
         square_size = 5,
         surface_size = 7,
@@ -291,7 +306,7 @@ run_test("Square Expansion research routes to the researched Planet", function()
     }
   }
 
-  local handled = growth_runtime.handle_expansion_research_finished(research, require("lib.bootstrap_runtime"), nil, nil)
+  local handled = growth_runtime.handle_expansion_research_finished(research, require("lib.planet_runtime"), nil, nil)
 
   assert_equal(handled, true, "planet research should be handled")
   assert_equal(storage.planets.vulcanus.square_size, 7, "researched Planet should expand")

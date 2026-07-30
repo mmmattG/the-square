@@ -10,30 +10,12 @@ local function get_target_surface_size(square_size)
   return defs.get_surface_size(square_size)
 end
 
-local function ensure_bootstrap_defaults(bootstrap)
-  bootstrap.name = "nauvis"
-  bootstrap.square_size = bootstrap.square_size or defs.get_square_size()
-  local target_surface_size = get_target_surface_size(bootstrap.square_size)
-
-  bootstrap.surface_name = bootstrap.surface_name or defs.SURFACE_NAME
-  bootstrap.surface_size = target_surface_size
-  bootstrap.expansions_completed = bootstrap.expansions_completed or 0
-  bootstrap.ingress_tier = bootstrap.ingress_tier or 1
-  bootstrap.expansion_research_levels = bootstrap.expansion_research_levels or 0
-  bootstrap.uranium_ore_progress_carry = bootstrap.uranium_ore_progress_carry or 0
-  bootstrap.square_position = bootstrap.square_position or {x = 0, y = 0}
-  bootstrap.growth_progress = nil
-  bootstrap.expansion_speed_research_levels = nil
-
-  return bootstrap
-end
-
 local function ensure_planets_storage()
   storage.planets = storage.planets or {}
   return storage.planets
 end
 
-local function ensure_planet_defaults(planet_name, state)
+local function ensure_planet_state_defaults(planet_name, state)
   local config = planet_config.get(planet_name)
 
   if not config then
@@ -63,6 +45,13 @@ local function ensure_planet_defaults(planet_name, state)
   state.expansion_research_levels = state.expansion_research_levels or 0
   state.square_position = state.square_position or {x = 0, y = 0}
 
+  if planet_name == "nauvis" then
+    state.ingress_tier = state.ingress_tier or 1
+    state.uranium_ore_progress_carry = state.uranium_ore_progress_carry or 0
+    state.growth_progress = nil
+    state.expansion_speed_research_levels = nil
+  end
+
   return state
 end
 
@@ -70,57 +59,12 @@ local function wrap_planet(state)
   return setmetatable({state = state}, planet_methods)
 end
 
-local function migrate_nauvis_state()
-  local planets = ensure_planets_storage()
-  local state = storage.bootstrap or planets.nauvis or {}
-
-  if planets.nauvis and planets.nauvis ~= state then
-    for key, value in pairs(planets.nauvis) do
-      if state[key] == nil then
-        state[key] = value
-      end
-    end
-  end
-
-  if storage.starter_anchors then
-    state.starter_anchors = storage.starter_anchors
-  end
-
-  planets.nauvis = ensure_bootstrap_defaults(state)
-  storage.bootstrap = planets.nauvis
-  storage.starter_anchors = planets.nauvis.starter_anchors
-
-  return planets.nauvis
-end
-
-function planet_instance.ensure_nauvis()
-  return wrap_planet(migrate_nauvis_state())
-end
-
-function planet_instance.from_bootstrap(bootstrap)
-  if not bootstrap then
-    return nil
-  end
-
-  storage.bootstrap = bootstrap
-  return planet_instance.ensure_nauvis()
-end
-
-local ensure_overrides = {
-  nauvis = planet_instance.ensure_nauvis
-}
-
 function planet_instance.ensure(planet_name)
   planet_name = planet_name or "nauvis"
 
-  local ensure_override = ensure_overrides[planet_name]
-  if ensure_override then
-    return ensure_override()
-  end
-
   local planets = ensure_planets_storage()
   planets[planet_name] = planets[planet_name] or {}
-  local state = ensure_planet_defaults(planet_name, planets[planet_name])
+  local state = ensure_planet_state_defaults(planet_name, planets[planet_name])
 
   if not state then
     planets[planet_name] = nil
@@ -192,7 +136,7 @@ function planet_methods:get_managed_lines()
   return self.state.starter_anchors
 end
 
-function planet_methods:get_bootstrap_storage()
+function planet_methods:get_state()
   return self.state
 end
 

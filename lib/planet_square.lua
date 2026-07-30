@@ -230,8 +230,8 @@ function planet_square.apply_square_expansion(planet_name, options)
   planet:set_square_size(next_square_size)
   planet:set_completed_square_expansion_levels(next_expansion_level)
 
-  local bootstrap = planet:get_bootstrap_storage()
-  bootstrap.expansions_completed = next_expansion_level
+  local planet_state = planet:get_state()
+  planet_state.expansions_completed = next_expansion_level
 
   apply_square_resize(
     surface,

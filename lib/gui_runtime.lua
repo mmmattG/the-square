@@ -130,27 +130,27 @@ local function ensure_debug_frame(player)
 end
 
 local function build_status_lines()
-  local bootstrap = storage.bootstrap
+  local planet_state = storage.planets and storage.planets.nauvis
   local lines = {}
 
-  if not bootstrap then
+  if not planet_state then
     lines[#lines + 1] = "No expansion data yet."
     return lines
   end
 
-  local next_reward = defs.get_next_expansion_tile_reward(bootstrap.square_size)
-  local completed_levels = defs.get_completed_expansion_research_levels()
+  local next_reward = defs.get_next_expansion_tile_reward(planet_state.square_size)
+  local completed_levels = defs.get_completed_expansion_research_levels("nauvis")
   local next_level = completed_levels + 1
   local next_band = defs.get_expansion_research_band_for_level(next_level)
 
-  lines[#lines + 1] = "Square: " .. bootstrap.square_size .. "x" .. bootstrap.square_size
+  lines[#lines + 1] = "Square: " .. planet_state.square_size .. "x" .. planet_state.square_size
   lines[#lines + 1] = "Background tile: " .. defs.get_background_tile_name()
   lines[#lines + 1] = "Logistics setting: "
     .. (defs.is_logistic_network_automation_enabled() and "enabled" or "disabled")
   lines[#lines + 1] = "Expansion research: " .. completed_levels .. " levels completed"
   lines[#lines + 1] = "Next expansion: level " .. next_level .. " using " .. next_band.label
   lines[#lines + 1] = "Next expansion unlocks " .. next_reward .. " tiles"
-  lines[#lines + 1] = "Expansions completed: " .. (bootstrap.expansions_completed or 0)
+  lines[#lines + 1] = "Expansions completed: " .. (planet_state.expansions_completed or 0)
 
   return lines
 end
@@ -162,14 +162,14 @@ local function build_debug_lines()
     return lines
   end
 
-  local bootstrap = storage.bootstrap
-  local next_level = defs.get_completed_expansion_research_levels() + 1
+  local planet_state = storage.planets.nauvis
+  local next_level = defs.get_completed_expansion_research_levels("nauvis") + 1
   local next_band = defs.get_expansion_research_band_for_level(next_level)
 
   lines[#lines + 1] = "Expansion trigger: complete one level of square-expansion research."
   lines[#lines + 1] = "Current research band: " .. next_band.name
-  lines[#lines + 1] = "Current square area: " .. defs.get_square_area(bootstrap.square_size) .. " tiles"
-  lines[#lines + 1] = "Next ring reward: " .. defs.get_next_expansion_tile_reward(bootstrap.square_size) .. " tiles"
+  lines[#lines + 1] = "Current square area: " .. defs.get_square_area(planet_state.square_size) .. " tiles"
+  lines[#lines + 1] = "Next ring reward: " .. defs.get_next_expansion_tile_reward(planet_state.square_size) .. " tiles"
 
   return lines
 end

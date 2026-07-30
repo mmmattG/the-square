@@ -33,7 +33,7 @@ local planets = {
       {resource = "lava", kind = "fluid", starter_side = "west", prerequisite_resource = nil}
     },
     opt_in_egress_resources = {},
-    bootstrap_research = {"calcite-processing", "tungsten-carbide"}
+    starter_research = {"calcite-processing", "tungsten-carbide"}
   },
   {
     name = "fulgora",
@@ -45,7 +45,7 @@ local planets = {
       {resource = "heavy-oil", kind = "fluid", starter_side = "west", prerequisite_resource = nil}
     },
     opt_in_egress_resources = {},
-    bootstrap_research = {"recycling"},
+    starter_research = {"recycling"},
     starter_entities = {
       {name = "recycler", position = {x = 0, y = 0}},
       {name = "lightning-rod", position = {x = -7, y = -7}},
@@ -69,7 +69,7 @@ local planets = {
       {resource = "yumako-seed", kind = "item", starter_side = "south", prerequisite_resource = nil},
       {resource = "jellynut-seed", kind = "item", starter_side = "east", prerequisite_resource = nil}
     },
-    bootstrap_research = {"heating-tower", "agriculture", "jellynut", "yumako"},
+    starter_research = {"heating-tower", "agriculture", "jellynut", "yumako"},
     starter_entities = {
       {name = "steel-chest", position = {x = 0, y = 0}, inventory = {articles = {{name = "yumako-seed", count = 50}, {name = "jellynut-seed", count = 50}}}}
     }
@@ -86,7 +86,7 @@ local planets = {
       {resource = "lithium-brine", kind = "fluid", starter_side = "west", prerequisite_resource = nil}
     },
     opt_in_egress_resources = {},
-    bootstrap_research = {"lithium-processing"}
+    starter_research = {"lithium-processing"}
   }
 }
 
@@ -131,11 +131,11 @@ function planet_catalog.get_opt_in_egress_resources(planet_name)
   return planet and copy_definitions(planet.opt_in_egress_resources) or nil
 end
 
-function planet_catalog.get_bootstrap_research(planet_name)
+function planet_catalog.get_starter_research(planet_name)
   local planet = planet_catalog.get(planet_name)
   local result = {}
 
-  for _, technology_name in ipairs(planet and planet.bootstrap_research or {}) do
+  for _, technology_name in ipairs(planet and planet.starter_research or {}) do
     result[#result + 1] = technology_name
   end
 

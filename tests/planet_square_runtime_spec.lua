@@ -79,7 +79,7 @@ run_test("Planet Square runtime expands one Planet-local Square through one inte
   assert_equal(reconciled_planet, "vulcanus", "runtime should reconcile Managed Lines after shifting them")
 end)
 
-run_test("Planet Square runtime handles Square Expansion research without bootstrap_runtime", function()
+run_test("Planet Square runtime handles Square Expansion research without planet_runtime", function()
   local surface = make_surface("vulcanus")
   install_game(surface)
   storage = {planets = {vulcanus = {square_size = 5, surface_size = 7, surface_name = "vulcanus", starter_anchors = {anchors = {}}}}}

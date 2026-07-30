@@ -21,7 +21,7 @@ local function run_test(name, fn)
 end
 
 run_test("same Managed Line state seam initializes and reads Nauvis and Proof Planet lines", function()
-  storage = {bootstrap = {square_size = 7, surface_name = "nauvis"}}
+  storage = {planets = {nauvis = {square_size = 7, surface_name = "nauvis"}}}
 
   local nauvis_lines = managed_line_state.initialize("nauvis")
   local vulcanus_lines = managed_line_state.initialize("vulcanus")
@@ -41,7 +41,7 @@ run_test("seam returns nil for unsupported planets without creating Managed Line
 end)
 
 run_test("starter Managed Lines initialize only once per Planet", function()
-  storage = {bootstrap = {square_size = 7, surface_name = "nauvis"}}
+  storage = {planets = {nauvis = {square_size = 7, surface_name = "nauvis"}}}
 
   local initial_lines = managed_line_state.initialize("nauvis")
   initial_lines.anchors[#initial_lines.anchors + 1] = {resource = "coal"}

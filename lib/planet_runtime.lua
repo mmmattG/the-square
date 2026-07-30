@@ -3,7 +3,7 @@ local planet_config = require("lib.planet_config")
 local planet_instance = require("lib.planet_instance")
 local planet_square = require("lib.planet_square")
 
-local bootstrap_runtime = {}
+local planet_runtime = {}
 local ensure_surface_dimensions
 
 local function get_target_surface_size(square_size, expansions_completed)
@@ -98,7 +98,7 @@ local function choose_spread_positions(positions, count, side)
   return chosen
 end
 
-function bootstrap_runtime.build_starter_anchor_layout(square_size, planet_name)
+function planet_runtime.build_starter_anchor_layout(square_size, planet_name)
   local bounds = defs.get_anchor_bounds(square_size)
   local resources_by_side = {}
   local anchors = {}
@@ -147,7 +147,7 @@ local function build_stashed_managed_anchor(kind, flow)
   }
 end
 
-function bootstrap_runtime.build_initial_managed_line_state(planet_name)
+function planet_runtime.build_initial_managed_line_state(planet_name)
   local anchors = {}
 
   if planet_name == "nauvis" then
@@ -162,8 +162,11 @@ function bootstrap_runtime.build_initial_managed_line_state(planet_name)
   }
 end
 
-function bootstrap_runtime.grant_initial_managed_line_inventory(player)
-  if storage.initial_managed_line_inventory_granted then
+function planet_runtime.grant_initial_managed_line_inventory(player, planet_name)
+  local planet = planet_runtime.ensure_planet_state(planet_name)
+  local planet_state = planet and planet:get_state()
+
+  if not planet_state or planet_state.initial_managed_line_inventory_granted then
     return
   end
 
@@ -171,9 +174,11 @@ function bootstrap_runtime.grant_initial_managed_line_inventory(player)
     return
   end
 
-  player.insert({name = defs.get_generic_anchor_item_name("fluid", "ingress"), count = 1})
-  player.insert({name = defs.get_generic_anchor_item_name("item", "ingress"), count = 2})
-  storage.initial_managed_line_inventory_granted = true
+  for _, anchor in ipairs(planet_runtime.build_initial_managed_line_state(planet_name).anchors) do
+    player.insert({name = anchor.item_name, count = 1})
+  end
+
+  planet_state.initial_managed_line_inventory_granted = true
 end
 
 local function call_freeplay(interface_name, value)
@@ -204,7 +209,7 @@ local function build_managed_surface_tiles(square_size, surface_size, floor_tile
   return tiles
 end
 
-function bootstrap_runtime.refresh_managed_surface_tiles(
+function planet_runtime.refresh_managed_surface_tiles(
   surface,
   square_size,
   surface_size,
@@ -229,11 +234,11 @@ function bootstrap_runtime.refresh_managed_surface_tiles(
   end
 end
 
-local function build_bootstrap_tiles(square_size, surface_size)
+local function build_initial_surface_tiles(square_size, surface_size)
   return build_managed_surface_tiles(square_size, surface_size)
 end
 
-function bootstrap_runtime.build_generated_chunk_tiles(
+function planet_runtime.build_generated_chunk_tiles(
   square_size,
   surface_size,
   area,
@@ -263,7 +268,7 @@ function bootstrap_runtime.build_generated_chunk_tiles(
   return tiles
 end
 
-function bootstrap_runtime.refresh_generated_chunk_tiles(
+function planet_runtime.refresh_generated_chunk_tiles(
   surface,
   square_size,
   surface_size,
@@ -275,7 +280,7 @@ function bootstrap_runtime.refresh_generated_chunk_tiles(
     return
   end
 
-  local tile_updates = bootstrap_runtime.build_generated_chunk_tiles(
+  local tile_updates = planet_runtime.build_generated_chunk_tiles(
     square_size,
     surface_size,
     area,
@@ -288,20 +293,20 @@ function bootstrap_runtime.refresh_generated_chunk_tiles(
   end
 end
 
-function bootstrap_runtime.refresh_all_generated_chunk_tiles(surface, square_size, surface_size, square_position)
+function planet_runtime.refresh_all_generated_chunk_tiles(surface, square_size, surface_size, square_position)
   if not surface then
     return
   end
 
   for chunk in surface.get_chunks() do
-    bootstrap_runtime.refresh_generated_chunk_tiles(surface, square_size, surface_size, {
+    planet_runtime.refresh_generated_chunk_tiles(surface, square_size, surface_size, {
       left_top = {x = chunk.x * 32, y = chunk.y * 32},
       right_bottom = {x = (chunk.x + 1) * 32, y = (chunk.y + 1) * 32}
     }, nil, square_position)
   end
 end
 
-function bootstrap_runtime.refresh_generated_chunk_for_planet_surface(surface, area)
+function planet_runtime.refresh_generated_chunk_for_planet_surface(surface, area)
   if not (surface and area) then
     return false
   end
@@ -312,7 +317,7 @@ function bootstrap_runtime.refresh_generated_chunk_for_planet_surface(surface, a
     return false
   end
 
-  bootstrap_runtime.refresh_generated_chunk_tiles(
+  planet_runtime.refresh_generated_chunk_tiles(
     surface,
     planet:get_square_size(),
     planet:get_surface_size(),
@@ -344,14 +349,8 @@ local function build_surface_map_gen_settings(square_size)
   }
 end
 
-function bootstrap_runtime.ensure_bootstrap_state_defaults()
-  local nauvis = planet_instance.ensure_nauvis()
-
-  if not nauvis then
-    return
-  end
-
-  storage.utilization_metrics = nil
+function planet_runtime.ensure_planet_state(planet_name)
+  return planet_instance.ensure(planet_name)
 end
 
 ensure_surface_dimensions = function(surface, target_surface_size, square_position)
@@ -371,14 +370,19 @@ ensure_surface_dimensions = function(surface, target_surface_size, square_positi
   surface.force_generate_chunk_requests()
 end
 
-function bootstrap_runtime.ensure_bootstrap_surface(anchor_runtime)
-  local nauvis_config = planet_config.get("nauvis")
-  local square_size = nauvis_config.square_size
+function planet_runtime.initialize_planet_surface(planet_name)
+  local config = planet_config.get(planet_name)
+
+  if not config then
+    return nil
+  end
+
+  local square_size = config.square_size
   local surface_size = get_target_surface_size(square_size, 0)
-  local surface = game.surfaces[defs.SURFACE_NAME]
+  local surface = game.surfaces[config.surface_name]
 
   if not surface then
-    surface = game.create_surface(defs.SURFACE_NAME, build_surface_map_gen_settings(square_size))
+    surface = game.create_surface(config.surface_name, build_surface_map_gen_settings(square_size))
   end
 
   surface.peaceful_mode = true
@@ -387,20 +391,18 @@ function bootstrap_runtime.ensure_bootstrap_surface(anchor_runtime)
   surface.destroy_decoratives({})
   surface.clear_hidden_tiles()
   destroy_noise_entities(surface)
-  -- Bootstrap writes need the same correction pass or the initial void edge stays hard
+  -- Initial surface writes need the same correction pass or the initial void edge stays hard
   -- until some later edit causes Factorio to recompute neighboring transitions.
-  surface.set_tiles(build_bootstrap_tiles(square_size, surface_size), true, true, true, false)
+  surface.set_tiles(build_initial_surface_tiles(square_size, surface_size), true, true, true, false)
 
-  storage.bootstrap = storage.bootstrap or {}
-  local nauvis = planet_instance.from_bootstrap(storage.bootstrap)
-  nauvis:set_square_size(square_size)
-  nauvis:set_surface_name(defs.SURFACE_NAME)
-  bootstrap_runtime.ensure_bootstrap_state_defaults()
+  local planet = planet_runtime.ensure_planet_state(planet_name)
+  planet:set_square_size(square_size)
+  planet:set_surface_name(config.surface_name)
 
   return surface
 end
 
-function bootstrap_runtime.clear_surface_chart(surface)
+function planet_runtime.clear_surface_chart(surface)
   if not surface then
     return
   end
@@ -412,35 +414,35 @@ function bootstrap_runtime.clear_surface_chart(surface)
   end
 end
 
-function bootstrap_runtime.chart_play_area(force, surface, surface_size, square_position)
+function planet_runtime.chart_play_area(force, surface, surface_size, square_position)
   planet_square.chart_play_area(force, surface, surface_size, square_position)
 end
 
-function bootstrap_runtime.teleport_player_to_square(player)
-  local bootstrap = storage.bootstrap
+function planet_runtime.teleport_player_to_planet_square(player, planet_name)
+  local planet = planet_instance.ensure(planet_name)
 
-  if not bootstrap then
+  if not planet then
     return
   end
 
-  local surface = game.surfaces[bootstrap.surface_name]
+  local surface = game.surfaces[planet:get_surface_name()]
 
   if not surface then
     return
   end
 
-  local target_position = bootstrap.square_position or {x = 0, y = 0}
+  local target_position = planet:get_square_position()
   player.force.set_spawn_position(target_position, surface)
   player.teleport(target_position, surface)
-  bootstrap_runtime.chart_play_area(
+  planet_runtime.chart_play_area(
     player.force,
     surface,
-    bootstrap.surface_size or bootstrap.square_size,
+    planet:get_surface_size(),
     target_position
   )
 end
 
-function bootstrap_runtime.expand_planet_square(planet_name, player, gui_runtime, anchor_runtime)
+function planet_runtime.expand_planet_square(planet_name, player, gui_runtime, anchor_runtime)
   local planet_square_runtime = require("lib.planet_square_runtime")
 
   return planet_square_runtime.expand(planet_name, {
@@ -450,22 +452,11 @@ function bootstrap_runtime.expand_planet_square(planet_name, player, gui_runtime
   }) ~= nil
 end
 
-function bootstrap_runtime.expand_square(player, gui_runtime, anchor_runtime)
-  local planet_square_runtime = require("lib.planet_square_runtime")
-
-  return planet_square_runtime.expand("nauvis", {
-    player = player,
-    gui_runtime = gui_runtime,
-    anchor_runtime = anchor_runtime,
-    announce_global = true
-  })
-end
-
-function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
+function planet_runtime.initialize_world(anchor_runtime, gui_runtime)
   call_freeplay("set_skip_intro", true)
   call_freeplay("set_disable_crashsite", true)
 
-  local surface = bootstrap_runtime.ensure_bootstrap_surface(anchor_runtime)
+  local surface = planet_runtime.initialize_planet_surface("nauvis")
   game.forces.player.set_spawn_position({x = 0, y = 0}, surface)
 
   if anchor_runtime then
@@ -474,7 +465,7 @@ function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
   end
 
   for _, player in pairs(game.players) do
-    bootstrap_runtime.teleport_player_to_square(player)
+    planet_runtime.teleport_player_to_planet_square(player, "nauvis")
   end
 
   if gui_runtime then
@@ -485,16 +476,14 @@ function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
   end
 end
 
-function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
-  local bootstrap = storage.bootstrap
+function planet_runtime.refresh_spawn_routing(planet_name, anchor_runtime, gui_runtime)
+  local planet = planet_runtime.ensure_planet_state(planet_name)
 
-  if not bootstrap then
+  if not planet then
     return
   end
 
-  bootstrap_runtime.ensure_bootstrap_state_defaults()
-
-  local surface = game.surfaces[bootstrap.surface_name]
+  local surface = game.surfaces[planet:get_surface_name()]
 
   if not surface then
     return
@@ -502,21 +491,21 @@ function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
 
   call_freeplay("set_skip_intro", true)
   call_freeplay("set_disable_crashsite", true)
-  local square_position = bootstrap.square_position or {x = 0, y = 0}
+  local square_position = planet:get_square_position()
   game.forces.player.set_spawn_position(square_position, surface)
   ensure_surface_dimensions(
     surface,
-    bootstrap.surface_size or defs.get_surface_size(bootstrap.square_size),
+    planet:get_surface_size(),
     square_position
   )
 
   if anchor_runtime then
-    anchor_runtime.reconcile("nauvis")
+    anchor_runtime.reconcile(planet_name)
     anchor_runtime.apply_logistic_network_setting_to_all_forces()
   end
 
   for _, player in pairs(game.players) do
-    bootstrap_runtime.teleport_player_to_square(player)
+    planet_runtime.teleport_player_to_planet_square(player, planet_name)
   end
 
   if gui_runtime then
@@ -526,10 +515,11 @@ function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
   end
 end
 
-function bootstrap_runtime.notify_square_size_change_applies_to_new_saves()
-  local requested_size = defs.get_square_size()
+function planet_runtime.notify_square_size_change_applies_to_new_saves(planet_name)
+  local planet = planet_instance.ensure(planet_name)
+  local config = planet_config.get(planet_name)
 
-  if storage.bootstrap and storage.bootstrap.square_size == requested_size then
+  if not (planet and config) or planet:get_square_size() == config.square_size then
     return
   end
 
@@ -537,12 +527,12 @@ function bootstrap_runtime.notify_square_size_change_applies_to_new_saves()
     {"",
       "[the-square] Starting square size changes only apply to new saves. ",
       "This save remains at ",
-      storage.bootstrap and storage.bootstrap.square_size or "?",
+      planet:get_square_size(),
       " and the current map setting is ",
-      requested_size,
+      config.square_size,
       "."
     }
   )
 end
 
-return bootstrap_runtime
+return planet_runtime

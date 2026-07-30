@@ -20,7 +20,7 @@ If you need to force a specific runtime, override `LUA` directly:
 make test LUA=lua
 ```
 
-The Nauvis starting square size is a startup setting. Set it before creating a run. Changing it after the bootstrap surface already exists does not resize the current save.
+The Nauvis starting square size is a startup setting. Set it before creating a run. Changing it after the world is created does not resize the current save.
 
 `Tiles per research pack` is also a startup setting. It defaults to `7`, which means each required science pack in square-expansion research pays for about seven newly unlocked tiles.
 

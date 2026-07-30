@@ -1,6 +1,6 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 
-local bootstrap_layout = require("lib.bootstrap_layout")
+local square_layout = require("lib.square_layout")
 
 local function assert_equal(actual, expected, message)
   if actual ~= expected then
@@ -21,15 +21,15 @@ end
 
 run_test("anchor ring tiles stay out of map", function()
   local square_size = 12
-  local surface_size = bootstrap_layout.get_surface_size(square_size, 1)
+  local surface_size = square_layout.get_surface_size(square_size, 1)
 
   assert_equal(
-    bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -7}),
+    square_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -7}),
     "out-of-map",
     "north anchor ring should stay out of map"
   )
   assert_equal(
-    bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 6, y = 0}),
+    square_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 6, y = 0}),
     "out-of-map",
     "east anchor ring should stay out of map"
   )
@@ -37,10 +37,10 @@ end)
 
 run_test("playable square uses the selected uniform tile", function()
   local square_size = 12
-  local surface_size = bootstrap_layout.get_surface_size(square_size, 1)
+  local surface_size = square_layout.get_surface_size(square_size, 1)
 
   assert_equal(
-    bootstrap_layout.get_managed_tile_name(square_size, surface_size, "sand-3", "out-of-map", {x = 0, y = 0}),
+    square_layout.get_managed_tile_name(square_size, surface_size, "sand-3", "out-of-map", {x = 0, y = 0}),
     "sand-3",
     "the playable square should use the configured tile"
   )
@@ -48,10 +48,10 @@ end)
 
 run_test("positions outside the managed surface stay unmanaged", function()
   local square_size = 12
-  local surface_size = bootstrap_layout.get_surface_size(square_size, 1)
+  local surface_size = square_layout.get_surface_size(square_size, 1)
 
   assert_equal(
-    bootstrap_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -8}),
+    square_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -8}),
     nil,
     "positions beyond the out-of-map ring should remain unmanaged"
   )
@@ -61,12 +61,12 @@ run_test("anchor side detection still targets the ingress ring", function()
   local square_size = 12
 
   assert_equal(
-    bootstrap_layout.get_anchor_side_for_position(square_size, {x = 0, y = -7}),
+    square_layout.get_anchor_side_for_position(square_size, {x = 0, y = -7}),
     "north",
     "starter Managed Lines should still snap to the north ring"
   )
   assert_equal(
-    bootstrap_layout.get_anchor_side_for_position(square_size, {x = 6, y = 0}),
+    square_layout.get_anchor_side_for_position(square_size, {x = 6, y = 0}),
     "east",
     "starter Managed Lines should still snap to the east ring"
   )
@@ -74,12 +74,12 @@ end)
 
 run_test("Square bounds and anchor detection follow a moved center", function()
   local center = {x = 2, y = -1}
-  local bounds = bootstrap_layout.get_square_bounds(7, center)
+  local bounds = square_layout.get_square_bounds(7, center)
 
   assert_equal(bounds.left_top.x, -1, "moved Square bounds should include the x offset")
   assert_equal(bounds.left_top.y, -4, "moved Square bounds should include the y offset")
   assert_equal(
-    bootstrap_layout.get_anchor_side_for_position(7, {x = 2, y = -5}, center),
+    square_layout.get_anchor_side_for_position(7, {x = 2, y = -5}, center),
     "north",
     "anchor detection should use the moved Square center"
   )

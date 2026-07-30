@@ -1,5 +1,5 @@
 local managed_line_runtime = require("lib.managed_line_runtime")
-local bootstrap_runtime = require("lib.bootstrap_runtime")
+local planet_runtime = require("lib.planet_runtime")
 local defs = require("lib.runtime_defs")
 local debug_platform_runtime = require("lib.debug_platform_runtime")
 local planet_square_runtime = require("lib.planet_square_runtime")
@@ -27,16 +27,16 @@ local function sync_research_runtime_state(force)
   sync_all_runtime_guis()
 end
 
-local function bootstrap_world()
-  bootstrap_runtime.bootstrap_world(managed_line_runtime, gui_runtime)
+local function initialize_world()
+  planet_runtime.initialize_world(managed_line_runtime, gui_runtime)
 end
 
 local function handle_player_join_or_respawn(event)
   local player = game.get_player(event.player_index)
 
   if player then
-    bootstrap_runtime.teleport_player_to_square(player)
-    bootstrap_runtime.grant_initial_managed_line_inventory(player)
+    planet_runtime.teleport_player_to_planet_square(player, "nauvis")
+    planet_runtime.grant_initial_managed_line_inventory(player, "nauvis")
     gui_runtime.sync_dev_gui(player)
     gui_runtime.sync_screenshot_gui(player)
     gui_runtime.sync_square_move_gui(player)
@@ -46,29 +46,31 @@ local function handle_player_join_or_respawn(event)
 end
 
 script.on_init(function()
-  bootstrap_world()
+  initialize_world()
 end)
 
 script.on_configuration_changed(function()
-  if storage.bootstrap then
-    bootstrap_runtime.ensure_bootstrap_state_defaults()
+  local nauvis = storage.planets and storage.planets.nauvis and planet_runtime.ensure_planet_state("nauvis")
+
+  if nauvis then
+    local planet_state = nauvis:get_state()
     managed_line_runtime.refresh_existing_planets()
     managed_line_runtime.sync_tier(defs.get_player_force())
 
-    if storage.bootstrap.square_size ~= defs.get_square_size() then
-      bootstrap_runtime.notify_square_size_change_applies_to_new_saves()
+    if nauvis:get_square_size() ~= defs.get_square_size() then
+      planet_runtime.notify_square_size_change_applies_to_new_saves("nauvis")
     end
 
-    local surface = game.surfaces[storage.bootstrap.surface_name]
+    local surface = game.surfaces[nauvis:get_surface_name()]
 
     if surface then
-      bootstrap_runtime.refresh_all_generated_chunk_tiles(
+      planet_runtime.refresh_all_generated_chunk_tiles(
         surface,
-        storage.bootstrap.square_size,
-        storage.bootstrap.surface_size,
-        storage.bootstrap.square_position
+        nauvis:get_square_size(),
+        nauvis:get_surface_size(),
+        planet_state.square_position
       )
-      bootstrap_runtime.clear_surface_chart(surface)
+      planet_runtime.clear_surface_chart(surface)
     end
 
     gui_runtime.sync_all_dev_guis()
@@ -76,18 +78,18 @@ script.on_configuration_changed(function()
     gui_runtime.sync_all_square_move_guis()
     gui_runtime.sync_all_shop_guis(managed_line_runtime)
     gui_runtime.sync_all_cliff_explosive_guis()
-    bootstrap_runtime.refresh_spawn_routing(managed_line_runtime, gui_runtime)
+    planet_runtime.refresh_spawn_routing("nauvis", managed_line_runtime, gui_runtime)
     return
   end
 
-  bootstrap_world()
+  initialize_world()
 end)
 
 script.on_event(defines.events.on_player_created, handle_player_join_or_respawn)
 script.on_event(defines.events.on_player_respawned, handle_player_join_or_respawn)
 
 script.on_event(defines.events.on_chunk_generated, function(event)
-  if bootstrap_runtime.refresh_generated_chunk_for_planet_surface(event.surface, event.area) then
+  if planet_runtime.refresh_generated_chunk_for_planet_surface(event.surface, event.area) then
     managed_line_runtime.initialize(event.surface.name)
   end
 end)
@@ -273,14 +275,15 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
   end
 
   if event.setting == defs.SETTING_BACKGROUND_TILE then
-    local surface = storage.bootstrap and game.surfaces[storage.bootstrap.surface_name]
+    local nauvis_state = storage.planets and storage.planets.nauvis
+    local surface = nauvis_state and game.surfaces[nauvis_state.surface_name]
 
-    if surface and storage.bootstrap then
-      bootstrap_runtime.refresh_all_generated_chunk_tiles(
+    if surface and nauvis_state then
+      planet_runtime.refresh_all_generated_chunk_tiles(
         surface,
-        storage.bootstrap.square_size,
-        storage.bootstrap.surface_size,
-        storage.bootstrap.square_position
+        nauvis_state.square_size,
+        nauvis_state.surface_size,
+        nauvis_state.square_position
       )
     end
 

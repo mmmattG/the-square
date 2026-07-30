@@ -40,20 +40,22 @@ local function run_test(name, fn)
   io.stdout:write("PASS " .. name .. "\n")
 end
 
-run_test("Nauvis Planet Instance preserves existing bootstrap defaults", function()
+run_test("Nauvis Planet Instance preserves existing planet state", function()
   storage = {
-    bootstrap = {
-      square_size = 9
+    planets = {
+      nauvis = {
+        square_size = 9
+      }
     }
   }
 
-  local nauvis = planet_instance.ensure_nauvis()
+  local nauvis = planet_instance.ensure("nauvis")
 
   assert_equal(nauvis:get_square_size(), 9, "Planet Progression should expose Square size")
   assert_equal(nauvis:get_surface_name(), "nauvis", "Nauvis adapter should use the normal starting surface")
   assert_equal(nauvis:get_surface_size(), 11, "surface size should include the managed void ring")
   assert_equal(nauvis:get_completed_square_expansion_levels(), 0, "Square Expansion levels should default to zero")
-  assert_equal(storage.bootstrap.growth_progress, nil, "removed legacy growth state should stay cleared")
+  assert_equal(storage.planets.nauvis.growth_progress, nil, "removed legacy growth state should stay cleared")
 end)
 
 run_test("Space Age planet configs default to 17x17 thematic squares", function()
@@ -94,7 +96,7 @@ run_test("Space Age Planet Instance initializes independent planet state", funct
   assert_equal(vulcanus:get_surface_size(), 13, "planet surface size should include the managed void ring")
   assert_equal(vulcanus:get_floor_tile_name(), "volcanic-ash-soil", "Space Age planets should expose their fixed floor tile")
   assert_equal(storage.planets.vulcanus.square_size, 11, "planet state should be stored independently")
-  assert_equal(storage.bootstrap, nil, "initializing another planet should not create Nauvis bootstrap state")
+  assert_equal(storage.planets.nauvis, nil, "initializing another planet should not create Nauvis state")
 end)
 
 run_test("Nauvis and Space Age Planet Instances share one method set", function()
@@ -113,13 +115,11 @@ run_test("Nauvis and Space Age Planet Instances share one method set", function(
     "get_completed_square_expansion_levels",
     "set_completed_square_expansion_levels",
     "get_managed_lines",
-    "get_bootstrap_storage"
+    "get_state"
   }) do
     assert_equal(type(nauvis[method_name]), "function", "Nauvis should expose " .. method_name)
     assert_equal(nauvis[method_name], vulcanus[method_name], "Planet Instances should share " .. method_name)
   end
-
-  assert_equal(storage.planets.nauvis, storage.bootstrap, "legacy bootstrap handle should alias the Nauvis Planet Instance state")
 end)
 
 run_test("Space Age Planet Instance migrates accidental Nauvis-sized planet state", function()

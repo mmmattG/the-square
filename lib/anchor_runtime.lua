@@ -1,4 +1,4 @@
-local bootstrap_runtime = require("lib.bootstrap_runtime")
+local planet_runtime = require("lib.planet_runtime")
 local defs = require("lib.runtime_defs")
 local planet_config = require("lib.planet_config")
 local planet_instance = require("lib.planet_instance")
@@ -102,10 +102,6 @@ local function get_required_underground_belt_type(anchor)
 end
 
 local function get_planet_name_for_surface_name(surface_name)
-  if surface_name == (storage.bootstrap and storage.bootstrap.surface_name) then
-    return "nauvis"
-  end
-
   if storage.planets then
     for planet_name, planet_state in pairs(storage.planets) do
       if planet_state.surface_name == surface_name then
@@ -142,15 +138,15 @@ function anchor_runtime.is_managed_anchor_entity_name(entity_name)
 end
 
 local function find_matching_stashed_anchor(item_or_entity_name, starter_anchors)
-  return anchor_placement.find_matching_stashed_anchor(item_or_entity_name, starter_anchors or storage.starter_anchors)
+  return anchor_placement.find_matching_stashed_anchor(item_or_entity_name, starter_anchors)
 end
 
 local function find_anchor_by_entity(entity, starter_anchors)
-  return anchor_placement.find_anchor_by_entity(entity, starter_anchors or storage.starter_anchors)
+  return anchor_placement.find_anchor_by_entity(entity, starter_anchors)
 end
 
 local function find_anchor_by_entity_name_and_position(entity_name, position, starter_anchors)
-  return anchor_placement.find_anchor_by_entity_name_and_position(entity_name, position, starter_anchors or storage.starter_anchors)
+  return anchor_placement.find_anchor_by_entity_name_and_position(entity_name, position, starter_anchors)
 end
 
 local function find_anchor_by_position(position, starter_anchors)
@@ -481,12 +477,12 @@ local function ensure_planet_starter_entities(surface, planet_name, planet)
   end
 end
 
-function anchor_runtime.unlock_planet_bootstrap_research(planet_name, force)
+function anchor_runtime.unlock_planet_starter_research(planet_name, force)
   if not (planet_name and force and force.technologies) then
     return
   end
 
-  for _, technology_name in ipairs(planet_config.get_bootstrap_research(planet_name)) do
+  for _, technology_name in ipairs(planet_config.get_starter_research(planet_name)) do
     local technology = force.technologies[technology_name]
 
     if technology then
@@ -538,7 +534,7 @@ function anchor_runtime.refresh_planet_managed_lines(planet_name)
 
   local managed_lines = managed_line_state.initialize(planet_name)
 
-  anchor_runtime.unlock_planet_bootstrap_research(planet_name, game.forces.player)
+  anchor_runtime.unlock_planet_starter_research(planet_name, game.forces.player)
   anchor_runtime.reconcile_planet_managed_lines(planet_name)
   ensure_planet_starter_entities(surface, planet_name, planet)
   planet.state.managed_lines_initialized = true
@@ -563,7 +559,8 @@ function anchor_runtime.initialize_planet_managed_lines(planet_name)
 end
 
 function anchor_runtime.reset_rotated_anchor(entity)
-  local anchor = find_anchor_by_entity(entity)
+  local starter_anchors = entity and entity.surface and select(1, get_anchor_state_for_surface(entity.surface)) or nil
+  local anchor = find_anchor_by_entity(entity, starter_anchors)
 
   if not anchor or not (entity and entity.valid) then
     return
@@ -719,8 +716,8 @@ local function get_selected_anchor_slot_proxy(player)
   return player.selected
 end
 
-function anchor_runtime.get_owned_line_counts(resource)
-  local starter_anchors = storage.starter_anchors
+function anchor_runtime.get_owned_line_counts(resource, planet_name)
+  local starter_anchors = managed_line_state.get(planet_name or "nauvis")
   local counts = {
     owned = 0,
     placed = 0,
@@ -746,22 +743,26 @@ function anchor_runtime.get_owned_line_counts(resource)
   return counts
 end
 
-function anchor_runtime.is_resource_unlocked(resource)
-  return anchor_runtime.get_owned_line_counts(resource).owned > 0
+function anchor_runtime.is_resource_unlocked(resource, planet_name)
+  return anchor_runtime.get_owned_line_counts(resource, planet_name).owned > 0
 end
 
-function anchor_runtime.can_purchase_line(resource, force)
+function anchor_runtime.can_purchase_line(resource, force, planet_name)
   local definition, flow = defs.get_line_definition(resource)
 
   if not definition then
     return false, "message.the-square-shop-resource-unknown", nil
   end
 
-  if anchor_runtime.is_resource_unlocked(resource) or defs.is_config_definition_unlocked(definition, flow, force) then
+  if anchor_runtime.is_resource_unlocked(resource, planet_name)
+    or defs.is_config_definition_unlocked(definition, flow, force)
+  then
     return true, nil, nil
   end
 
-  if definition.prerequisite_resource and not anchor_runtime.is_resource_unlocked(definition.prerequisite_resource) then
+  if definition.prerequisite_resource
+    and not anchor_runtime.is_resource_unlocked(definition.prerequisite_resource, planet_name)
+  then
     return false, "message.the-square-shop-prerequisite", definition.prerequisite_resource
   end
 
@@ -769,9 +770,10 @@ function anchor_runtime.can_purchase_line(resource, force)
 end
 
 function anchor_runtime.sync_anchor_tiers_from_research(force)
-  local bootstrap = storage.bootstrap
+  local nauvis = planet_instance.ensure("nauvis")
+  local tier_state = nauvis and nauvis:get_state()
 
-  if not bootstrap then
+  if not tier_state then
     return false
   end
 
@@ -779,13 +781,13 @@ function anchor_runtime.sync_anchor_tiers_from_research(force)
   local target_egress_tier_level = defs.get_egress_tier_level_for_force(force or defs.get_player_force())
   local changed = false
 
-  if bootstrap.ingress_tier ~= target_ingress_tier_level then
-    bootstrap.ingress_tier = target_ingress_tier_level
+  if tier_state.ingress_tier ~= target_ingress_tier_level then
+    tier_state.ingress_tier = target_ingress_tier_level
     changed = true
   end
 
-  if bootstrap.egress_tier ~= target_egress_tier_level then
-    bootstrap.egress_tier = target_egress_tier_level
+  if tier_state.egress_tier ~= target_egress_tier_level then
+    tier_state.egress_tier = target_egress_tier_level
     changed = true
   end
 
@@ -820,16 +822,17 @@ local function get_shop_item_name(resource)
   return nil
 end
 
-local function grant_managed_line(player, bootstrap, definition, flow, item_name, purchase_message)
-  if not (bootstrap and definition and flow and item_name) then
+local function grant_managed_line(player, planet_state, definition, flow, item_name, purchase_message)
+  if not (planet_state and definition and flow and item_name) then
     return false
   end
 
-  storage.starter_anchors = storage.starter_anchors or {
+  planet_state.starter_anchors = planet_state.starter_anchors or {
     layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
     anchors = {}
   }
-  storage.starter_anchors.anchors[#storage.starter_anchors.anchors + 1] = defs.create_managed_anchor(definition, flow, nil, nil)
+  planet_state.starter_anchors.anchors[#planet_state.starter_anchors.anchors + 1] =
+    defs.create_managed_anchor(definition, flow, nil, nil)
 
   if player and player.valid then
     player_insert_or_spill(player, item_name)
@@ -842,16 +845,19 @@ local function grant_managed_line(player, bootstrap, definition, flow, item_name
   return true
 end
 
-function anchor_runtime.purchase_managed_line_for_resource(player, resource)
-  local bootstrap = storage.bootstrap
+function anchor_runtime.purchase_managed_line_for_resource(player, resource, planet_name)
+  planet_name = planet_name or "nauvis"
+  local planet = planet_instance.ensure(planet_name)
+  local planet_state = planet and planet:get_state()
   local definition, flow = defs.get_line_definition(resource)
   local item_name = get_shop_item_name(resource)
 
-  if not bootstrap or not definition or not item_name then
+  if not planet_state or not definition or not item_name then
     return
   end
 
-  local can_purchase, message_key, message_resource = anchor_runtime.can_purchase_line(resource, player and player.force)
+  local can_purchase, message_key, message_resource =
+    anchor_runtime.can_purchase_line(resource, player and player.force, planet_name)
 
   if not can_purchase then
     if player and player.valid then
@@ -865,16 +871,16 @@ function anchor_runtime.purchase_managed_line_for_resource(player, resource)
     return
   end
 
-  grant_managed_line(player, bootstrap, definition, flow, item_name, {
+  grant_managed_line(player, planet_state, definition, flow, item_name, {
     "message.the-square-shop-purchased-line",
     {"item-name." .. item_name}
   })
 
-  if resource == "uranium-ore" and not anchor_runtime.is_resource_unlocked("sulfuric-acid") then
+  if resource == "uranium-ore" and not anchor_runtime.is_resource_unlocked("sulfuric-acid", planet_name) then
     local sulfuric_acid_definition = defs.get_output_definition("sulfuric-acid")
     local sulfuric_acid_item_name = defs.get_egress_item_name("sulfuric-acid")
 
-    grant_managed_line(player, bootstrap, sulfuric_acid_definition, "egress", sulfuric_acid_item_name)
+    grant_managed_line(player, planet_state, sulfuric_acid_definition, "egress", sulfuric_acid_item_name)
   end
 end
 
@@ -1342,9 +1348,9 @@ function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
   local ok, reason, side = anchor_placement.check(
     placement_anchor,
     anchor.position,
-    planet and planet:get_square_size() or storage.bootstrap and storage.bootstrap.square_size,
+    planet and planet:get_square_size(),
     starter_anchors,
-    planet and planet:get_square_position() or storage.bootstrap and storage.bootstrap.square_position
+    planet and planet:get_square_position()
   )
 
   if not ok then
