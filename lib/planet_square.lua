@@ -7,23 +7,34 @@ local function get_target_surface_size(square_size)
   return defs.get_surface_size(square_size)
 end
 
-local function ensure_surface_dimensions(surface, target_surface_size)
+local function ensure_surface_dimensions(surface, target_surface_size, square_position)
+  square_position = square_position or {x = 0, y = 0}
   local map_gen_settings = surface.map_gen_settings
+  local target_width = target_surface_size + (math.abs(square_position.x) * 2)
+  local target_height = target_surface_size + (math.abs(square_position.y) * 2)
 
-  if map_gen_settings.width ~= target_surface_size or map_gen_settings.height ~= target_surface_size then
-    map_gen_settings.width = target_surface_size
-    map_gen_settings.height = target_surface_size
+  if map_gen_settings.width < target_width or map_gen_settings.height < target_height then
+    map_gen_settings.width = math.max(map_gen_settings.width, target_width)
+    map_gen_settings.height = math.max(map_gen_settings.height, target_height)
     surface.map_gen_settings = map_gen_settings
   end
 
-  surface.request_to_generate_chunks({x = 0, y = 0}, defs.CHART_MARGIN)
+  local chunk_radius = math.max(defs.CHART_MARGIN, math.ceil(target_surface_size / 64))
+  surface.request_to_generate_chunks(square_position, chunk_radius)
   surface.force_generate_chunk_requests()
 end
 
-local function build_resize_tile_updates(old_square_size, old_surface_size, new_square_size, new_surface_size, floor_tile_name)
+local function build_resize_tile_updates(
+  old_square_size,
+  old_surface_size,
+  new_square_size,
+  new_surface_size,
+  floor_tile_name,
+  square_position
+)
   local tiles = {}
-  local old_bounds = defs.get_square_bounds(old_surface_size)
-  local new_bounds = defs.get_square_bounds(new_surface_size)
+  local old_bounds = defs.get_square_bounds(old_surface_size, square_position)
+  local new_bounds = defs.get_square_bounds(new_surface_size, square_position)
   local min_x = math.min(old_bounds.left_top.x, new_bounds.left_top.x)
   local min_y = math.min(old_bounds.left_top.y, new_bounds.left_top.y)
   local max_x = math.max(old_bounds.right_bottom.x - 1, new_bounds.right_bottom.x - 1)
@@ -32,8 +43,20 @@ local function build_resize_tile_updates(old_square_size, old_surface_size, new_
   for y = min_y, max_y do
     for x = min_x, max_x do
       local position = {x = x, y = y}
-      local previous_tile_name = defs.get_managed_tile_name(old_square_size, old_surface_size, position, floor_tile_name)
-      local next_tile_name = defs.get_managed_tile_name(new_square_size, new_surface_size, position, floor_tile_name)
+      local previous_tile_name = defs.get_managed_tile_name(
+        old_square_size,
+        old_surface_size,
+        position,
+        floor_tile_name,
+        square_position
+      )
+      local next_tile_name = defs.get_managed_tile_name(
+        new_square_size,
+        new_surface_size,
+        position,
+        floor_tile_name,
+        square_position
+      )
 
       if next_tile_name and next_tile_name ~= previous_tile_name then
         tiles[#tiles + 1] = {
@@ -47,15 +70,24 @@ local function build_resize_tile_updates(old_square_size, old_surface_size, new_
   return tiles
 end
 
-local function apply_square_resize(surface, old_square_size, old_surface_size, new_square_size, new_surface_size, floor_tile_name)
-  ensure_surface_dimensions(surface, new_surface_size)
+local function apply_square_resize(
+  surface,
+  old_square_size,
+  old_surface_size,
+  new_square_size,
+  new_surface_size,
+  floor_tile_name,
+  square_position
+)
+  ensure_surface_dimensions(surface, new_surface_size, square_position)
 
   local tile_updates = build_resize_tile_updates(
     old_square_size,
     old_surface_size,
     new_square_size,
     new_surface_size,
-    floor_tile_name
+    floor_tile_name,
+    square_position
   )
 
   if #tile_updates > 0 then
@@ -100,7 +132,7 @@ local function get_trailing_entity_name(anchor)
   return "transport-belt"
 end
 
-local function leave_trailing_ingress_stub(surface, anchor)
+local function leave_trailing_managed_line_stub(surface, anchor)
   if not (surface and anchor and anchor.position) then
     return
   end
@@ -137,7 +169,7 @@ local function leave_trailing_stubs_for_expansion(surface, managed_lines)
 
   for _, anchor in ipairs(managed_lines.anchors) do
     if anchor.position and anchor.resource then
-      leave_trailing_ingress_stub(surface, anchor)
+      leave_trailing_managed_line_stub(surface, anchor)
     end
   end
 end
@@ -156,8 +188,8 @@ local function move_managed_lines_outward(managed_lines)
   end
 end
 
-function planet_square.chart_play_area(force, surface, surface_size)
-  local chart_bounds = defs.get_square_bounds(surface_size)
+function planet_square.chart_play_area(force, surface, surface_size, square_position)
+  local chart_bounds = defs.get_square_bounds(surface_size, square_position)
 
   force.chart(surface, {
     {
@@ -193,6 +225,7 @@ function planet_square.apply_square_expansion(planet_name, options)
   local next_expansion_level = planet:get_completed_square_expansion_levels() + 1
   local next_surface_size = get_target_surface_size(next_square_size)
   local managed_lines = planet:get_managed_lines()
+  local square_position = planet:get_square_position()
 
   planet:set_square_size(next_square_size)
   planet:set_completed_square_expansion_levels(next_expansion_level)
@@ -200,10 +233,18 @@ function planet_square.apply_square_expansion(planet_name, options)
   local bootstrap = planet:get_bootstrap_storage()
   bootstrap.expansions_completed = next_expansion_level
 
-  apply_square_resize(surface, previous_square_size, previous_surface_size, next_square_size, next_surface_size, planet:get_floor_tile_name())
+  apply_square_resize(
+    surface,
+    previous_square_size,
+    previous_surface_size,
+    next_square_size,
+    next_surface_size,
+    planet:get_floor_tile_name(),
+    square_position
+  )
   leave_trailing_stubs_for_expansion(surface, managed_lines)
   move_managed_lines_outward(managed_lines)
-  planet_square.chart_play_area(game.forces.player, surface, next_surface_size)
+  planet_square.chart_play_area(game.forces.player, surface, next_surface_size, square_position)
 
   if options.anchor_runtime and options.anchor_runtime.ensure then
     options.anchor_runtime.ensure(planet_name)
@@ -225,5 +266,7 @@ function planet_square.apply_square_expansion(planet_name, options)
     expansion_research_levels = next_expansion_level
   }
 end
+
+planet_square.leave_trailing_managed_line_stub = leave_trailing_managed_line_stub
 
 return planet_square

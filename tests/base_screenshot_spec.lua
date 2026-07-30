@@ -40,3 +40,10 @@ run_test("expanded squares keep the same deterministic two-tile margin", functio
   assert_equal(spec.resolution.y, 816, "resolution should scale directly with the configured pixels per tile")
   assert_equal(spec.zoom, 1.5, "zoom should scale with render density so the same tiles stay in frame")
 end)
+
+run_test("screenshots follow the Planet-local Square position", function()
+  local spec = base_screenshot.build_capture_spec(7, 2, 32, {x = 3, y = -2})
+
+  assert_equal(spec.position.x, 3.5, "the screenshot center should follow a moved Square on x")
+  assert_equal(spec.position.y, -1.5, "the screenshot center should follow a moved Square on y")
+end)

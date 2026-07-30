@@ -58,6 +58,21 @@ run_test("generated chunks outside managed surface are painted void", function()
   end
 end)
 
+run_test("generated chunks follow a moved Square position", function()
+  local tiles = bootstrap_runtime.build_generated_chunk_tiles(7, 9, {
+    left_top = {x = -4, y = -4},
+    right_bottom = {x = 6, y = 5}
+  }, "grass-1", {x = 1, y = 0})
+  local by_position = {}
+
+  for _, tile in ipairs(tiles) do
+    by_position[tile.position.x .. ":" .. tile.position.y] = tile.name
+  end
+
+  assert_equal(by_position["-3:0"], "out-of-map", "the old west edge should become the moved Boundary")
+  assert_equal(by_position["4:0"], "grass-1", "the newly included east tile should become playable")
+end)
+
 run_test("new worlds start with stashed Nauvis Managed Lines only", function()
   local nauvis_lines = bootstrap_runtime.build_initial_managed_line_state("nauvis")
   local vulcanus_lines = bootstrap_runtime.build_initial_managed_line_state("vulcanus")

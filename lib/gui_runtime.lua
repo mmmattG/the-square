@@ -52,9 +52,9 @@ function gui_runtime.destroy_all_legacy_guis()
   end
 end
 
-local function build_ingress_edge_check_debug(square_size, position)
+local function build_ingress_edge_check_debug(square_size, position, square_position)
   local tile_position = defs.snap_entity_position_to_tile(position)
-  local bounds = defs.get_anchor_bounds(square_size)
+  local bounds = defs.get_anchor_bounds(square_size, square_position)
   local min_x = bounds.left_top.x
   local min_y = bounds.left_top.y
   local max_x = bounds.right_bottom.x - 1
@@ -63,7 +63,7 @@ local function build_ingress_edge_check_debug(square_size, position)
   local east_match = tile_position.x == max_x and tile_position.y > min_y and tile_position.y < max_y
   local south_match = tile_position.y == max_y and tile_position.x > min_x and tile_position.x < max_x
   local west_match = tile_position.x == min_x and tile_position.y > min_y and tile_position.y < max_y
-  local detected_side = defs.get_anchor_side_for_position(square_size, tile_position)
+  local detected_side = defs.get_anchor_side_for_position(square_size, tile_position, square_position)
 
   return table.concat({
     "[the-square] Ingress placement debug",
@@ -106,12 +106,12 @@ function gui_runtime.is_cliff_explosive_button_enabled(player)
     and settings.get_player_settings(player)[defs.SETTING_CLIFF_EXPLOSIVE_BUTTON].value
 end
 
-function gui_runtime.print_ingress_placement_debug(player, square_size, position)
+function gui_runtime.print_ingress_placement_debug(player, square_size, position, square_position)
   if not gui_runtime.is_ingress_placement_debug_enabled(player) then
     return
   end
 
-  player.print(build_ingress_edge_check_debug(square_size, position))
+  player.print(build_ingress_edge_check_debug(square_size, position, square_position))
 end
 
 local function ensure_debug_frame(player)
@@ -245,6 +245,157 @@ local function ensure_screenshot_button(player)
   })
 end
 
+local function ensure_square_move_button(player)
+  local button = player.gui.top[defs.SQUARE_MOVE_BUTTON_NAME]
+
+  if button then
+    return button
+  end
+
+  return player.gui.top.add({
+    type = "button",
+    name = defs.SQUARE_MOVE_BUTTON_NAME,
+    caption = {"gui.the-square-move-button"},
+    tooltip = {"gui.the-square-move-button-tooltip"}
+  })
+end
+
+local function destroy_square_move_frame(player)
+  if player and player.valid and player.gui and player.gui.screen then
+    destroy_child(player.gui.screen, defs.SQUARE_MOVE_FRAME_NAME)
+  end
+end
+
+local function build_square_move_tooltip(direction, result)
+  local tooltip
+
+  if result.ok then
+    tooltip = {
+      "gui.the-square-move-direction-tooltip",
+      {"the-square-direction." .. direction}
+    }
+  elseif result.reason == "obstructed" then
+    tooltip = {
+      "gui.the-square-move-obstructed-tooltip",
+      {"the-square-direction." .. direction},
+      {"the-square-direction." .. result.departing_side}
+    }
+  else
+    tooltip = {"gui.the-square-move-unsupported-tooltip"}
+  end
+
+  return tooltip
+end
+
+local function add_square_move_cell(table_element, direction, result)
+  if not direction then
+    local spacer = table_element.add({type = "empty-widget"})
+    spacer.style.width = 48
+    spacer.style.height = 48
+    return
+  end
+
+  local button = table_element.add({
+    type = "button",
+    name = defs.SQUARE_MOVE_DIRECTION_BUTTON_PREFIX .. direction,
+    caption = {"gui.the-square-move-" .. direction},
+    tooltip = build_square_move_tooltip(direction, result),
+    enabled = result.ok
+  })
+  button.style.width = 48
+  button.style.height = 48
+  button.style.font = "default-large-bold"
+end
+
+local function open_square_move_gui(player, square_move_runtime)
+  local frame = player.gui.screen.add({
+    type = "frame",
+    name = defs.SQUARE_MOVE_FRAME_NAME,
+    direction = "vertical",
+    caption = {"gui.the-square-move-title"}
+  })
+  frame.add({
+    type = "label",
+    caption = {"gui.the-square-move-description"}
+  })
+
+  local directions = frame.add({
+    type = "table",
+    name = "the_square_move_direction_table",
+    column_count = 3
+  })
+  local options = square_move_runtime.get_options_for_player(player)
+
+  add_square_move_cell(directions)
+  add_square_move_cell(directions, "north", options.north)
+  add_square_move_cell(directions)
+  add_square_move_cell(directions, "west", options.west)
+  add_square_move_cell(directions)
+  add_square_move_cell(directions, "east", options.east)
+  add_square_move_cell(directions)
+  add_square_move_cell(directions, "south", options.south)
+  add_square_move_cell(directions)
+
+  if frame.force_auto_center then
+    frame.force_auto_center()
+  end
+
+  player.opened = frame
+end
+
+function gui_runtime.refresh_square_move_gui(player, square_move_runtime)
+  if not (player and player.valid and square_move_runtime) then
+    return
+  end
+
+  local frame = player.gui.screen[defs.SQUARE_MOVE_FRAME_NAME]
+  local directions = frame and frame.the_square_move_direction_table
+
+  if not directions then
+    return
+  end
+
+  local options = square_move_runtime.get_options_for_player(player)
+
+  for _, direction in ipairs({"north", "east", "south", "west"}) do
+    local button = directions[defs.SQUARE_MOVE_DIRECTION_BUTTON_PREFIX .. direction]
+    local result = options[direction]
+
+    if button then
+      button.enabled = result.ok
+      button.tooltip = build_square_move_tooltip(direction, result)
+    end
+  end
+end
+
+function gui_runtime.toggle_square_move_gui(player, square_move_runtime)
+  if not (player and player.valid) then
+    return
+  end
+
+  local frame = player.gui.screen[defs.SQUARE_MOVE_FRAME_NAME]
+
+  if frame then
+    destroy_square_move_frame(player)
+    return
+  end
+
+  open_square_move_gui(player, square_move_runtime)
+end
+
+function gui_runtime.handle_square_move_gui_closed(player, element)
+  if not (player and player.valid and element and element.valid) then
+    return false
+  end
+
+  if element.name ~= defs.SQUARE_MOVE_FRAME_NAME then
+    return false
+  end
+
+  destroy_square_move_frame(player)
+  return true
+end
+
 local function build_shop_status_caption(resource, anchor_runtime)
   local definition = defs.get_input_definition(resource) or defs.get_output_definition(resource)
   local counts = anchor_runtime.get_owned_line_counts(resource)
@@ -308,6 +459,15 @@ function gui_runtime.sync_screenshot_gui(player)
   ensure_screenshot_button(player)
 end
 
+function gui_runtime.sync_square_move_gui(player)
+  if not (player and player.valid) then
+    return
+  end
+
+  gui_runtime.destroy_legacy_guis(player)
+  ensure_square_move_button(player)
+end
+
 function gui_runtime.sync_cliff_explosive_gui(player)
   if not (player and player.valid) then
     return
@@ -337,6 +497,18 @@ end
 function gui_runtime.sync_all_screenshot_guis()
   for _, player in pairs(game.players) do
     gui_runtime.sync_screenshot_gui(player)
+  end
+end
+
+function gui_runtime.sync_all_square_move_guis()
+  for _, player in pairs(game.players) do
+    gui_runtime.sync_square_move_gui(player)
+  end
+end
+
+function gui_runtime.refresh_all_square_move_guis(square_move_runtime)
+  for _, player in pairs(game.players) do
+    gui_runtime.refresh_square_move_gui(player, square_move_runtime)
   end
 end
 

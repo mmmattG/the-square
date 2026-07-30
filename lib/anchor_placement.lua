@@ -110,8 +110,8 @@ function anchor_placement.find_anchor_by_entity_name_and_position(entity_name, p
   return nil
 end
 
-function anchor_placement.check(anchor, position, square_size, starter_anchors)
-  local side = defs.get_anchor_side_for_position(square_size, position)
+function anchor_placement.check(anchor, position, square_size, starter_anchors, square_position)
+  local side = defs.get_anchor_side_for_position(square_size, position, square_position)
 
   if not side then
     return false, "invalid-edge", nil

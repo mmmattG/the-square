@@ -23,7 +23,10 @@ function void_item_runtime.should_destroy_entity(entity)
   end
 
   local tile_position = defs.snap_entity_position_to_tile(entity.position)
-  local square_bounds = defs.get_square_bounds(planet:get_square_size())
+  local square_bounds = defs.get_square_bounds(
+    planet:get_square_size(),
+    planet:get_square_position()
+  )
 
   if defs.is_inside_bounds(square_bounds, tile_position) then
     return false

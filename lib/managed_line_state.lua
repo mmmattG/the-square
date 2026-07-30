@@ -4,12 +4,12 @@ local planet_instance = require("lib.planet_instance")
 
 local managed_line_state = {}
 
-local function migrate_anchor_to_anchor_ring(square_size, anchor)
+local function migrate_anchor_to_anchor_ring(square_size, anchor, square_position)
   if not (anchor and anchor.position and anchor.side) then
     return
   end
 
-  if defs.get_anchor_side_for_position(square_size, anchor.position) then
+  if defs.get_anchor_side_for_position(square_size, anchor.position, square_position) then
     return
   end
 
@@ -18,10 +18,10 @@ local function migrate_anchor_to_anchor_ring(square_size, anchor)
   anchor.entity = nil
 end
 
-local function normalize_anchor(anchor, square_size)
+local function normalize_anchor(anchor, square_size, square_position)
   if anchor.position and not anchor.resource and not (anchor.kind or anchor.flow) then
     anchor.item_progress = anchor.item_progress or {0, 0}
-    migrate_anchor_to_anchor_ring(square_size, anchor)
+    migrate_anchor_to_anchor_ring(square_size, anchor, square_position)
     return
   end
 
@@ -34,7 +34,7 @@ local function normalize_anchor(anchor, square_size)
     anchor.entity_name = anchor.entity_name or defs.get_generic_anchor_entity_name(anchor.kind or "item", anchor.flow)
   end
   anchor.direction = anchor.side and defs.get_anchor_direction_for_side(anchor.flow, anchor.kind, anchor.side) or nil
-  migrate_anchor_to_anchor_ring(square_size, anchor)
+  migrate_anchor_to_anchor_ring(square_size, anchor, square_position)
 end
 
 local function migrate_legacy_nauvis_state(bootstrap)
@@ -104,7 +104,7 @@ function managed_line_state.ensure(planet_name)
   local state = bootstrap.starter_anchors
 
   for _, anchor in ipairs(state.anchors) do
-    normalize_anchor(anchor, planet:get_square_size())
+    normalize_anchor(anchor, planet:get_square_size(), planet:get_square_position())
   end
 
   return state

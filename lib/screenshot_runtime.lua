@@ -39,7 +39,8 @@ function screenshot_runtime.take_base_screenshot(player)
   local capture = base_screenshot.build_capture_spec(
     square_size,
     defs.BASE_SCREENSHOT_MARGIN_TILES,
-    defs.get_screenshot_pixels_per_tile()
+    defs.get_screenshot_pixels_per_tile(),
+    planet:get_square_position()
   )
   local path = build_screenshot_path(viewed_surface.name, square_size)
 

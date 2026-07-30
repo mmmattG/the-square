@@ -182,14 +182,20 @@ local function call_freeplay(interface_name, value)
   end
 end
 
-local function build_managed_surface_tiles(square_size, surface_size, floor_tile_name)
-  local surface_bounds = defs.get_square_bounds(surface_size)
+local function build_managed_surface_tiles(square_size, surface_size, floor_tile_name, square_position)
+  local surface_bounds = defs.get_square_bounds(surface_size, square_position)
   local tiles = {}
 
   for y = surface_bounds.left_top.y, surface_bounds.right_bottom.y - 1 do
     for x = surface_bounds.left_top.x, surface_bounds.right_bottom.x - 1 do
       tiles[#tiles + 1] = {
-        name = defs.get_managed_tile_name(square_size, surface_size, {x = x, y = y}, floor_tile_name),
+        name = defs.get_managed_tile_name(
+          square_size,
+          surface_size,
+          {x = x, y = y},
+          floor_tile_name,
+          square_position
+        ),
         position = {x = x, y = y}
       }
     end
@@ -198,12 +204,23 @@ local function build_managed_surface_tiles(square_size, surface_size, floor_tile
   return tiles
 end
 
-function bootstrap_runtime.refresh_managed_surface_tiles(surface, square_size, surface_size, floor_tile_name)
+function bootstrap_runtime.refresh_managed_surface_tiles(
+  surface,
+  square_size,
+  surface_size,
+  floor_tile_name,
+  square_position
+)
   if not surface then
     return
   end
 
-  local tile_updates = build_managed_surface_tiles(square_size, surface_size, floor_tile_name)
+  local tile_updates = build_managed_surface_tiles(
+    square_size,
+    surface_size,
+    floor_tile_name,
+    square_position
+  )
 
   if #tile_updates > 0 then
     -- Keep tile correction enabled so Factorio rebuilds the soft edge transition
@@ -216,13 +233,25 @@ local function build_bootstrap_tiles(square_size, surface_size)
   return build_managed_surface_tiles(square_size, surface_size)
 end
 
-function bootstrap_runtime.build_generated_chunk_tiles(square_size, surface_size, area, floor_tile_name)
+function bootstrap_runtime.build_generated_chunk_tiles(
+  square_size,
+  surface_size,
+  area,
+  floor_tile_name,
+  square_position
+)
   local tiles = {}
 
   for y = area.left_top.y, area.right_bottom.y - 1 do
     for x = area.left_top.x, area.right_bottom.x - 1 do
       local position = {x = x, y = y}
-      local tile_name = defs.get_managed_tile_name(square_size, surface_size, position, floor_tile_name) or defs.VOID_TILE_NAME
+      local tile_name = defs.get_managed_tile_name(
+        square_size,
+        surface_size,
+        position,
+        floor_tile_name,
+        square_position
+      ) or defs.VOID_TILE_NAME
 
       tiles[#tiles + 1] = {
         name = tile_name,
@@ -234,19 +263,32 @@ function bootstrap_runtime.build_generated_chunk_tiles(square_size, surface_size
   return tiles
 end
 
-function bootstrap_runtime.refresh_generated_chunk_tiles(surface, square_size, surface_size, area, floor_tile_name)
+function bootstrap_runtime.refresh_generated_chunk_tiles(
+  surface,
+  square_size,
+  surface_size,
+  area,
+  floor_tile_name,
+  square_position
+)
   if not (surface and area) then
     return
   end
 
-  local tile_updates = bootstrap_runtime.build_generated_chunk_tiles(square_size, surface_size, area, floor_tile_name)
+  local tile_updates = bootstrap_runtime.build_generated_chunk_tiles(
+    square_size,
+    surface_size,
+    area,
+    floor_tile_name,
+    square_position
+  )
 
   if #tile_updates > 0 then
     surface.set_tiles(tile_updates, true, true, true, false)
   end
 end
 
-function bootstrap_runtime.refresh_all_generated_chunk_tiles(surface, square_size, surface_size)
+function bootstrap_runtime.refresh_all_generated_chunk_tiles(surface, square_size, surface_size, square_position)
   if not surface then
     return
   end
@@ -255,7 +297,7 @@ function bootstrap_runtime.refresh_all_generated_chunk_tiles(surface, square_siz
     bootstrap_runtime.refresh_generated_chunk_tiles(surface, square_size, surface_size, {
       left_top = {x = chunk.x * 32, y = chunk.y * 32},
       right_bottom = {x = (chunk.x + 1) * 32, y = (chunk.y + 1) * 32}
-    })
+    }, nil, square_position)
   end
 end
 
@@ -275,7 +317,8 @@ function bootstrap_runtime.refresh_generated_chunk_for_planet_surface(surface, a
     planet:get_square_size(),
     planet:get_surface_size(),
     area,
-    planet:get_floor_tile_name()
+    planet:get_floor_tile_name(),
+    planet:get_square_position()
   )
 
   return true
@@ -311,16 +354,20 @@ function bootstrap_runtime.ensure_bootstrap_state_defaults()
   storage.utilization_metrics = nil
 end
 
-ensure_surface_dimensions = function(surface, target_surface_size)
+ensure_surface_dimensions = function(surface, target_surface_size, square_position)
+  square_position = square_position or {x = 0, y = 0}
   local map_gen_settings = surface.map_gen_settings
+  local target_width = target_surface_size + (math.abs(square_position.x) * 2)
+  local target_height = target_surface_size + (math.abs(square_position.y) * 2)
 
-  if map_gen_settings.width ~= target_surface_size or map_gen_settings.height ~= target_surface_size then
-    map_gen_settings.width = target_surface_size
-    map_gen_settings.height = target_surface_size
+  if map_gen_settings.width < target_width or map_gen_settings.height < target_height then
+    map_gen_settings.width = math.max(map_gen_settings.width, target_width)
+    map_gen_settings.height = math.max(map_gen_settings.height, target_height)
     surface.map_gen_settings = map_gen_settings
   end
 
-  surface.request_to_generate_chunks({x = 0, y = 0}, defs.CHART_MARGIN)
+  local chunk_radius = math.max(defs.CHART_MARGIN, math.ceil(target_surface_size / 64))
+  surface.request_to_generate_chunks(square_position, chunk_radius)
   surface.force_generate_chunk_requests()
 end
 
@@ -365,8 +412,8 @@ function bootstrap_runtime.clear_surface_chart(surface)
   end
 end
 
-function bootstrap_runtime.chart_play_area(force, surface, surface_size)
-  planet_square.chart_play_area(force, surface, surface_size)
+function bootstrap_runtime.chart_play_area(force, surface, surface_size, square_position)
+  planet_square.chart_play_area(force, surface, surface_size, square_position)
 end
 
 function bootstrap_runtime.teleport_player_to_square(player)
@@ -382,10 +429,15 @@ function bootstrap_runtime.teleport_player_to_square(player)
     return
   end
 
-  local target_position = {x = 0, y = 0}
+  local target_position = bootstrap.square_position or {x = 0, y = 0}
   player.force.set_spawn_position(target_position, surface)
   player.teleport(target_position, surface)
-  bootstrap_runtime.chart_play_area(player.force, surface, bootstrap.surface_size or bootstrap.square_size)
+  bootstrap_runtime.chart_play_area(
+    player.force,
+    surface,
+    bootstrap.surface_size or bootstrap.square_size,
+    target_position
+  )
 end
 
 function bootstrap_runtime.expand_planet_square(planet_name, player, gui_runtime, anchor_runtime)
@@ -430,6 +482,7 @@ function bootstrap_runtime.bootstrap_world(anchor_runtime, gui_runtime)
   if gui_runtime then
     gui_runtime.sync_all_dev_guis()
     gui_runtime.sync_all_screenshot_guis()
+    gui_runtime.sync_all_square_move_guis()
     gui_runtime.sync_all_shop_guis(anchor_runtime)
   end
 end
@@ -451,8 +504,13 @@ function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
 
   call_freeplay("set_skip_intro", true)
   call_freeplay("set_disable_crashsite", true)
-  game.forces.player.set_spawn_position({x = 0, y = 0}, surface)
-  ensure_surface_dimensions(surface, bootstrap.surface_size or defs.get_surface_size(bootstrap.square_size))
+  local square_position = bootstrap.square_position or {x = 0, y = 0}
+  game.forces.player.set_spawn_position(square_position, surface)
+  ensure_surface_dimensions(
+    surface,
+    bootstrap.surface_size or defs.get_surface_size(bootstrap.square_size),
+    square_position
+  )
 
   if anchor_runtime then
     anchor_runtime.ensure("nauvis")
@@ -465,6 +523,7 @@ function bootstrap_runtime.refresh_spawn_routing(anchor_runtime, gui_runtime)
 
   if gui_runtime then
     gui_runtime.sync_all_dev_guis()
+    gui_runtime.sync_all_square_move_guis()
     gui_runtime.sync_all_shop_guis(anchor_runtime)
   end
 end
