@@ -66,10 +66,6 @@ function managed_line_runtime.handle_config_gui_closed(player, element)
   return anchor_runtime.handle_anchor_config_gui_closed(player, element)
 end
 
-function managed_line_runtime.handle_recipe_changed(entity, actor)
-  return anchor_runtime.handle_anchor_recipe_changed(entity, actor)
-end
-
 function managed_line_runtime.handle_slot_click(player)
   return anchor_runtime.handle_managed_anchor_slot_click(player)
 end

@@ -99,12 +99,6 @@ script.on_event(defines.events.on_player_flipped_entity, function(event)
   managed_line_runtime.handle_rotated(event.entity)
 end)
 
-if defines.events.on_entity_settings_pasted then
-  script.on_event(defines.events.on_entity_settings_pasted, function(event)
-    managed_line_runtime.handle_recipe_changed(event.destination, game.get_player(event.player_index))
-  end)
-end
-
 if defines.events.on_gui_opened then
   script.on_event(defines.events.on_gui_opened, function(event)
     if event.entity then
@@ -121,10 +115,6 @@ if defines.events.on_gui_closed then
 
     if event.element and managed_line_runtime.handle_config_gui_closed(game.get_player(event.player_index), event.element) then
       return
-    end
-
-    if event.entity then
-      managed_line_runtime.handle_recipe_changed(event.entity, game.get_player(event.player_index))
     end
   end)
 end

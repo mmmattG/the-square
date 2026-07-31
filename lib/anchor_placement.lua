@@ -3,20 +3,6 @@ local anchor_identity = require("lib.anchor_identity")
 
 local anchor_placement = {}
 
-function anchor_placement.stash(anchor)
-  if not anchor then
-    return
-  end
-
-  anchor.position = nil
-  anchor.side = nil
-  anchor.resource = nil
-  anchor.item_progress = {0, 0}
-  anchor.item_name = defs.get_generic_anchor_item_name_for_tier(anchor.kind, anchor.flow, anchor.tier_level or 1)
-  anchor.entity_name = defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
-  anchor.entity = nil
-end
-
 function anchor_placement.assign(anchor, side, position)
   if not (anchor and side and position) then
     return false
@@ -58,23 +44,6 @@ function anchor_placement.is_fluid_anchor_too_close(anchor, position, side, star
   end
 
   return false
-end
-
-function anchor_placement.find_matching_stashed_anchor(item_or_entity_name, starter_anchors)
-  if not starter_anchors then
-    return nil
-  end
-
-  for _, anchor in ipairs(starter_anchors.anchors) do
-    if not anchor.position and (
-      anchor.item_name == item_or_entity_name
-      or anchor_identity.does_anchor_match_entity_name(anchor, item_or_entity_name)
-    ) then
-      return anchor
-    end
-  end
-
-  return nil
 end
 
 function anchor_placement.find_anchor_by_entity(entity, starter_anchors)
