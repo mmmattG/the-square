@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.1.6
+  Balancing:
+    - Removed the burner mining drill from the starting inventory because there are no resource patches to mine.
+
+---------------------------------------------------------------------------------------------------
 Version: 0.1.5
 Date: 2026-07-30
   Features:
