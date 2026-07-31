@@ -2,6 +2,8 @@
 Version: 0.1.6
   Balancing:
     - Removed the burner mining drill from the starting inventory because there are no resource patches to mine.
+  Bugfixes:
+    - Removed obsolete Managed Line configuration recipes from the crafting menu.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.5

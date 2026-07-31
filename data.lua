@@ -3,42 +3,6 @@ local biter_egg_bootstrap = require("lib.biter_egg_bootstrap")
 local pentapod_egg_bootstrap = require("lib.pentapod_egg_bootstrap")
 local planet_config = require("lib.planet_config")
 
-local function space_age_icon(path, fallback)
-  if mods and mods["space-age"] then
-    return "__space-age__/graphics/icons/" .. path
-  end
-
-  return fallback
-end
-
-local ingress_resources = {
-  {resource = "iron-ore", kind = "item", icon = "__base__/graphics/icons/iron-ore.png", order = "a[ingress]-a[iron-ore]"},
-  {resource = "copper-ore", kind = "item", icon = "__base__/graphics/icons/copper-ore.png", order = "a[ingress]-b[copper-ore]"},
-  {resource = "coal", kind = "item", icon = "__base__/graphics/icons/coal.png", order = "a[ingress]-c[coal]"},
-  {resource = "stone", kind = "item", icon = "__base__/graphics/icons/stone.png", order = "a[ingress]-d[stone]"},
-  {resource = "water", kind = "fluid", icon = "__base__/graphics/icons/fluid/water.png", order = "a[ingress]-e[water]"},
-  {resource = "wood", kind = "item", icon = "__base__/graphics/icons/wood.png", order = "a[ingress]-f[wood]"},
-  {resource = "crude-oil", kind = "fluid", icon = "__base__/graphics/icons/fluid/crude-oil.png", order = "a[ingress]-g[crude-oil]"},
-  {resource = "uranium-ore", kind = "item", icon = "__base__/graphics/icons/uranium-ore.png", order = "a[ingress]-h[uranium-ore]"},
-  {resource = "calcite", kind = "item", icon = space_age_icon("calcite.png", "__base__/graphics/icons/stone.png"), order = "a[ingress]-i[calcite]"},
-  {resource = "tungsten-ore", kind = "item", icon = space_age_icon("tungsten-ore.png", "__base__/graphics/icons/stone.png"), order = "a[ingress]-j[tungsten-ore]"},
-  {resource = "sulfuric-acid", kind = "fluid", icon = "__base__/graphics/icons/fluid/sulfuric-acid.png", order = "a[ingress]-k[sulfuric-acid]"},
-  {resource = "lava", kind = "fluid", icon = space_age_icon("fluid/lava.png", "__base__/graphics/icons/fluid/crude-oil.png"), order = "a[ingress]-l[lava]"},
-  {resource = "scrap", kind = "item", icon = space_age_icon("scrap.png", "__base__/graphics/icons/iron-stick.png"), order = "a[ingress]-m[scrap]"},
-  {resource = "heavy-oil", kind = "fluid", icon = "__base__/graphics/icons/fluid/heavy-oil.png", order = "a[ingress]-n[heavy-oil]"},
-  {resource = "yumako", kind = "item", icon = space_age_icon("yumako.png", "__base__/graphics/icons/wood.png"), order = "a[ingress]-o[yumako]"},
-  {resource = "jellynut", kind = "item", icon = space_age_icon("jellynut.png", "__base__/graphics/icons/wood.png"), order = "a[ingress]-p[jellynut]"},
-  {resource = "ammoniacal-solution", kind = "fluid", icon = space_age_icon("fluid/ammoniacal-solution.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-q[ammoniacal-solution]"},
-  {resource = "fluorine", kind = "fluid", icon = space_age_icon("fluid/fluorine.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-r[fluorine]"},
-  {resource = "lithium-brine", kind = "fluid", icon = space_age_icon("fluid/lithium-brine.png", "__base__/graphics/icons/fluid/water.png"), order = "a[ingress]-s[lithium-brine]"}
-}
-
-local egress_resources = {
-  {resource = "sulfuric-acid", kind = "fluid", icon = "__base__/graphics/icons/fluid/sulfuric-acid.png", order = "b[egress]-a[sulfuric-acid]"},
-  {resource = "yumako-seed", kind = "item", icon = space_age_icon("yumako-seed.png", "__base__/graphics/icons/wood.png"), order = "b[egress]-b[yumako-seed]"},
-  {resource = "jellynut-seed", kind = "item", icon = space_age_icon("jellynut-seed.png", "__base__/graphics/icons/wood.png"), order = "b[egress]-c[jellynut-seed]"}
-}
-
 local item_ingress_belt_tiers = {
   {key = "yellow", prototype_name = "underground-belt"},
   {key = "red", prototype_name = "fast-underground-belt"},
@@ -331,7 +295,7 @@ local function build_tiered_managed_line_icons(tier, kind, flow, fallback_icon)
   }
 end
 
-local function build_generic_anchor_item(name, icon, order, place_result, tier, kind, flow)
+local function build_generic_anchor_item(name, icon, order, tier, kind, flow)
   return {
     type = "item",
     name = name,
@@ -342,84 +306,11 @@ local function build_generic_anchor_item(name, icon, order, place_result, tier, 
     icons = build_tiered_managed_line_icons(tier, kind, flow, icon),
     subgroup = "energy-pipe-distribution",
     order = order,
-    place_result = place_result,
     stack_size = 50
   }
 end
 
 local allow_anchor_on_out_of_map
-
-local function build_generic_anchor_animation(anchor_source, kind, flow)
-  if kind == "item" and anchor_source.structure then
-    local direction_key = flow == "egress" and "direction_out" or "direction_in"
-    local structure = anchor_source.structure[direction_key] or anchor_source.structure.direction_in
-
-    if structure and structure.sheet then
-      local sheet = table.deepcopy(structure.sheet)
-      sheet.direction_count = sheet.direction_count or 4
-      return sheet
-    end
-  end
-
-  if kind == "fluid" and flow == "ingress" and anchor_source.graphics_set and anchor_source.graphics_set.animation then
-    return table.deepcopy(anchor_source.graphics_set.animation)
-  end
-
-  return {
-    layers = {
-      {
-        filename = anchor_source.icon,
-        size = 64,
-        scale = 0.5,
-        shift = {0, 0}
-      },
-      {
-        filename = "__core__/graphics/icons/parametrise.png",
-        size = 64,
-        scale = 0.175,
-        shift = {0.125, 0.125}
-      }
-    }
-  }
-end
-
-local function build_generic_anchor_entity(name, item_name, kind, flow)
-  local anchor_source
-
-  if kind == "fluid" and flow == "ingress" then
-    anchor_source = table.deepcopy(data.raw["offshore-pump"]["offshore-pump"])
-  elseif kind == "fluid" then
-    anchor_source = table.deepcopy(data.raw["pipe-to-ground"]["pipe-to-ground"])
-  else
-    anchor_source = table.deepcopy(data.raw["underground-belt"]["underground-belt"])
-  end
-
-  local source = table.deepcopy(data.raw["assembling-machine"]["assembling-machine-1"])
-  source.name = name
-  source.localised_description = {"entity-description.the-square-generic-anchor"}
-  source.icons = build_parameterised_anchor_icons(anchor_source.icon)
-  source.icon = nil
-  source.minable = {mining_time = 0.1, result = item_name}
-  source.placeable_by = {item = item_name, count = 1}
-  source.next_upgrade = nil
-  source.crafting_categories = {"the-square-anchor-configuration"}
-  source.crafting_speed = 1
-  source.energy_source = {type = "void"}
-  source.energy_usage = "1W"
-  source.allowed_effects = {}
-  source.module_slots = 0
-  source.graphics_set = {
-    animation = build_generic_anchor_animation(anchor_source, kind, flow)
-  }
-  source.collision_box = {{0, 0}, {0, 0}}
-  source.selection_box = {{-0.5, -0.5}, {0.5, 0.5}}
-  source.collision_mask = {layers = {}}
-  source.tile_width = nil
-  source.tile_height = nil
-  allow_anchor_on_out_of_map(source)
-
-  return source
-end
 
 local function build_recipe(name, result, ingredients, energy_required)
   return {
@@ -450,30 +341,6 @@ local function is_managed_line_item_tier_available(tier)
   end
 
   return true
-end
-
-local function config_recipe_name(resource, flow)
-  return "the-square-configure-" .. resource .. "-" .. flow
-end
-
-local function build_config_recipe(definition, flow, planet_name)
-  return {
-    type = "recipe",
-    name = config_recipe_name(definition.resource, flow),
-    localised_name = {"recipe-name.the-square-configure-anchor", {"the-square-resource-name." .. definition.resource}},
-    icon = definition.icon,
-    icon_size = 64,
-    category = "the-square-anchor-configuration",
-    enabled = true,
-    hidden = false,
-    hidden_in_factoriopedia = true,
-    allow_productivity = false,
-    allow_quality = false,
-    energy_required = 1,
-    ingredients = {},
-    results = {},
-    order = "z[the-square-configure]-" .. planet_name .. "-" .. flow .. "-" .. definition.resource
-  }
 end
 
 local function remove_collision_layers(collision_mask, layers_to_remove)
@@ -538,49 +405,6 @@ local function build_ingress_entity(kind, belt_tier_key, belt_prototype_name)
   source.minable = {mining_time = 0.1, result = item_name}
   source.placeable_by = {item = item_name, count = 1}
   source.next_upgrade = nil
-  allow_anchor_on_out_of_map(source)
-
-  return source
-end
-
-local function anchor_config_proxy_name(kind, flow)
-  return "the-square-anchor-config-proxy-" .. kind .. "-" .. flow
-end
-
-local function build_anchor_config_proxy(kind, flow)
-  local source = table.deepcopy(data.raw["assembling-machine"]["assembling-machine-1"])
-  source.name = anchor_config_proxy_name(kind, flow)
-  source.localised_name = {"entity-name.the-square-generic-" .. kind .. "-" .. flow .. "-anchor"}
-  source.localised_description = {"entity-description.the-square-generic-anchor"}
-  source.icon = "__core__/graphics/icons/parametrise.png"
-  source.icon_size = 64
-  source.flags = {
-    "not-on-map",
-    "placeable-off-grid",
-    "not-blueprintable",
-    "not-deconstructable",
-    "not-flammable"
-  }
-  source.minable = nil
-  source.placeable_by = nil
-  source.next_upgrade = nil
-  source.crafting_categories = {"the-square-anchor-configuration"}
-  source.crafting_speed = 1
-  source.energy_source = {type = "void"}
-  source.energy_usage = "1W"
-  source.allowed_effects = {}
-  source.module_slots = 0
-  source.graphics_set = {
-    animation = {
-      filename = "__core__/graphics/empty.png",
-      size = 1
-    }
-  }
-  source.collision_box = {{0, 0}, {0, 0}}
-  source.selection_box = {{-0.49, -0.49}, {0.49, 0.49}}
-  source.collision_mask = {layers = {}}
-  source.tile_width = nil
-  source.tile_height = nil
   allow_anchor_on_out_of_map(source)
 
   return source
@@ -797,33 +621,6 @@ local function build_tips_item(definition)
   }
 end
 
-local function add_recipe_unlock_to_technology(technology_name, recipe_name)
-  local technology = data.raw.technology[technology_name]
-
-  if not technology or not data.raw.recipe[recipe_name] then
-    return
-  end
-
-  technology.effects = technology.effects or {}
-  for _, effect in ipairs(technology.effects) do
-    if effect.type == "unlock-recipe" and effect.recipe == recipe_name then
-      return
-    end
-  end
-
-  technology.effects[#technology.effects + 1] = {
-    type = "unlock-recipe",
-    recipe = recipe_name
-  }
-end
-
-local function add_resource_configuration_unlocks()
-  add_recipe_unlock_to_technology("oil-gathering", config_recipe_name("crude-oil", "ingress"))
-  add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("uranium-ore", "ingress"))
-  add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("sulfuric-acid", "ingress"))
-  add_recipe_unlock_to_technology("uranium-mining", config_recipe_name("sulfuric-acid", "egress"))
-end
-
 local prototypes = {}
 
 prototypes[#prototypes + 1] = {
@@ -832,24 +629,15 @@ prototypes[#prototypes + 1] = {
   order = "o[the-square]"
 }
 
-prototypes[#prototypes + 1] = {
-  type = "recipe-category",
-  name = "the-square-anchor-configuration"
-}
-
-prototypes[#prototypes + 1] = build_anchor_config_proxy("item", "ingress")
-prototypes[#prototypes + 1] = build_anchor_config_proxy("item", "egress")
-prototypes[#prototypes + 1] = build_anchor_config_proxy("fluid", "ingress")
-prototypes[#prototypes + 1] = build_anchor_config_proxy("fluid", "egress")
 prototypes[#prototypes + 1] = build_anchor_slot_proxy()
 prototypes[#prototypes + 1] = build_anchor_place_input()
 prototypes[#prototypes + 1] = build_anchor_open_input()
 prototypes[#prototypes + 1] = build_anchor_frame_item()
 local generic_anchor_item_definitions = {
-  {kind = "item", flow = "ingress", icon = "__base__/graphics/icons/underground-belt.png", order = "b[item-ingress-anchor]", place_result = "the-square-generic-item-ingress-anchor"},
-  {kind = "item", flow = "egress", icon = "__base__/graphics/icons/underground-belt.png", order = "c[item-egress-anchor]", place_result = "the-square-generic-item-egress-anchor"},
-  {kind = "fluid", flow = "ingress", icon = "__base__/graphics/icons/offshore-pump.png", order = "d[fluid-ingress-anchor]", place_result = "the-square-generic-fluid-ingress-anchor"},
-  {kind = "fluid", flow = "egress", icon = "__base__/graphics/icons/pipe-to-ground.png", order = "e[fluid-egress-anchor]", place_result = "the-square-generic-fluid-egress-anchor"}
+  {kind = "item", flow = "ingress", icon = "__base__/graphics/icons/underground-belt.png", order = "b[item-ingress-anchor]"},
+  {kind = "item", flow = "egress", icon = "__base__/graphics/icons/underground-belt.png", order = "c[item-egress-anchor]"},
+  {kind = "fluid", flow = "ingress", icon = "__base__/graphics/icons/offshore-pump.png", order = "d[fluid-ingress-anchor]"},
+  {kind = "fluid", flow = "egress", icon = "__base__/graphics/icons/pipe-to-ground.png", order = "e[fluid-egress-anchor]"}
 }
 
 for _, tier in ipairs(managed_line_item_tiers) do
@@ -863,7 +651,6 @@ for _, tier in ipairs(managed_line_item_tiers) do
           item_name,
           definition.icon,
           "z[the-square]-" .. order_suffix,
-          tier.key == "yellow" and definition.place_result or nil,
           tier,
           definition.kind,
           definition.flow
@@ -872,10 +659,6 @@ for _, tier in ipairs(managed_line_item_tiers) do
     end
   end
 end
-prototypes[#prototypes + 1] = build_generic_anchor_entity("the-square-generic-item-ingress-anchor", "the-square-item-ingress-anchor", "item", "ingress")
-prototypes[#prototypes + 1] = build_generic_anchor_entity("the-square-generic-item-egress-anchor", "the-square-item-egress-anchor", "item", "egress")
-prototypes[#prototypes + 1] = build_generic_anchor_entity("the-square-generic-fluid-ingress-anchor", "the-square-fluid-ingress-anchor", "fluid", "ingress")
-prototypes[#prototypes + 1] = build_generic_anchor_entity("the-square-generic-fluid-egress-anchor", "the-square-fluid-egress-anchor", "fluid", "egress")
 prototypes[#prototypes + 1] = build_recipe("the-square-anchor-frame", "the-square-anchor-frame", {
   {type = "item", name = "steel-plate", amount = 50},
   {type = "item", name = "electronic-circuit", amount = 50},
@@ -954,14 +737,6 @@ end
 
 prototypes[#prototypes + 1] = build_egress_entity("fluid")
 
-for _, definition in ipairs(ingress_resources) do
-  prototypes[#prototypes + 1] = build_config_recipe(definition, "ingress", "all")
-end
-
-for _, definition in ipairs(egress_resources) do
-  prototypes[#prototypes + 1] = build_config_recipe(definition, "egress", "all")
-end
-
 local starting_square_size = expansion_research.DEFAULT_STARTING_SQUARE_SIZE
 local tiles_per_research = settings.startup["the-square-expansion-tiles-per-research"].value
 
@@ -1020,6 +795,5 @@ for _, definition in ipairs(tips_and_tricks_items) do
 end
 
 data:extend(prototypes)
-add_resource_configuration_unlocks()
 biter_egg_bootstrap.install(data, mods)
 pentapod_egg_bootstrap.install(data, mods)

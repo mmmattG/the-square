@@ -24,11 +24,7 @@ local function run_test(name, fn)
   io.stdout:write("PASS " .. name .. "\n")
 end
 
-run_test("Managed Line identity matches generic, proxy, and tiered entities", function()
-  local kind, flow = anchor_identity.get_generic_kind_flow(defs.get_generic_anchor_entity_name("fluid", "egress"))
-  assert_equal(kind, "fluid", "generic entity should decode kind")
-  assert_equal(flow, "egress", "generic entity should decode flow")
-
+run_test("Managed Line identity matches tiered entities", function()
   assert_equal(
     anchor_identity.is_managed_entity_name(defs.get_ingress_entity_name("iron-ore", 2)),
     true,

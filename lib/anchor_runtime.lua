@@ -82,19 +82,12 @@ local function configure_source_anchor_entity(entity, direction, anchor, planet_
   entity.destructible = false
   entity.operable = true
   if entity.active ~= nil then
-    entity.active = not (
-      anchor_identity.is_generic_entity_name(entity.name)
-      or anchor_identity.is_config_proxy_entity_name(entity.name)
-    ) and should_anchor_entity_be_active(anchor, planet_name)
+    entity.active = should_anchor_entity_be_active(anchor, planet_name)
   end
 end
 
 local function get_required_underground_belt_type(anchor)
   if not (anchor and anchor.flow == "ingress" and anchor.kind == "item") then
-    return nil
-  end
-
-  if anchor_identity.is_generic_entity_name(anchor.entity_name) then
     return nil
   end
 
@@ -135,10 +128,6 @@ end
 
 function anchor_runtime.is_managed_anchor_entity_name(entity_name)
   return anchor_identity.is_managed_entity_name(entity_name)
-end
-
-local function find_matching_stashed_anchor(item_or_entity_name, starter_anchors)
-  return anchor_placement.find_matching_stashed_anchor(item_or_entity_name, starter_anchors)
 end
 
 local function find_anchor_by_entity(entity, starter_anchors)
@@ -298,9 +287,7 @@ local function ensure_anchor_entity(surface, anchor, planet_name)
     return nil
   end
 
-  if not anchor_identity.is_config_proxy_entity_name(anchor.entity_name) then
-    anchor.entity_name = defs.get_anchor_entity_name_for_current_tier(anchor)
-  end
+  anchor.entity_name = defs.get_anchor_entity_name_for_current_tier(anchor)
 
   local entity = anchor.entity
 
@@ -1219,115 +1206,6 @@ function anchor_runtime.handle_anchor_gui_opened(entity, player)
   end
 
   return open_anchor_config_gui(player, anchor, planet_name)
-end
-
-function anchor_runtime.handle_anchor_recipe_changed(entity, actor)
-  if not (entity and entity.valid and (anchor_identity.is_generic_entity_name(entity.name) or anchor_identity.is_config_proxy_entity_name(entity.name))) then
-    return false
-  end
-
-  local starter_anchors, planet, planet_name = get_anchor_state_for_surface(entity.surface)
-  local anchor = find_anchor_by_entity(entity, starter_anchors)
-    or find_anchor_by_entity_name_and_position(entity.name, entity.position, starter_anchors)
-
-  if not anchor then
-    return false
-  end
-
-  local recipe = entity.get_recipe and entity.get_recipe(entity) or nil
-  if not recipe then
-    anchor.resource = nil
-    anchor.item_progress = {0, 0}
-    return true
-  end
-
-  local resource, flow = defs.parse_config_recipe_name(recipe.name)
-  local definition = defs.get_config_definition(resource, flow, planet_name)
-
-  local is_fresh_slot_configuration = anchor_identity.is_config_proxy_entity_name(entity.name)
-    and not anchor.resource
-
-  if not definition
-    or (not is_fresh_slot_configuration and (flow ~= anchor.flow or definition.kind ~= anchor.kind))
-  then
-    if entity.set_recipe then
-      entity.set_recipe(anchor.resource and defs.get_config_recipe_name(anchor.resource, anchor.flow) or nil)
-    end
-    if actor and actor.valid and actor.print then
-      actor.print({"message.the-square-managed-line-invalid-configuration"})
-    end
-    return false
-  end
-
-  local placement_anchor = is_fresh_slot_configuration and {
-    kind = definition.kind,
-    flow = flow
-  } or anchor
-  local ok, reason, side = anchor_placement.check(
-    placement_anchor,
-    anchor.position,
-    planet and planet:get_square_size(),
-    starter_anchors,
-    planet and planet:get_square_position()
-  )
-
-  if not ok then
-    if entity.set_recipe then
-      entity.set_recipe(nil)
-    end
-    if actor and actor.valid and actor.print then
-      actor.print(get_anchor_placement_rejection_message(reason))
-    end
-    if entity.active ~= nil then
-      entity.active = false
-    end
-    return false
-  end
-
-  if is_fresh_slot_configuration then
-    local item_name = defs.get_generic_anchor_item_name_for_tier(definition.kind, flow, anchor.tier_level or 1)
-
-    if not consume_player_inventory_item(actor, item_name) then
-      if entity.set_recipe then
-        entity.set_recipe(nil)
-      end
-      if actor and actor.valid and actor.print then
-        actor.print({"message.the-square-managed-line-missing-inventory", {"item-name." .. item_name}})
-      end
-      if entity.active ~= nil then
-        entity.active = false
-      end
-      return false
-    end
-
-    local stashed_anchor = find_matching_stashed_configurable_anchor(definition, flow, starter_anchors, anchor.tier_level or 1)
-
-    if stashed_anchor and stashed_anchor ~= anchor then
-      remove_anchor_from_set(anchor, starter_anchors)
-      anchor = stashed_anchor
-      anchor.entity = entity
-      anchor.position = entity.position and defs.snap_entity_position_to_tile(entity.position) or anchor.position
-    end
-  end
-
-  anchor.resource = resource
-  anchor.kind = definition.kind
-  anchor.flow = flow
-  anchor.side = side
-  anchor.direction = defs.get_anchor_direction_for_side(flow, definition.kind, side)
-  anchor.tier_level = anchor.tier_level or 1
-  anchor.item_name = defs.get_generic_anchor_item_name_for_tier(anchor.kind, anchor.flow, anchor.tier_level)
-  anchor.entity_name = defs.get_anchor_entity_name_for_current_tier(anchor)
-  anchor.item_progress = {0, 0}
-  if entity.active ~= nil then
-    entity.active = false
-  end
-  try_unlock_oil_processing(anchor, entity.force, actor)
-  try_unlock_uranium_processing(anchor, entity.force, actor)
-
-  anchor_runtime.reconcile_planet_managed_lines(planet_name)
-
-  return true
 end
 
 local function get_open_anchor_for_player(player)
