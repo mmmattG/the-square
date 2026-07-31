@@ -185,7 +185,27 @@ end
 
 local function call_freeplay(interface_name, value)
   if remote.interfaces.freeplay and remote.interfaces.freeplay[interface_name] then
-    remote.call("freeplay", interface_name, value)
+    return remote.call("freeplay", interface_name, value)
+  end
+end
+
+function planet_runtime.configure_freeplay()
+  call_freeplay("set_skip_intro", true)
+  call_freeplay("set_disable_crashsite", true)
+
+  if not (
+    remote.interfaces.freeplay
+    and remote.interfaces.freeplay.get_created_items
+    and remote.interfaces.freeplay.set_created_items
+  ) then
+    return
+  end
+
+  local created_items = call_freeplay("get_created_items")
+
+  if created_items then
+    created_items["burner-mining-drill"] = nil
+    call_freeplay("set_created_items", created_items)
   end
 end
 
@@ -459,8 +479,7 @@ function planet_runtime.expand_planet_square(planet_name, player, gui_runtime, a
 end
 
 function planet_runtime.initialize_world(anchor_runtime, gui_runtime)
-  call_freeplay("set_skip_intro", true)
-  call_freeplay("set_disable_crashsite", true)
+  planet_runtime.configure_freeplay()
 
   local surface = planet_runtime.initialize_planet_surface("nauvis")
   game.forces.player.set_spawn_position({x = 0, y = 0}, surface)
@@ -495,8 +514,7 @@ function planet_runtime.refresh_spawn_routing(planet_name, anchor_runtime, gui_r
     return
   end
 
-  call_freeplay("set_skip_intro", true)
-  call_freeplay("set_disable_crashsite", true)
+  planet_runtime.configure_freeplay()
   local square_position = planet:get_square_position()
   game.forces.player.set_spawn_position(square_position, surface)
   ensure_surface_dimensions(

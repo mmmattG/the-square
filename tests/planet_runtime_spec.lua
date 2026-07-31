@@ -102,6 +102,38 @@ run_test("initial Managed Line inventory is granted once", function()
   assert_equal(inserted[defs.get_generic_anchor_item_name("item", "ingress")], 2, "player should receive two item ingresses")
 end)
 
+run_test("freeplay starting items omit the burner mining drill", function()
+  local created_items = {
+    ["burner-mining-drill"] = 1,
+    ["stone-furnace"] = 1
+  }
+
+  remote = {
+    interfaces = {
+      freeplay = {
+        get_created_items = true,
+        set_created_items = true,
+        set_disable_crashsite = true,
+        set_skip_intro = true
+      }
+    },
+    call = function(_, interface_name, value)
+      if interface_name == "get_created_items" then
+        return created_items
+      end
+
+      if interface_name == "set_created_items" then
+        created_items = value
+      end
+    end
+  }
+
+  planet_runtime.configure_freeplay()
+
+  assert_equal(created_items["burner-mining-drill"], nil, "new players should not receive an unusable mining drill")
+  assert_equal(created_items["stone-furnace"], 1, "other freeplay starting items should remain unchanged")
+end)
+
 run_test("generated chunks on supported Space Age planet surfaces are routed through planet state", function()
   storage = {}
   local painted_tiles = nil
