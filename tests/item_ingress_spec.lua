@@ -46,6 +46,17 @@ local function simulate_ticks(item_lane_counts, tick_count)
   }
 end
 
+run_test("hot-path lane progress advances in place", function()
+  local progress = {0.875, 0}
+  local original_progress = progress
+  local lane_one_emission, lane_two_emission = item_ingress.advance_lane_progress({1, 0}, 8, progress, 1)
+
+  assert_equal(lane_one_emission, 1, "the first lane should emit once when its progress reaches one")
+  assert_equal(lane_two_emission, 0, "the unused second lane should not emit")
+  assert_equal(progress, original_progress, "lane progress should keep the same table")
+  assert_equal(progress[1], 0, "emitted progress should be consumed in place")
+end)
+
 run_test("yellow single lane still emits one item every eight ticks", function()
   local simulation = simulate_ticks({1, 0}, 8)
 

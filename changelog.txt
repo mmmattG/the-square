@@ -4,6 +4,8 @@ Version: 0.1.6
     - Removed the burner mining drill from the starting inventory because there are no resource patches to mine.
   Bugfixes:
     - Removed obsolete Managed Line configuration recipes from the crafting menu.
+  Optimizations:
+    - Reduced the routine script work performed by Managed Lines.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.5
