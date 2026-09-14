@@ -1,5 +1,5 @@
 # Regenerable mod packages, asset gallery pages/images, and Factorio exports.
-/build/
+build/
 # Local Python tooling caches.
 __pycache__/
 *.py[cod]
