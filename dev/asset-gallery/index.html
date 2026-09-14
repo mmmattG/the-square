@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Square · Asset gallery</title>
+<style>
+:root {
+  color-scheme:dark;
+  font-family:system-ui,sans-serif;
+  color:#eceeef;
+  background:#15171a;
+  font-size:16px;
+  --line:#383c42;
+  --accent:#ffc35d;
+  --preview:64px;
+}
+* {
+  box-sizing:border-box;
+}
+body {
+  margin:0;
+}
+header,main {
+  max-width:1600px;
+  margin:auto;
+  padding:24px 32px;
+}
+header {
+  padding-bottom:16px;
+}
+h1 {
+  font-size:1.65rem;
+  margin:0;
+  letter-spacing:-.035em;
+}
+header .title {
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.mark {
+  width:24px;
+  height:24px;
+  border:5px solid var(--accent);
+}
+.badge {
+  font-size:.8rem;
+  border:1px solid var(--line);
+  padding:4px 8px;
+  color:#c1c6cd;
+}
+p {
+  line-height:1.55;
+  color:#b8bfc8;
+  margin:12px 0;
+}
+a {
+  color:var(--accent);
+}
+.toolbar {
+  display:flex;
+  align-items:end;
+  gap:12px;
+  flex-wrap:wrap;
+  padding:16px 0;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+label {
+  display:grid;
+  gap:6px;
+  font-size:.875rem;
+  color:#c8cdd4;
+}
+.search {
+  flex:1;
+  min-width:220px;
+}
+input,select,button {
+  font:inherit;
+  color:inherit;
+  background:#23262b;
+  border:1px solid #515760;
+  border-radius:4px;
+  padding:9px 12px;
+  min-height:42px;
+}
+input:focus-visible,select:focus-visible,a:focus-visible,summary:focus-visible {
+  outline:2px solid var(--accent);
+  outline-offset:3px;
+}
+select {
+  cursor:pointer;
+}
+main {
+  padding-top:0;
+}
+.results {
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin:16px 0;
+  font-size:.875rem;
+  color:#b8bfc8;
+}
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  gap:12px;
+}
+.card {
+  border:1px solid var(--line);
+  background:#1d2024;
+  min-width:0;
+  border-radius:5px;
+  overflow:hidden;
+}
+.preview {
+  height:176px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background-color:#272b30;
+  background-image:linear-gradient(45deg,#202328 25%,transparent 25%),linear-gradient(-45deg,#202328 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#202328 75%),linear-gradient(-45deg,transparent 75%,#202328 75%);
+  background-size:20px 20px;
+  background-position:0 0,0 10px,10px -10px,-10px 0;
+}
+.preview img {
+  display:block;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+  image-rendering:pixelated;
+}
+.preview.icon img {
+  width:var(--preview);
+  height:var(--preview);
+}
+.body {
+  padding:14px;
+}
+.name {
+  font-size:.875rem;
+  font-weight:600;
+  overflow-wrap:anywhere;
+  margin:0 0 10px;
+  color:#eceeef;
+}
+.meta {
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  color:#b6bec9;
+  font-size:.8rem;
+}
+.meta span {
+  border:1px solid var(--line);
+  border-radius:3px;
+  padding:2px 6px;
+}
+.missing {
+  color:#ffc35d;
+  font-size:.875rem;
+  text-align:center;
+}
+details {
+  font-size:.875rem;
+  margin-top:12px;
+  color:#b8bfc8;
+}
+summary {
+  cursor:pointer;
+}
+ul {
+  padding-left:18px;
+  line-height:1.5;
+}
+li {
+  overflow-wrap:anywhere;
+  margin:6px 0;
+}
+.coverage {
+  border:1px solid var(--line);
+  padding:12px 16px;
+  margin-bottom:18px;
+}
+.coverage p {
+  font-size:.875rem;
+}
+.coverage.warn {
+  border-color:#95703b;
+}
+.empty {
+  padding:48px 0;
+  text-align:center;
+}
+.native {
+  font-size:.8rem;
+  display:inline-block;
+  margin-top:12px;
+}
+[hidden] {
+  display:none!important;
+}
+@media(max-width:600px) {
+  header,main {
+    padding-left:16px;
+    padding-right:16px;
+  }
+  .grid {
+    grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  }
+  .toolbar label {
+    flex:1;
+  }
+  .toolbar .search {
+    flex-basis:100%;
+  }
+  .preview {
+    height:150px;
+  }
+  .badge {
+    margin-left:auto;
+  }
+}
+.reference-section { margin-top:32px; border-top:1px solid var(--line); padding-top:24px; }
+.reference-section > summary { font-size:1.25rem; font-weight:600; color:#eceeef; }
+.reference-section > .grid { margin-top:16px; }
+</style>
+</head>
+<body>
+<header>
+<div class="title"><span class="mark" aria-hidden="true"></span><h1>The Square / Assets</h1><span class="badge">DEV ONLY</span></div>
+<p>Finished visuals shown to players in The Square.</p>
+<div class="toolbar">
+<label class="search">Find an asset<input id="search" type="search" placeholder="Name or where it appears…"></label>
+<label>Show<select id="category"><option value="">Everything</option></select></label>
+<label>Game mode<select id="mode"><option value="">All modes</option value="base">Base</option><option value="space-age">Space Age</option><option value="local">Mod listing</option></select></label>
+<label>Icon size<select id="size"><option value="32">32 px</option><option value="64" selected>64 px</option><option value="128">128 px</option></select></label>
+</div>
+</header>
+<main>
+<details id="coverage" class="coverage"><summary id="coverage-summary">Included visuals</summary><p>Finished icons for the mod’s items, recipes, research and entities; icons displayed in its menus and settings; tips artwork; and the mod thumbnail. Identical exported visuals share a card within each section, with every use listed below it. Unchanged game assets are kept in the reference section; placeholders for mod features remain under Mod visuals.</p><p>Entity previews here are their icons, not in-world scenes. Raw texture sheets, icon components, invisible helpers, and assets mentioned only as ingredients or prerequisites are excluded.</p><p id="build-info"></p><ul id="warnings"></ul></details>
+<div class="results"><span id="count" role="status" aria-live="polite"></span><span>Click a preview to open the finished image.</span></div>
+<section id="mod-section">
+<h2>Mod visuals</h2>
+<p>Includes placeholders used for mod features that still need their own art.</p>
+<div id="gallery" class="grid"></div>
+</section>
+<details id="reference-section" class="reference-section">
+<summary>Unchanged Base / Space Age assets · <span id="reference-count"></span></summary>
+<p>Resource, settings and utility icons reused as-is. Kept here for reference.</p>
+<div id="reference-gallery" class="grid"></div>
+</details>
+<p id="empty" class="empty" hidden>No matching assets. Try another name or clear the filters.</p>
+</main>
+<script id="catalogue" type="application/json">/* CATALOGUE */</script>
+<script>
+'use strict';
+const catalogue = JSON.parse(document.getElementById('catalogue').textContent);
+const byId = id => document.getElementById(id);
+const entries = catalogue.entries;
+const nodes = [];
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+for (const category of [...new Set(entries.flatMap(entry => entry.categories))].sort()) {
+  const option = element('option', '', category);
+  option.value = category;
+  byId('category').append(option);
+}
+for (const entry of entries) {
+  const card = element('article', 'card');
+  const preview = element(entry.image ? 'a' : 'div', 'preview' + (!entry.categories.includes('Mod listing') ? ' icon' : ''));
+  if (entry.image) {
+    preview.href = entry.image; preview.target = '_blank'; preview.rel = 'noopener';
+    preview.setAttribute('aria-label', 'Open ' + entry.name);
+    const image = element('img'); image.src = entry.image; image.alt = entry.name; image.loading = 'lazy';
+    image.addEventListener('error', () => {
+      preview.replaceChildren(element('span', 'missing', 'Image could not be loaded'));
+    });
+    preview.append(image);
+  } else preview.append(element('span', 'missing', 'Preview missing'));
+  const body = element('div', 'body');
+  body.append(element('h2', 'name', entry.name));
+  const meta = element('div', 'meta');
+  for (const label of [...entry.categories, ...entry.modes]) meta.append(element('span', '', label));
+  body.append(meta);
+  const details = element('details');
+  details.append(element('summary', '', `${entry.usages.length} ${entry.usages.length === 1 ? 'use' : 'uses'}`));
+  const list = element('ul');
+  for (const usage of entry.usages) list.append(element('li', '', usage));
+  details.append(list); body.append(details);
+  card.append(preview, body);
+  byId(entry.section === 'reference' ? 'reference-gallery' : 'gallery').append(card);
+  nodes.push({card, entry, search: [entry.name, ...entry.categories, ...entry.usages].join(' ').toLowerCase()});
+}
+function filter() {
+  const query = byId('search').value.toLowerCase().trim();
+  const category = byId('category').value;
+  const mode = byId('mode').value;
+  let visible = 0;
+  let referenceVisible = 0;
+  for (const node of nodes) {
+    const show = (!query || node.search.includes(query)) && (!category || node.entry.categories.includes(category))
+      && (!mode || node.entry.modes.includes(mode));
+    node.card.hidden = !show;
+    if (show) {
+      visible++;
+      if (node.entry.section === 'reference') referenceVisible++;
+    }
+  }
+  byId('count').textContent = `${visible - referenceVisible} mod visuals · ${referenceVisible} unchanged game assets`;
+  byId('reference-count').textContent = referenceVisible;
+  byId('mod-section').hidden = visible === referenceVisible;
+  byId('reference-section').hidden = referenceVisible === 0;
+  if (query || category || mode) byId('reference-section').open = referenceVisible > 0;
+  byId('empty').hidden = visible > 0;
+}
+for (const id of ['search', 'category', 'mode']) byId(id).addEventListener('input', filter);
+byId('size').addEventListener('change', () => document.documentElement.style.setProperty('--preview', byId('size').value + 'px'));
+byId('build-info').textContent = `Mod v${catalogue.version} · ${catalogue.modes.join(' + ')} · ${catalogue.cached ? 'Reused exports: may not reflect current mod source.' : 'Fresh prototype and icon exports.'}`;
+const problems = catalogue.warnings.length;
+byId('coverage-summary').textContent = problems ? `Coverage · ${problems} missing previews` : 'Included visuals';
+byId('coverage').classList.toggle('warn', problems > 0);
+for (const warning of catalogue.warnings) byId('warnings').append(element('li', '', warning));
+filter();
+</script>
+</body>
+</html>

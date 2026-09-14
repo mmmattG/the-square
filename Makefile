@@ -8,12 +8,19 @@ ARTIFACT := build/$(MOD_NAME)_$(MOD_VERSION).zip
 DETECTED_FACTORIO_MODS_DIR := $(shell ./scripts/detect-factorio-mods-dir.sh)
 FACTORIO_MODS_DIR ?= $(DETECTED_FACTORIO_MODS_DIR)
 
-.PHONY: all build install test typecheck unit-test e2e-load-test e2e-test e2e-content-move-test e2e-screenshot-test playtest
+.PHONY: all build install test typecheck unit-test e2e-load-test e2e-test e2e-content-move-test e2e-screenshot-test playtest asset-gallery asset-gallery-test
 
 all: build install
 
 build:
 	./scripts/build-mod.sh
+
+# Local development only. Nothing under dev/ or build/ is packaged with the mod.
+asset-gallery:
+	python3 dev/asset-gallery/gallery.py $(GALLERY_ARGS)
+
+asset-gallery-test:
+	python3 -B -m unittest discover -s dev/asset-gallery -p 'test_*.py'
 
 install: build
 	@if [ -z "$(FACTORIO_MODS_DIR)" ]; then \

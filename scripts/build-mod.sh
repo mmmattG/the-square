@@ -35,6 +35,8 @@ copy_if_exists() {
   fi
 }
 
+# Keep this an allowlist: dev tools, tests and generated build output must never
+# enter the mod archive (including dev/asset-gallery and build/asset-gallery).
 copy_if_exists "info.json"
 copy_if_exists "LICENSE"
 copy_if_exists "control.lua"
