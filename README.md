@@ -1,6 +1,15 @@
 # the-square
 
-Contact: https://discord.gg/HytACasPxY
+The Square is a Factorio challenge mod where your factory begins inside a tiny square and can grow by researching Square expansion.
+Each square expansion level adds one buildable tile in each direction.
+
+The intended purpose of this mod is to constrain space and force efficient design of the factory.
+
+Feedback: Join the discord! https://discord.gg/HytACasPxY
+
+## The Slop Line
+
+Everything below this was written by my LLMs, not me.
 
 Local development commands:
 
