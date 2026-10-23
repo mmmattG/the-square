@@ -203,13 +203,6 @@ local tips_and_tricks_items = {
     category = "the-square-rules",
     icon = "__base__/graphics/icons/fast-transport-belt.png",
     indent = 1
-  },
-  {
-    name = "the-square-logistics-rule",
-    order = "h[logistics-rule]",
-    category = "the-square-rules",
-    icon = "__base__/graphics/icons/logistic-robot.png",
-    indent = 1
   }
 }
 

@@ -105,8 +105,6 @@ local function build_status_lines()
 
   lines[#lines + 1] = "Square: " .. planet_state.square_size .. "x" .. planet_state.square_size
   lines[#lines + 1] = "Background tile: " .. defs.get_background_tile_name()
-  lines[#lines + 1] = "Logistics setting: "
-    .. (defs.is_logistic_network_automation_enabled() and "enabled" or "disabled")
   lines[#lines + 1] = "Expansion research: " .. completed_levels .. " levels completed"
   lines[#lines + 1] = "Next expansion: level " .. next_level .. " using " .. next_band.label
   lines[#lines + 1] = "Next expansion unlocks " .. next_reward .. " tiles"

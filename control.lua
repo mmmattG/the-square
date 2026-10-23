@@ -18,9 +18,6 @@ local function sync_research_runtime_state(force)
 
   if target_force then
     managed_line_runtime.sync_tier(target_force)
-    if not defs.is_logistic_network_automation_enabled() then
-      managed_line_runtime.apply_logistic_network_setting_to_force(target_force)
-    end
   end
 
   sync_all_runtime_guis()
@@ -269,11 +266,6 @@ script.on_event(defs.OPEN_MANAGED_ANCHOR_INPUT_NAME, function(event)
 end)
 
 script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
-  if event.setting == defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION then
-    managed_line_runtime.apply_logistic_network_setting_to_all_forces()
-    return
-  end
-
   if event.setting == defs.SETTING_BACKGROUND_TILE then
     local nauvis_state = storage.planets and storage.planets.nauvis
     local surface = nauvis_state and game.surfaces[nauvis_state.surface_name]
@@ -326,10 +318,6 @@ script.on_event(defines.events.on_research_finished, function(event)
 
   if managed_line_runtime.sync_tier(research.force) then
     sync_all_runtime_guis()
-  end
-
-  if not defs.is_logistic_network_automation_enabled() then
-    managed_line_runtime.apply_logistic_network_setting_to_force(research.force)
   end
 end)
 

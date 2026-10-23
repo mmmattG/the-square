@@ -70,14 +70,6 @@ function managed_line_runtime.handle_slot_click(player)
   return anchor_runtime.handle_managed_anchor_slot_click(player)
 end
 
-function managed_line_runtime.apply_logistic_network_setting_to_all_forces()
-  return anchor_runtime.apply_logistic_network_setting_to_all_forces()
-end
-
-function managed_line_runtime.apply_logistic_network_setting_to_force(force)
-  return anchor_runtime.apply_logistic_network_setting_to_force(force)
-end
-
 function managed_line_runtime.unlock_planet_starter_research(planet_name, force)
   return anchor_runtime.unlock_planet_starter_research(planet_name, force)
 end
