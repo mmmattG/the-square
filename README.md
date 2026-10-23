@@ -11,99 +11,83 @@ Feedback: Join the discord! https://discord.gg/HytACasPxY
 
 Everything below this was written by my LLMs, not me.
 
-Local development commands:
+## How it plays
+
+- **A tiny Square.** Nauvis starts as a 7x7 Square surrounded by the Void. With Space Age,
+  Vulcanus, Fulgora, Gleba and Aquilo each have their own 17x17 Square.
+- **Grow it with research.** Each level of `Square expansion` adds a Ring: one tile on every
+  side. Nauvis levels step up through science packs every ten levels, then continue forever
+  with all science through space. Each other Planet has one infinite expansion research paid
+  in its own science pack.
+- **Resources come from Managed Lines.** There are no ore patches. Click an empty Anchor on
+  the edge of the Square to place a Managed Line. Ingress lines bring a Planet's native
+  resources in; egress lines send support materials out. Placing one uses a Managed Line
+  item. Nauvis starts with three in your inventory, and you craft more.
+- **Some resources have a price.** Nauvis uranium ore needs sulfuric acid sent out through an
+  egress line, and Gleba fruit needs its seeds sent out. What you send out builds a small
+  budget that the ingress line spends.
+- **Faster lines.** `Dual-lane ingress` (after Logistics) fills both lanes of yellow lines.
+  `Red ingress` and `Blue ingress` (after Logistics 2 and 3) unlock red and blue Managed Line
+  items, and Space Age adds turbo. Each copies the science cost of the logistics research it
+  follows.
+- **Space Age eggs.** With no nests to capture, `Captivity` unlocks a hand-only recipe for five
+  fresh biter eggs on Nauvis, and `Biochamber` one for a pentapod egg on Gleba.
+- **Tools.** Top-bar buttons can move the Square or its contents one tile, and save a
+  screenshot of the Square to `script-output/the-square/`.
+
+Tips and tricks in game explain the rules. Their art is placeholder for now.
+
+## Settings
+
+| Setting | Kind | What it does |
+| --- | --- | --- |
+| Starting square size (one per Planet) | Startup | Square width on a new save. Changing it later does not resize an existing save. |
+| Tiles per research pack | Startup | About how many new tiles each science pack of expansion research pays for. Default 7. |
+| Background tile | Map | The floor of the Nauvis Square, including a lab checkerboard. Water, concrete and brick are left out on purpose. |
+| Screenshot pixels per tile, alt mode | Map | How the screenshot button captures the Square. |
+| Developer mode | Per player | Adds an `Expand square` button, a status panel and, with Space Age, buttons to jump to a test platform over each Planet. |
+| Cliff explosives button | Per player | Adds a button that gives one cliff explosive, for cliffs that block progress on Vulcanus. |
+
+Nauvis expansion research is built before any save exists, so its costs assume the default
+starting size of 7. The difference fades quickly as the Square grows.
+
+## Development
 
 ```sh
-make build
-make install
-make test
+make build         # build/the-square_<version>.zip from info.json
+make install       # build, then copy into your Factorio mods folder
+make test          # plain-Lua specs in tests/
+make syntax-check  # check that every Lua file parses
+make playtest      # create and launch an isolated playtest save
 ```
 
-`make build` creates a versioned Factorio mod zip in `./build/` using the `name` and `version` from `info.json`.
+`make test` needs `luajit` or `lua` on your `PATH`; force one with `make test LUA=lua`. The
+specs only cover pure logic, so check anything that uses the Factorio API in game.
 
-### Development asset gallery
+`make install` finds the mods folder for macOS, Linux, WSL (your Windows `%APPDATA%`) and
+Windows shells, and replaces any older copy of the mod there. Override it with
+`FACTORIO_MODS_DIR=/path/to/mods make install`. On Windows, close Factorio first if an old
+zip is locked.
 
-Run `make asset-gallery`, then open `build/asset-gallery/index.html` in your browser.
-The page works directly from disk, with no development server or web dependencies.
-It contains finished visuals shown by the mod, with usage details, Base/Space Age
-filters, and adjustable icon preview sizes. Repeated designs share one card within
-each section. Mod features and their placeholder art appear first; unchanged Base/Space
-Age resource and utility icons live in a separate, initially collapsed reference section.
+`make playtest` builds a save in `build/playtest/` with helper tools and launches Factorio.
+Set `PLAYTEST_SPACE_AGE=0` for base game only, or `PLAYTEST_NO_LAUNCH=1` to only create the save.
+Set `FACTORIO=/path/to/factorio` if the game is not found.
 
-The generator discovers Steam libraries automatically. For another installation:
+`make asset-gallery` builds a local page of every visual the mod shows. See
+[dev/asset-gallery/README.md](dev/asset-gallery/README.md).
 
-```sh
-FACTORIO_DATA_DIR="/path/to/Factorio/data" FACTORIO="/path/to/factorio" make asset-gallery
-```
+### Code map
 
-By default it exports both Base and Space Age. Without the DLC, use
-`make asset-gallery GALLERY_ARGS="--mode base"`.
-Factorio runs its prototype and icon export commands in a temporary isolated
-configuration. It does not create a world, take screenshots, or change your installed
-mods, settings or saves. Fresh exports pick up generated prototypes and layered/tinted
-icons. Rebuilding after only gallery UI changes can skip Factorio with
-`make asset-gallery GALLERY_ARGS="--reuse-exports"` (add `--mode base` if needed).
-Cached exports do not pick up mod changes.
+[CONTEXT.md](CONTEXT.md) defines the game terms used in the code.
 
-The gallery includes visible mod item, recipe, research and entity icons; icons
-explicitly displayed by its UI and settings; tips artwork; and the mod thumbnail.
-Resource selector icons come directly from `lib/planet_catalog.lua` via Lua, so its
-resource list stays in sync. It needs `lua` or `luajit` (or a `LUA` override).
-It excludes raw sprite sheets, component layers, invisible helpers, and vanilla
-assets that are only ingredients, prerequisites or implementation references.
-Entity previews are finished icons, not in-world scenes. Standalone GUI sprites
-and tips icons are cropped to their declared dimensions, without exposing atlases.
-Missing expected previews are reported on the page and fail the command.
-
-All tooling lives in `dev/asset-gallery/`; generated pages, copied game assets and exports
-live in ignored `build/` folders. The mod builder's explicit runtime-file allowlist
-excludes both directories. `make asset-gallery-test` checks discovery and packaging
-without launching Factorio.
-
-`make test` runs every Lua spec in `tests/*_spec.lua` and stops on the first failure. It requires either `luajit` or `lua` to be available on `PATH`; the target prefers `luajit` when both are installed.
-
-If you need to force a specific runtime, override `LUA` directly:
-
-```sh
-make test LUA=lua
-```
-
-The Nauvis starting square size is a startup setting. Set it before creating a run. Changing it after the world is created does not resize the current save.
-
-`Tiles per research pack` is also a startup setting. It defaults to `7`, which means each required science pack in square-expansion research pays for about seven newly unlocked tiles.
-
-Because square-expansion technologies are generated in the data stage, their precomputed finite costs and infinite count formula use the default Nauvis starting square size of `7` even if a save overrides the startup setting. That mismatch is acceptable in practice because the ring costs quickly converge toward the same values as the square grows.
-
-`Background tile` is a per-save map setting under `Mod settings -> Map`. It repaints the square floor uniformly, with curated dry tiles plus lab tiles and a special checkerboard option. Water, concrete, and stone-brick style tiles are intentionally excluded.
-
-Square growth is now driven directly by research. Each completed level of `Square expansion` immediately expands the map by one ring.
-
-Research now includes custom expanding-square technologies:
-
-- `Square expansion` is a repeatable research line that uses science bands in blocks: levels `1-10`, `11-20`, `21-30`, and `31-40` step through broader pack sets, then level `41+` continues infinitely with all science through space.
-- `Dual-lane ingress`, `Red ingress`, and `Blue ingress` are one-time researches unlocked after `Logistics`, `Logistics 2`, and `Logistics 3`. Each copies the science cost of the logistics technology that gates it.
-
-With Space Age enabled, Nauvis biter eggs are no longer available through Managed Lines. Researching `Captivity` unlocks a character-only recipe that hand-grows five fresh biter eggs from one bioflux in ten seconds. The recipe has Nauvis's exact pressure as a surface condition, so it cannot be crafted on the other supported planets. Crafting the first five eggs completes the visible `Biter egg handling` trigger. The vanilla captive-spawner recipe and capture progression remain unchanged.
-
-Tips and tricks are currently text-first and use base-game icons as placeholders. Proper custom instructional art is deferred for later work.
-
-For manual testing, enable the per-player `Developer mode` runtime setting. That adds an `Expand square` button to the top-left UI plus a debug panel showing the current square-expansion progression state.
-
-Issue `#18` was resolved by `PR #52`, which fixed the border/background rendering regressions that prompted the earlier experiments here.
-
-`make install` builds the zip and copies it into your Windows Factorio mods directory from WSL. By default the Makefile asks Windows for `%APPDATA%` and installs to:
-
-```sh
-/mnt/c/Users/<windows-user>/AppData/Roaming/Factorio/mods
-```
-
-If Windows detection is unavailable, it falls back to `~/.factorio/mods`.
-
-Override the destination with `FACTORIO_MODS_DIR`:
-
-```sh
-FACTORIO_MODS_DIR="/mnt/c/Users/<windows-user>/AppData/Roaming/Factorio/mods" make install
-```
-
-The install step removes previously installed copies of this mod before copying the new zip, so the game sees a single current version.
-If Factorio is running, Windows may keep the old zip locked; close Factorio and run `make install` again to remove stale versions.
+- `data.lua` loads `prototypes/`: Managed Line items and Anchors, research, tips, and egg recipes.
+- `control.lua` only routes events to the modules in `lib/`.
+- Shared by both stages: `managed_line_definitions` (names, tiers, throughput),
+  `planet_catalog` (each Planet's resources and starter content), `mod_settings`,
+  `square_layout` and `expansion_research`.
+- Runtime: `planet_state` and `managed_line_state` (what is stored), `planet_runtime`
+  (setup and updates), `square_runtime` (painting and expansion), `anchor_runtime` (Anchor
+  entities), `anchor_config_gui`, `managed_line_pump`, `square_move_runtime` and
+  `square_move_gui`, and `gui_runtime` (top-bar buttons and the dev panel).
+- `migrations/` upgrades older saves. Each file is self-contained, so changes in `lib/` can't
+  break it.
