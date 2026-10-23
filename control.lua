@@ -23,16 +23,6 @@ local function sync_all_guis()
   end
 end
 
--- Managed Line Upgrade research changes every Planet's lines.
-local function sync_tiers(force)
-  if managed_line_tiers.sync_from_research(force) then
-    anchor_runtime.reconcile_all()
-    return true
-  end
-
-  return false
-end
-
 script.on_init(function()
   planet_runtime.initialize_world()
   sync_all_guis()
@@ -40,7 +30,6 @@ end)
 
 script.on_configuration_changed(function()
   planet_runtime.handle_configuration_changed()
-  sync_tiers(game.forces.player)
   sync_all_guis()
 end)
 
@@ -159,9 +148,9 @@ end)
 
 script.on_event(defines.events.on_research_finished, function(event)
   local expanded = planet_runtime.handle_research_finished(event.research)
-  local tiers_changed = sync_tiers(event.research.force)
 
-  if expanded or tiers_changed then
+  -- Upgrades change which tiers Anchor Slot Configuration offers.
+  if expanded or managed_line_tiers.is_upgrade_technology(event.research.name) then
     gui_runtime.refresh_all_debug_panels()
     square_move_gui.sync_all()
   end
@@ -177,8 +166,7 @@ end)
 
 -- Used by the playtest launcher (scripts/playtest-world.sh).
 remote.add_interface("the-square", {
-  sync_research_runtime_state = function(force_name)
-    sync_tiers(game.forces[force_name or "player"])
+  sync_research_runtime_state = function()
     gui_runtime.refresh_all_debug_panels()
     square_move_gui.sync_all()
   end,

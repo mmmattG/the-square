@@ -184,7 +184,7 @@ local function get_connector_entity_name(anchor)
     return "pipe"
   end
 
-  return definitions.get_item_tier_for_level(anchor.tier_level or 1).transport_belt
+  return definitions.get_item_tier_for_level(anchor.tier_level).transport_belt
 end
 
 -- Managed Line Shift: replaces a line's Anchor entity with a plain belt or pipe, so
