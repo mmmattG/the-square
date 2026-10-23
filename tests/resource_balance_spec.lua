@@ -1,23 +1,10 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 
+local helper = require("tests.helper")
+local assert_equal = helper.assert_equal
+local run_test = helper.run_test
+
 local resource_balance = require("lib.resource_balance")
-
-local function assert_equal(actual, expected, message)
-  if actual ~= expected then
-    error((message or "values differ") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(actual))
-  end
-end
-
-local function run_test(name, fn)
-  local ok, err = pcall(fn)
-
-  if not ok then
-    io.stderr:write("FAIL " .. name .. "\n" .. err .. "\n")
-    os.exit(1)
-  end
-
-  io.stdout:write("PASS " .. name .. "\n")
-end
 
 run_test("uranium stays gated without sulfuric acid egress", function()
   local budget = resource_balance.compute_uranium_budget(0, 0, 0)
