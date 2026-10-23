@@ -6,7 +6,6 @@ local managed_line_state = require("lib.managed_line_state")
 local planet_catalog = require("lib.planet_catalog")
 local planet_state = require("lib.planet_state")
 local square_layout = require("lib.square_layout")
-local throughput_policy = require("lib.managed_line_throughput_policy")
 
 local anchor_runtime = {}
 
@@ -18,27 +17,13 @@ local function get_tile_center(position)
   return {x = position.x + 0.5, y = position.y + 0.5}
 end
 
--- Lines on a budget start stopped until the pump finds budget for them.
-local function should_line_run(anchor, planet_name)
-  if anchor.flow == "ingress" and anchor.resource == "uranium-ore" then
-    return anchor.input_budget_active == true
-  end
-
-  if throughput_policy.should_gate_gleba_fruit(planet_name, anchor) then
-    return anchor.input_budget_active == true
-  end
-
-  return true
-end
-
-local function configure_anchor_entity(entity, anchor, planet_name)
+local function configure_anchor_entity(entity, anchor)
   if anchor.direction and entity.direction ~= anchor.direction then
     entity.direction = anchor.direction
   end
 
   entity.destructible = false
   entity.operable = true
-  entity.disabled_by_script = not should_line_run(anchor, planet_name)
 end
 
 -- Item ingress Anchors are the output end of an underground belt, so items surface
@@ -73,7 +58,7 @@ local function clear_anchor_tile(surface, anchor)
 end
 
 -- Makes sure a placed line has exactly the right Anchor entity, reusing what is there.
-local function ensure_anchor_entity(surface, anchor, planet_name)
+local function ensure_anchor_entity(surface, anchor)
   anchor.entity_name = managed_line_state.get_entity_name(anchor)
 
   if not is_correct_anchor_entity(anchor.entity, anchor) then
@@ -104,7 +89,7 @@ local function ensure_anchor_entity(surface, anchor, planet_name)
   end
 
   if anchor.entity then
-    configure_anchor_entity(anchor.entity, anchor, planet_name)
+    configure_anchor_entity(anchor.entity, anchor)
     clear_anchor_tile(surface, anchor)
   end
 end
@@ -160,7 +145,7 @@ function anchor_runtime.reconcile(planet_name)
 
   for _, anchor in ipairs(managed_lines.anchors) do
     if anchor.position and anchor.resource then
-      ensure_anchor_entity(surface, anchor, planet_name)
+      ensure_anchor_entity(surface, anchor)
     elseif anchor.entity then
       if anchor.entity.valid then
         anchor.entity.destroy({raise_destroy = false})
@@ -216,9 +201,7 @@ function anchor_runtime.leave_connector(surface, anchor)
   surface.create_entity({
     name = connector_name,
     position = anchor.position,
-    direction = anchor.kind == "item"
-      and managed_line_state.get_direction("ingress", "item", anchor.side)
-      or anchor.direction,
+    direction = anchor.direction,
     force = "player"
   })
 end

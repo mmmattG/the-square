@@ -172,22 +172,18 @@ function planet_runtime.initialize_world()
   end
 end
 
+-- The starting size is a startup setting, so changing it mid-game does nothing.
 local function notify_if_starting_size_changed()
   local planet = planet_state.get("nauvis")
-  local starting_square_size = mod_settings.get_starting_square_size("nauvis")
-
-  if planet:get_square_size() == starting_square_size then
-    return
-  end
-
-  game.print({"",
-    "[the-square] Starting square size changes only apply to new saves. ",
-    "This save remains at ",
+  local save_starting_size = expansion_research.get_starting_square_size(
     planet:get_square_size(),
-    " and the current map setting is ",
-    starting_square_size,
-    "."
-  })
+    planet:get_completed_square_expansion_levels()
+  )
+  local setting_starting_size = mod_settings.get_starting_square_size("nauvis")
+
+  if save_starting_size ~= setting_starting_size then
+    game.print({"message.the-square-starting-size-applies-to-new-saves", save_starting_size, setting_starting_size})
+  end
 end
 
 -- Brings every Planet up to date after the mod or its startup settings change.
@@ -197,24 +193,21 @@ function planet_runtime.handle_configuration_changed()
     return
   end
 
+  local nauvis = planet_state.get("nauvis")
+
+  configure_freeplay()
+  square_runtime.ensure_surface_dimensions(nauvis:get_surface(), nauvis:get_surface_size(), nauvis:get_square_position())
+  square_runtime.repaint(nauvis)
+
+  -- After painting, so every Anchor entity is checked against the final tiles.
   for _, planet_name in ipairs(planet_catalog.SUPPORTED_PLANETS) do
     planet_runtime.refresh_planet(planet_name)
   end
 
   notify_if_starting_size_changed()
-
-  local nauvis = planet_state.get("nauvis")
-
-  square_runtime.repaint(nauvis)
-  square_runtime.clear_chart(nauvis)
-  configure_freeplay()
   game.forces.player.set_spawn_position(nauvis:get_square_position(), nauvis:get_surface())
-  square_runtime.ensure_surface_dimensions(nauvis:get_surface(), nauvis:get_surface_size(), nauvis:get_square_position())
-  anchor_runtime.reconcile("nauvis")
-
-  for _, player in pairs(game.players) do
-    planet_runtime.move_player_to_square(player)
-  end
+  square_runtime.clear_chart(nauvis)
+  square_runtime.chart(game.forces.player, nauvis)
 end
 
 -- Grows the Planet a finished Square Expansion technology belongs to. Returns false
@@ -226,9 +219,8 @@ function planet_runtime.handle_research_finished(research)
     return false
   end
 
-  if square_runtime.expand(planet_name) and game.players[1] then
-    game.players[1].play_sound({path = "utility/new_objective"})
-  end
+  square_runtime.expand(planet_name)
+  research.force.play_sound({path = "utility/new_objective"})
 
   local planet = planet_state.get(planet_name)
 
@@ -244,10 +236,6 @@ end
 -- The dev mode Expand button grows Nauvis without research.
 function planet_runtime.expand_from_dev_button(player)
   local result = square_runtime.expand("nauvis")
-
-  if not result then
-    return
-  end
 
   player.play_sound({path = "utility/new_objective"})
   game.print({"",

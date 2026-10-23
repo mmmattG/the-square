@@ -9,6 +9,13 @@ Version: 0.2.0
     - Removed the burner mining drill from the starting inventory because there are no resource patches to mine.
   Bugfixes:
     - Removed obsolete Managed Line configuration recipes from the crafting menu.
+    - Item egress lines, such as Gleba's seed lines, no longer break when the Square expands.
+    - Updating the mod no longer teleports every player back to Nauvis.
+    - Changing the Background tile map setting no longer removes Nauvis's placed Managed Lines, and mod updates no longer empty their belts and pipes.
+    - The "starting square size only applies to new saves" notice no longer appears after every update once the Square has grown.
+    - Square expansion research finished before anyone reaches a Planet now counts when the Planet is first visited.
+    - In multiplayer, the whole team now hears the Square expansion sound.
+    - Fixed an error when a blocked placement was refunded to a player with a full inventory.
   Optimizations:
     - Reduced the routine script work performed by Managed Lines.
 

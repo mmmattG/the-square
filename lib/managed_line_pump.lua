@@ -22,12 +22,6 @@ local function advance_item_emissions(anchor, throughput)
   )
 end
 
--- Gated lines are disabled while their budget is empty, so their belts visibly stop.
-local function set_line_running(anchor, entity, running)
-  anchor.input_budget_active = running
-  entity.disabled_by_script = not running
-end
-
 local function insert_items(entity, resource, lane_index, item_count)
   local line = entity.get_transport_line(lane_index)
   local inserted = 0
@@ -204,13 +198,11 @@ local function drain_gleba_seeds(managed_lines)
   return budgets
 end
 
-local function pump_uranium_ingress(anchor, entity, uranium_plan, planet)
+local function pump_uranium_ingress(anchor, entity, uranium_plan)
   local line = uranium_plan[anchor]
   local allocation = line and line.allocation or 0
 
-  set_line_running(anchor, entity, allocation > 0 or (planet.uranium_sulfuric_acid_buffer or 0) > 0)
-
-  if line and allocation > 0 then
+  if allocation > 0 then
     insert_items_within_budget(entity, "uranium-ore", line.lane_one_count, line.lane_two_count, allocation)
   end
 end
@@ -218,8 +210,6 @@ end
 local function pump_gleba_fruit_ingress(anchor, entity, fruit_budgets)
   local available = fruit_budgets[anchor.resource] or 0
   local lane_one_count, lane_two_count = advance_item_emissions(anchor, managed_line_tiers.get_throughput(anchor))
-
-  set_line_running(anchor, entity, available > 0)
 
   if available > 0 then
     available = available - insert_items_within_budget(entity, anchor.resource, lane_one_count, lane_two_count, available)
@@ -235,7 +225,7 @@ local function pump_line(anchor, entity, planet_name, context)
     if anchor.kind == "fluid" then
       entity.insert_fluid({name = anchor.resource, amount = throughput.fluid_amount_per_tick})
     elseif anchor.resource == "uranium-ore" then
-      pump_uranium_ingress(anchor, entity, context.uranium_plan, context.planet)
+      pump_uranium_ingress(anchor, entity, context.uranium_plan)
     elseif throughput_policy.should_gate_gleba_fruit(planet_name, anchor) then
       pump_gleba_fruit_ingress(anchor, entity, context.fruit_budgets)
     else
@@ -272,7 +262,6 @@ function managed_line_pump.pump_planet(planet_name)
   end
 
   local context = {
-    planet = planet,
     uranium_plan = planet_name == "nauvis" and plan_uranium(managed_lines, planet) or {},
     fruit_budgets = planet_name == "gleba" and drain_gleba_seeds(managed_lines) or {}
   }
