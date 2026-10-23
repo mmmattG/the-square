@@ -12,66 +12,18 @@ local function destroy_child(parent, name)
   end
 end
 
-local function build_ingress_edge_check_debug(square_size, position, square_position)
-  local tile_position = defs.snap_entity_position_to_tile(position)
-  local bounds = defs.get_anchor_bounds(square_size, square_position)
-  local min_x = bounds.left_top.x
-  local min_y = bounds.left_top.y
-  local max_x = bounds.right_bottom.x - 1
-  local max_y = bounds.right_bottom.y - 1
-  local north_match = tile_position.y == min_y and tile_position.x > min_x and tile_position.x < max_x
-  local east_match = tile_position.x == max_x and tile_position.y > min_y and tile_position.y < max_y
-  local south_match = tile_position.y == max_y and tile_position.x > min_x and tile_position.x < max_x
-  local west_match = tile_position.x == min_x and tile_position.y > min_y and tile_position.y < max_y
-  local detected_side = defs.get_anchor_side_for_position(square_size, tile_position, square_position)
-
-  return table.concat({
-    "[the-square] Ingress placement debug",
-    "raw_position=" .. defs.format_position(position),
-    "tile_position=" .. defs.format_position(tile_position),
-    "square_size=" .. square_size,
-    "anchor_bounds.left_top=" .. defs.format_position(bounds.left_top),
-    "anchor_bounds.right_bottom=" .. defs.format_position(bounds.right_bottom),
-    "min=(" .. min_x .. ", " .. min_y .. ")",
-    "max=(" .. max_x .. ", " .. max_y .. ")",
-    "north=" .. tostring(north_match),
-    "east=" .. tostring(east_match),
-    "south=" .. tostring(south_match),
-    "west=" .. tostring(west_match),
-    "detected_side=" .. tostring(detected_side)
-  }, " | ")
-end
-
 function gui_runtime.is_dev_mode_enabled(player)
-  if storage and storage.the_square_playtest_debug_enabled then
+  if storage.the_square_playtest_debug_enabled then
     return true
   end
 
   return settings.get_player_settings(player)[defs.SETTING_DEV_MODE].value
 end
 
-function gui_runtime.is_ingress_placement_debug_enabled(player)
-  if storage and storage.the_square_playtest_debug_enabled then
-    return true
-  end
-
-  return player
-    and player.valid
-    and settings.get_player_settings(player)[defs.SETTING_INGRESS_PLACEMENT_DEBUG].value
-end
-
 function gui_runtime.is_cliff_explosive_button_enabled(player)
   return player
     and player.valid
     and settings.get_player_settings(player)[defs.SETTING_CLIFF_EXPLOSIVE_BUTTON].value
-end
-
-function gui_runtime.print_ingress_placement_debug(player, square_size, position, square_position)
-  if not gui_runtime.is_ingress_placement_debug_enabled(player) then
-    return
-  end
-
-  player.print(build_ingress_edge_check_debug(square_size, position, square_position))
 end
 
 local function ensure_debug_frame(player)
@@ -376,9 +328,7 @@ local function open_square_move_gui(player, square_move_runtime)
   add_square_move_cell(directions, "south", options.south, mode)
   add_square_move_cell(directions, nil, nil, mode)
 
-  if frame.force_auto_center then
-    frame.force_auto_center()
-  end
+  frame.force_auto_center()
 
   player.opened = frame
 end

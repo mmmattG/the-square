@@ -1,6 +1,35 @@
-local planet_runtime = require("lib.planet_runtime")
-local defs = require("lib.runtime_defs")
+-- Self-contained on purpose: migrations must not depend on lib/ modules that later
+-- versions are free to change. Tile repainting and chart clearing for Nauvis happen in
+-- on_configuration_changed, which runs after every migration.
 local LEGACY_SURFACE_NAME = "fes-bootstrap"
+local SURFACE_NAME = "nauvis"
+local ITEM_TIER_KEYS = {[3] = "red", [4] = "blue", [5] = "turbo"}
+
+local function get_square_bounds(size)
+  local left = -math.floor(size / 2)
+
+  return {
+    left_top = {x = left, y = left},
+    right_bottom = {x = left + size, y = left + size}
+  }
+end
+
+local function get_generic_anchor_item_name_for_tier(kind, flow, tier_level)
+  local base_name = "the-square-" .. kind .. "-" .. flow .. "-anchor"
+  local tier_key = kind == "item" and ITEM_TIER_KEYS[tier_level]
+
+  return tier_key and base_name .. "-" .. tier_key or base_name
+end
+
+local function get_generic_anchor_entity_name(kind, flow)
+  return "the-square-generic-" .. kind .. "-" .. flow .. "-anchor"
+end
+
+local function get_active_anchor_entity_name(kind, flow, tier_level)
+  local tier_key = kind == "item" and ITEM_TIER_KEYS[tier_level]
+
+  return "the-square-" .. kind .. "-" .. flow .. "-managed-anchor" .. (tier_key and "-" .. tier_key or "")
+end
 
 local function clear_managed_anchor_refs()
   if storage.starter_anchors and storage.starter_anchors.anchors then
@@ -36,12 +65,12 @@ local function migrate_legacy_bootstrap_surface()
   end
 
   local legacy_surface = game.surfaces[LEGACY_SURFACE_NAME]
-  local square_size = bootstrap.square_size or defs.get_square_size()
-  local surface_size = bootstrap.surface_size or defs.get_surface_size(square_size)
-  local target_surface = game.surfaces[defs.SURFACE_NAME]
+  local square_size = bootstrap.square_size or settings.startup["the-square-nauvis-starting-square-size"].value
+  local surface_size = bootstrap.surface_size or square_size + 2
+  local target_surface = game.surfaces[SURFACE_NAME]
 
   if not target_surface then
-    target_surface = game.create_surface(defs.SURFACE_NAME, {
+    target_surface = game.create_surface(SURFACE_NAME, {
       width = surface_size,
       height = surface_size,
       starting_points = {{x = 0, y = 0}},
@@ -58,7 +87,7 @@ local function migrate_legacy_bootstrap_surface()
   destroy_surface_entities(target_surface)
 
   if legacy_surface then
-    local managed_area = defs.get_square_bounds(surface_size)
+    local managed_area = get_square_bounds(surface_size)
 
     legacy_surface.clone_area({
       source_area = managed_area,
@@ -73,11 +102,9 @@ local function migrate_legacy_bootstrap_surface()
     })
   end
 
-  bootstrap.surface_name = defs.SURFACE_NAME
+  bootstrap.surface_name = SURFACE_NAME
   bootstrap.surface_size = surface_size
   clear_managed_anchor_refs()
-  planet_runtime.refresh_all_generated_chunk_tiles(target_surface, square_size, surface_size)
-  planet_runtime.clear_surface_chart(target_surface)
 
   for _, player in pairs(game.players) do
     if player.valid then
@@ -112,9 +139,9 @@ local function get_tier_level_from_anchor_entity_name(anchor)
     return nil
   end
 
-  for _, tier in ipairs(defs.MANAGED_LINE_ITEM_TIERS) do
-    if tier.key ~= "yellow" and string.match(anchor.entity_name, "%-" .. tier.key .. "$") then
-      return tier.tier_level
+  for tier_level, tier_key in pairs(ITEM_TIER_KEYS) do
+    if string.match(anchor.entity_name, "%-" .. tier_key .. "$") then
+      return tier_level
     end
   end
 
@@ -145,10 +172,10 @@ local function migrate_anchor_to_generic(anchor)
   anchor.tier_level = anchor.tier_level
     or get_tier_level_from_anchor_entity_name(anchor)
     or get_fallback_anchor_tier_level(anchor)
-  anchor.item_name = defs.get_generic_anchor_item_name_for_tier(anchor.kind, anchor.flow, anchor.tier_level)
+  anchor.item_name = get_generic_anchor_item_name_for_tier(anchor.kind, anchor.flow, anchor.tier_level)
   anchor.entity_name = anchor.position and anchor.resource
-    and defs.get_anchor_entity_name_for_current_tier(anchor)
-    or defs.get_generic_anchor_entity_name(anchor.kind, anchor.flow)
+    and get_active_anchor_entity_name(anchor.kind, anchor.flow, anchor.tier_level)
+    or get_generic_anchor_entity_name(anchor.kind, anchor.flow)
   anchor.entity = nil
 end
 

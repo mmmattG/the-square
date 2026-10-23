@@ -21,17 +21,7 @@ local function get_item_anchor_emissions(anchor, ingress_tier, elapsed_ticks)
 end
 
 local function get_anchor_transport_line(entity, lane_index)
-  if not (entity and entity.valid and entity.get_transport_line) then
-    return nil
-  end
-
-  local ok, line = pcall(entity.get_transport_line, lane_index)
-
-  if not ok then
-    return nil
-  end
-
-  return line
+  return entity.get_transport_line(lane_index)
 end
 
 local function set_anchor_active(anchor, entity, active)
@@ -53,10 +43,6 @@ local function pump_item_anchor(entity, resource, lane_index, item_count)
 
   local line = get_anchor_transport_line(entity, lane_index)
 
-  if not line then
-    return 0
-  end
-
   local inserted = 0
 
   for _ = 1, item_count do
@@ -72,15 +58,7 @@ local function pump_item_anchor(entity, resource, lane_index, item_count)
 end
 
 local function can_insert_item_at_back(entity, lane_index)
-  local line = get_anchor_transport_line(entity, lane_index)
-
-  if not line or not line.can_insert_at_back then
-    return false
-  end
-
-  local ok, can_insert = pcall(line.can_insert_at_back)
-
-  return ok and can_insert == true
+  return get_anchor_transport_line(entity, lane_index).can_insert_at_back()
 end
 
 local function drain_item_anchor(entity, resource, lane_index, item_count)
@@ -89,10 +67,6 @@ local function drain_item_anchor(entity, resource, lane_index, item_count)
   end
 
   local line = get_anchor_transport_line(entity, lane_index)
-
-  if not line then
-    return 0
-  end
 
   local removed = line.remove_item({name = resource, count = item_count})
   return removed or 0
@@ -331,12 +305,10 @@ local function pump_anchor_set(starter_anchors, uranium_context, planet_name)
             pump_item_anchor(entity, anchor.resource, 2, lane_two_emission)
           end
         else
-          if entity.insert_fluid then
-            pcall(entity.insert_fluid, {
-              name = anchor.resource,
-              amount = defs.get_effective_ingress_tier_for_anchor(anchor).fluid_amount_per_interval
-            })
-          end
+          entity.insert_fluid({
+            name = anchor.resource,
+            amount = defs.get_effective_ingress_tier_for_anchor(anchor).fluid_amount_per_interval
+          })
         end
       elseif anchor.flow == "egress" then
         if anchor.kind == "item" then

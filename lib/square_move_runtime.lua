@@ -248,7 +248,7 @@ end
 local function destroy_anchor_entity(surface, anchor)
   local entity = anchor.entity
 
-  if entity and entity.valid and entity.destroy then
+  if entity and entity.valid then
     entity.destroy({raise_destroy = false})
   elseif anchor.entity_name and anchor.position then
     local entities = surface.find_entities_filtered({
@@ -257,7 +257,7 @@ local function destroy_anchor_entity(surface, anchor)
     })
     entity = entities[1]
 
-    if entity and entity.valid and entity.destroy then
+    if entity and entity.valid then
       entity.destroy({raise_destroy = false})
     end
   end
@@ -477,9 +477,7 @@ local function get_contents_tile_updates(surface, planet, direction)
       if defs.is_inside_bounds(bounds, source_position) then
         visible_tile_name = surface.get_tile(source_position.x, source_position.y).name
 
-        if surface.get_hidden_tile then
-          hidden_tile_name = surface.get_hidden_tile(source_position)
-        end
+        hidden_tile_name = surface.get_hidden_tile(source_position)
       else
         visible_tile_name = defs.get_managed_tile_name(
           planet:get_square_size(),
@@ -509,10 +507,8 @@ local function apply_contents_tile_updates(surface, visible_tile_updates, hidden
     surface.set_tiles(visible_tile_updates, false, false, false, false)
   end
 
-  if surface.set_hidden_tile then
-    for _, update in ipairs(hidden_tile_updates) do
-      surface.set_hidden_tile(update.position, update.name)
-    end
+  for _, update in ipairs(hidden_tile_updates) do
+    surface.set_hidden_tile(update.position, update.name)
   end
 end
 
@@ -530,7 +526,7 @@ end
 
 local function destroy_entities(entities)
   for _, entity in ipairs(entities) do
-    if entity.valid and entity.destroy then
+    if entity.valid then
       entity.destroy({raise_destroy = false})
     end
   end
@@ -718,9 +714,7 @@ local function move_square(planet_name, direction, check, options)
   local force = options.force or game.forces.player
 
   if force then
-    if force.set_spawn_position then
-      force.set_spawn_position(check.target_position, surface)
-    end
+    force.set_spawn_position(check.target_position, surface)
 
     planet_square.chart_play_area(force, surface, planet:get_surface_size(), check.target_position)
   end

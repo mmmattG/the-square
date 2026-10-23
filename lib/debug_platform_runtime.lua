@@ -58,7 +58,7 @@ local function remember_platform(force, planet_name, platform)
 end
 
 local function make_entity_indestructible(entity)
-  if entity and entity.valid and entity.destructible ~= nil then
+  if entity and entity.valid then
     entity.destructible = false
   end
 end
@@ -66,28 +66,18 @@ end
 local function make_platform_indestructible(platform)
   make_entity_indestructible(platform.hub)
 
-  if not (platform.surface and platform.surface.find_entities_filtered) then
-    return
-  end
-
   for _, entity in ipairs(platform.surface.find_entities_filtered({force = platform.force})) do
     make_entity_indestructible(entity)
   end
 end
 
 local function apply_starter_pack(platform)
-  if platform.apply_starter_pack then
-    make_entity_indestructible(platform.apply_starter_pack())
-  end
+  make_entity_indestructible(platform.apply_starter_pack())
 
   make_platform_indestructible(platform)
 end
 
 local function create_platform(force, planet_name)
-  if not force.create_space_platform then
-    return nil, "This Factorio runtime does not expose space platform creation."
-  end
-
   local platform = force.create_space_platform({
     name = get_platform_name(force, planet_name),
     planet = planet_name,
@@ -104,7 +94,7 @@ local function create_platform(force, planet_name)
 end
 
 function debug_platform_runtime.is_space_age_active()
-  return script and script.active_mods and script.active_mods["space-age"] ~= nil
+  return script.active_mods["space-age"] ~= nil
 end
 
 function debug_platform_runtime.get_button_planet_name(element_name)
@@ -136,10 +126,6 @@ function debug_platform_runtime.teleport_player_to_planet_platform(player, plane
 
   if not platform then
     return {ok = false, error = err or "Could not create debug space platform"}
-  end
-
-  if not player.enter_space_platform then
-    return {ok = false, error = "This Factorio runtime does not expose player space platform entry."}
   end
 
   local ok = player.enter_space_platform(platform)

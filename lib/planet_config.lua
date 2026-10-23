@@ -60,17 +60,4 @@ function planet_config.get_starter_entities(planet_name)
   return planet_catalog.get_starter_entities(planet_name)
 end
 
-function planet_config.each_supported_planet()
-  local index = 0
-
-  return function()
-    index = index + 1
-    local planet_name = planet_config.SUPPORTED_PLANETS[index]
-
-    if planet_name then
-      return planet_config.get(planet_name)
-    end
-  end
-end
-
 return planet_config

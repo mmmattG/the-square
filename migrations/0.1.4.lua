@@ -1,5 +1,8 @@
-local anchor_identity = require("lib.anchor_identity")
-local defs = require("lib.runtime_defs")
+-- Self-contained on purpose: migrations must not depend on lib/ modules that later
+-- versions are free to change.
+local function is_managed_anchor_entity_name(entity_name)
+  return string.find(entity_name, "^the%-square%-") ~= nil and string.find(entity_name, "%-anchor") ~= nil
+end
 
 local function is_obsolete_biter_line(anchor)
   return anchor
@@ -20,7 +23,7 @@ local function destroy_anchor_entity(anchor, surface)
   end
 
   for _, entity in ipairs(surface.find_entities_filtered({position = anchor.position})) do
-    if entity.valid and anchor_identity.is_managed_entity_name(entity.name) and entity.destroy then
+    if entity.valid and is_managed_anchor_entity_name(entity.name) and entity.destroy then
       entity.destroy({raise_destroy = false})
     end
   end
@@ -28,7 +31,7 @@ end
 
 local nauvis = storage.planets and storage.planets.nauvis or storage.bootstrap
 local anchor_set = nauvis and nauvis.starter_anchors or storage.starter_anchors
-local surface = game.surfaces and game.surfaces[defs.SURFACE_NAME]
+local surface = game.surfaces.nauvis
 
 if anchor_set and anchor_set.anchors then
   anchor_set.biter_egg_budget = nil

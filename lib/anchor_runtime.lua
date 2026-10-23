@@ -152,35 +152,14 @@ local function find_anchor_by_position(position, starter_anchors)
   return nil
 end
 
-local function print_anchor_debug_message(recipient, message)
-  if not (
-    recipient
-    and recipient.valid
-    and recipient.object_name == "LuaPlayer"
-    and type(recipient.print) == "function"
-    and settings
-    and type(settings.get_player_settings) == "function"
-  ) then
-    return
+local function print_anchor_debug_message(player, message)
+  if player and player.valid and settings.get_player_settings(player)[defs.SETTING_DEV_MODE].value then
+    player.print(message)
   end
-
-  local player_settings = settings.get_player_settings(recipient)
-
-  if not (player_settings and player_settings[defs.SETTING_DEV_MODE] and player_settings[defs.SETTING_DEV_MODE].value) then
-    return
-  end
-
-  recipient.print(message)
 end
 
 local function are_all_prerequisites_researched(technology)
-  if not technology or technology.valid == false then
-    return false
-  end
-
-  local prerequisites = technology.prerequisites or {}
-
-  for _, prerequisite in pairs(prerequisites) do
+  for _, prerequisite in pairs(technology.prerequisites) do
     if not prerequisite.researched then
       return false
     end
@@ -190,14 +169,7 @@ local function are_all_prerequisites_researched(technology)
 end
 
 local function try_unlock_ingress_technology(anchor, force, debug_recipient, resource_name, technology_name, resource_label)
-  if not (
-    anchor
-    and anchor.flow == "ingress"
-    and anchor.resource == resource_name
-    and force
-    and force.valid ~= false
-    and force.technologies
-  ) then
+  if not (anchor.flow == "ingress" and anchor.resource == resource_name) then
     return
   end
 
@@ -222,9 +194,7 @@ local function try_unlock_ingress_technology(anchor, force, debug_recipient, res
   end
 
   technology.researched = true
-  if type(force.play_sound) == "function" then
-    force.play_sound({path = "utility/research_completed"})
-  end
+  force.play_sound({path = "utility/research_completed"})
   print_anchor_debug_message(
     debug_recipient,
     "the-square debug: unlocked " .. technology_name .. " from " .. resource_label .. " ingress placement"
@@ -299,7 +269,7 @@ local function ensure_anchor_entity(surface, anchor, planet_name)
     end
   end
 
-  if entity and entity.valid and entity.destroy then
+  if entity and entity.valid then
     entity.destroy({raise_destroy = false})
     anchor.entity = nil
   end
@@ -404,7 +374,7 @@ local function ensure_anchor_set(surface, square_size, starter_anchors, planet_n
     if anchor.position and anchor.resource then
       ensure_anchor_entity(surface, anchor, planet_name)
     elseif anchor.position and anchor.entity then
-      if anchor.entity.valid and anchor.entity.destroy then
+      if anchor.entity.valid then
         anchor.entity.destroy({raise_destroy = false})
       end
       anchor.entity = nil
@@ -415,16 +385,11 @@ local function ensure_anchor_set(surface, square_size, starter_anchors, planet_n
 end
 
 local function fill_starter_entity_inventory(entity, inventory_config)
-  if not (entity and inventory_config and entity.get_inventory and defines and defines.inventory) then
+  if not inventory_config then
     return
   end
 
   local inventory = entity.get_inventory(defines.inventory.chest)
-
-  if not inventory then
-    return
-  end
-
   inventory.clear()
 
   for _, stack in ipairs(inventory_config.articles or {}) do
@@ -733,61 +698,20 @@ function anchor_runtime.sync_anchor_tiers_from_research(force)
   return true
 end
 
-function anchor_runtime.sync_ingress_tier_from_research(force)
-  return anchor_runtime.sync_anchor_tiers_from_research(force)
-end
-
-local function run_anchor_placement_effects(anchor, force, actor, source_label)
-  if anchor.flow == "ingress" and anchor.resource == "crude-oil" then
-    print_anchor_debug_message(actor, "the-square debug: placed crude oil ingress via " .. source_label)
-  end
-
-  if anchor.flow == "ingress" and anchor.resource == "uranium-ore" then
-    print_anchor_debug_message(actor, "the-square debug: placed uranium ore ingress via " .. source_label)
-  end
-
-  try_unlock_oil_processing(anchor, force, actor)
-  try_unlock_uranium_processing(anchor, force, actor)
-end
-
 local function get_anchor_placement_rejection_message(reason)
   return reason == "fluid-gap-required" and {"message.the-square-managed-line-fluid-gap-required"}
     or {"message.the-square-managed-line-invalid-edge"}
 end
 
 local function consume_player_inventory_item(player, item_name)
-  if not (player and player.valid and item_name) then
-    return false
-  end
-
-  if player.get_item_count and player.get_item_count(item_name) < 1 then
-    return false
-  end
-
-  if player.remove_item then
-    return player.remove_item({name = item_name, count = 1}) == 1
-  end
-
-  return false
+  return player.remove_item({name = item_name, count = 1}) == 1
 end
 
 local function can_player_receive_item(player, item_name)
-  if not (player and player.valid and item_name) then
-    return false
-  end
-
-  if player.can_insert then
-    return player.can_insert({name = item_name, count = 1})
-  end
-
-  return true
+  return player.can_insert({name = item_name, count = 1})
 end
 
 local function insert_player_inventory_item(player, item_name)
-  if not (player and player.valid and item_name and player.insert) then
-    return false
-  end
-
   return player.insert({name = item_name, count = 1}) == 1
 end
 
@@ -805,7 +729,7 @@ end
 
 local function remember_open_anchor_config(player, planet_name, anchor, category, tier_level)
   storage.anchor_config_open = storage.anchor_config_open or {}
-  storage.anchor_config_open[player.index or player.player_index or 1] = {
+  storage.anchor_config_open[player.index] = {
     planet_name = planet_name,
     position_key = anchor.position and defs.get_position_key(anchor.position) or nil,
     category = category or "ingress_item",
@@ -871,10 +795,8 @@ local function add_anchor_config_category_tabs(parent, selected_category)
       style = "slot_button"
     })
 
-    if button.style then
-      button.style.width = 92
-      button.style.height = 72
-    end
+    button.style.width = 92
+    button.style.height = 72
 
     if category_name == selected_category then
       button.toggled = true
@@ -921,10 +843,8 @@ local function add_anchor_config_resource_grid(
         style = "slot_button"
       })
 
-      if button.style then
-        button.style.width = 44
-        button.style.height = 44
-      end
+      button.style.width = 44
+      button.style.height = 44
 
       if selected then
         button.enabled = false
@@ -961,10 +881,8 @@ local function add_anchor_config_tier_selector(parent, player, selected_tier_lev
       caption = {"the-square-managed-line-tier." .. tier.key}
     })
 
-    if button.style then
-      button.style.width = 80
-      button.style.height = 32
-    end
+    button.style.width = 80
+    button.style.height = 32
 
     if tier.tier_level == selected_tier_level then
       button.enabled = false
@@ -990,9 +908,7 @@ local function open_anchor_config_gui(player, anchor, planet_name, category_name
     caption = {"gui.the-square-anchor-config-title"}
   })
 
-  if frame.force_auto_center then
-    frame.force_auto_center()
-  end
+  frame.force_auto_center()
 
   add_anchor_config_category_tabs(frame, category_name)
 
@@ -1026,7 +942,7 @@ local function clear_anchor_managed_line(anchor)
     return
   end
 
-  if anchor.entity and anchor.entity.valid and anchor.entity.destroy then
+  if anchor.entity and anchor.entity.valid then
     anchor.entity.destroy({raise_destroy = false})
   end
 
@@ -1179,7 +1095,7 @@ local function get_open_anchor_for_player(player)
     return nil, nil, nil, nil
   end
 
-  local open_config = storage.anchor_config_open[player.index or player.player_index or 1]
+  local open_config = storage.anchor_config_open[player.index]
 
   if not (open_config and open_config.planet_name and open_config.position_key) then
     return nil, nil, nil, nil
@@ -1201,10 +1117,6 @@ local function get_open_anchor_for_player(player)
 end
 
 local function parse_anchor_config_button_name(name)
-  if type(name) ~= "string" then
-    return nil, nil, nil
-  end
-
   local category = string.match(name, "^" .. defs.ANCHOR_CONFIG_BUTTON_PREFIX .. "category__(.+)$")
 
   if category then
@@ -1223,17 +1135,11 @@ local function parse_anchor_config_button_name(name)
     return "pick", flow, resource
   end
 
-  flow, resource = string.match(name, "^" .. defs.ANCHOR_CONFIG_BUTTON_PREFIX .. "(%w+)__(.+)$")
-
-  if flow then
-    return "pick", flow, resource
-  end
-
   return nil, nil, nil
 end
 
 local function get_open_anchor_config_for_player(player)
-  return storage.anchor_config_open and storage.anchor_config_open[player.index or player.player_index or 1] or nil
+  return storage.anchor_config_open and storage.anchor_config_open[player.index] or nil
 end
 
 function anchor_runtime.handle_anchor_config_gui_click(player, element)
@@ -1343,15 +1249,14 @@ function anchor_runtime.handle_anchor_config_gui_click(player, element)
     return true
   end
 
-  if anchor.entity and anchor.entity.valid and anchor.entity.destroy then
+  if anchor.entity and anchor.entity.valid then
     anchor.entity.destroy({raise_destroy = false})
     anchor.entity = nil
   end
 
   configure_anchor_managed_line(anchor, definition, flow, side, selected_tier_level)
-  local force = player.force or game and game.forces and game.forces.player
-  try_unlock_oil_processing(anchor, force, player)
-  try_unlock_uranium_processing(anchor, force, player)
+  try_unlock_oil_processing(anchor, player.force, player)
+  try_unlock_uranium_processing(anchor, player.force, player)
   anchor_runtime.reconcile_planet_managed_lines(planet_name)
   destroy_anchor_config_gui(player)
 
@@ -1368,12 +1273,10 @@ function anchor_runtime.handle_anchor_config_gui_closed(player, element)
   end
 
   if storage.anchor_config_open then
-    storage.anchor_config_open[player.index or player.player_index or 1] = nil
+    storage.anchor_config_open[player.index] = nil
   end
 
-  if element.destroy then
-    element.destroy()
-  end
+  element.destroy()
 
   return true
 end

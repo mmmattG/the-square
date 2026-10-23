@@ -14,17 +14,7 @@ runtime_defs.SETTING_BACKGROUND_TILE = "the-square-background-tile"
 runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE = "the-square-screenshot-pixels-per-tile"
 runtime_defs.SETTING_SCREENSHOT_ALT_MODE = "the-square-screenshot-alt-mode"
 runtime_defs.SETTING_DEV_MODE = "the-square-dev-mode"
-runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG = "the-square-ingress-placement-debug"
 runtime_defs.SETTING_CLIFF_EXPLOSIVE_BUTTON = "the-square-cliff-explosive-button"
-runtime_defs.LEGACY_SETTING_NAMES = {
-  [runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH] = "fes-expansion-tiles-per-research",
-  [runtime_defs.SETTING_BACKGROUND_TILE] = "fes-background-tile",
-  [runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE] = "fes-screenshot-pixels-per-tile",
-  [runtime_defs.SETTING_SCREENSHOT_ALT_MODE] = "fes-screenshot-alt-mode",
-  [runtime_defs.SETTING_DEV_MODE] = "fes-dev-mode",
-  [runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG] = "fes-ingress-placement-debug"
-}
-runtime_defs.FLOOR_TILE_NAME = "grass-1"
 runtime_defs.VOID_TILE_NAME = "out-of-map"
 runtime_defs.DEFAULT_BACKGROUND_TILE_NAME = "grass-1"
 runtime_defs.CHECKERBOARD_BACKGROUND_TILE_NAME = "checkerboard"
@@ -136,9 +126,6 @@ runtime_defs.EGRESS_RESEARCH_DEFINITIONS = {
     tier_level = 5
   }
 }
-runtime_defs.EXPANSION_RESEARCH_LEVELS_PER_TIER = 10
-runtime_defs.FINAL_FINITE_EXPANSION_RESEARCH_LEVEL = expansion_research.FINAL_FINITE_LEVEL
-runtime_defs.INFINITE_EXPANSION_RESEARCH_START_LEVEL = expansion_research.INFINITE_START_LEVEL
 runtime_defs.EXPANSION_RESEARCH_BANDS = {
   {
     name = "Automation science",
@@ -166,24 +153,8 @@ runtime_defs.EXPANSION_RESEARCH_BANDS = {
     label = "All science through space"
   }
 }
-runtime_defs.COUNTED_CATEGORY_ORDER = {
-  "crafting",
-  "lab",
-  "rocket-silo",
-  "beacon",
-  "power"
-}
-runtime_defs.COUNTED_CATEGORY_LABELS = {
-  crafting = "Crafting",
-  lab = "Labs",
-  ["rocket-silo"] = "Rocket silos",
-  beacon = "Beacons",
-  power = "Power"
-}
 runtime_defs.INPUT_DEFINITIONS_BY_PLANET = planet_catalog.build_native_free_resources_by_planet()
 runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET = planet_catalog.build_opt_in_egress_resources_by_planet()
-runtime_defs.INPUT_DEFINITIONS = runtime_defs.INPUT_DEFINITIONS_BY_PLANET.nauvis
-runtime_defs.OUTPUT_DEFINITIONS = runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET.nauvis
 runtime_defs.DIRECTION_BY_SIDE = {
   north = defines.direction.south,
   east = defines.direction.west,
@@ -332,7 +303,7 @@ local function are_all_force_technologies_researched(force, technology_names)
     return false
   end
 
-  if not (force and force.valid ~= false and force.technologies) then
+  if not (force and force.valid) then
     return false
   end
 
@@ -378,11 +349,6 @@ function runtime_defs.get_config_definition(resource, flow, planet_name)
   return nil
 end
 
-function runtime_defs.get_ingress_item_name(resource, planet_name)
-  local definition = runtime_defs.get_input_definition(resource, planet_name)
-  return runtime_defs.get_generic_anchor_item_name(definition and definition.kind or "item", "ingress")
-end
-
 local function get_input_kind_for_resource(resource)
   for _, definitions in pairs(runtime_defs.INPUT_DEFINITIONS_BY_PLANET) do
     for _, input_definition in ipairs(definitions) do
@@ -407,35 +373,9 @@ function runtime_defs.get_ingress_entity_name(resource, ingress_tier_level)
   return runtime_defs.get_active_anchor_entity_name("item", "ingress", ingress_tier_level)
 end
 
-local function get_legacy_ingress_entity_name(resource, ingress_tier_level)
-  if not resource then
-    return nil
-  end
-
-  local belt_tier_key = runtime_defs.ITEM_INGRESS_BELT_TIER_BY_INGRESS_TIER[ingress_tier_level or 1] or "yellow"
-
-  if get_input_kind_for_resource(resource) ~= "item" or belt_tier_key == "yellow" then
-    return "the-square-" .. resource .. "-ingress-anchor"
-  end
-
-  return "the-square-" .. resource .. "-ingress-anchor-" .. belt_tier_key
-end
-
 function runtime_defs.is_ingress_entity_name_for_resource(resource, entity_name)
-  if entity_name == runtime_defs.get_ingress_entity_name(resource, 1) then
-    return true
-  end
-
-  if entity_name == get_legacy_ingress_entity_name(resource, 1) then
-    return true
-  end
-
-  for tier_level = 2, runtime_defs.MAX_INGRESS_TIER do
+  for tier_level = 1, runtime_defs.MAX_INGRESS_TIER do
     if entity_name == runtime_defs.get_ingress_entity_name(resource, tier_level) then
-      return true
-    end
-
-    if entity_name == get_legacy_ingress_entity_name(resource, tier_level) then
       return true
     end
   end
@@ -473,11 +413,6 @@ function runtime_defs.get_output_definition(resource, planet_name)
   return nil
 end
 
-function runtime_defs.get_egress_item_name(resource, planet_name)
-  local definition = runtime_defs.get_output_definition(resource, planet_name)
-  return runtime_defs.get_generic_anchor_item_name(definition and definition.kind or "item", "egress")
-end
-
 local function get_output_kind_for_resource(resource)
   for _, definitions in pairs(runtime_defs.OUTPUT_DEFINITIONS_BY_PLANET) do
     for _, output_definition in ipairs(definitions) do
@@ -502,56 +437,14 @@ function runtime_defs.get_egress_entity_name(resource, egress_tier_level)
   return runtime_defs.get_active_anchor_entity_name("item", "egress", egress_tier_level)
 end
 
-local function get_legacy_egress_entity_name(resource, egress_tier_level)
-  if not resource then
-    return nil
-  end
-
-  local belt_tier_key = runtime_defs.ITEM_EGRESS_BELT_TIER_BY_EGRESS_TIER[egress_tier_level or 1] or "yellow"
-
-  if get_output_kind_for_resource(resource) ~= "item" or belt_tier_key == "yellow" then
-    return "the-square-" .. resource .. "-egress-anchor"
-  end
-
-  return "the-square-" .. resource .. "-egress-anchor-" .. belt_tier_key
-end
-
 function runtime_defs.is_egress_entity_name_for_resource(resource, entity_name)
-  if entity_name == runtime_defs.get_egress_entity_name(resource, 1) then
-    return true
-  end
-
-  if entity_name == get_legacy_egress_entity_name(resource, 1) then
-    return true
-  end
-
-  for tier_level = 2, runtime_defs.MAX_EGRESS_TIER do
+  for tier_level = 1, runtime_defs.MAX_EGRESS_TIER do
     if entity_name == runtime_defs.get_egress_entity_name(resource, tier_level) then
-      return true
-    end
-
-    if entity_name == get_legacy_egress_entity_name(resource, tier_level) then
       return true
     end
   end
 
   return false
-end
-
-function runtime_defs.get_anchor_presentation(flow, kind, resource)
-  if flow == "egress" and kind == "item" then
-    return "underground-belt-outward"
-  end
-
-  if flow == "egress" and kind == "fluid" then
-    return "underground-pipe"
-  end
-
-  if kind == "fluid" then
-    return "offshore-pump"
-  end
-
-  return "underground-belt-inward"
 end
 
 function runtime_defs.create_managed_anchor(definition, flow, side, position, tier_level)
@@ -593,28 +486,16 @@ function runtime_defs.get_anchor_direction_for_side(flow, kind, side)
   return runtime_defs.DIRECTION_BY_SIDE[side]
 end
 
-local function get_setting_value(scope, setting_name, default_value)
-  local setting = scope and scope[setting_name]
-  local legacy_setting_name = runtime_defs.LEGACY_SETTING_NAMES[setting_name]
-  local legacy_setting = legacy_setting_name and scope and scope[legacy_setting_name]
-
-  if setting and setting.value ~= nil then
-    return setting.value
-  end
-
-  if legacy_setting and legacy_setting.value ~= nil then
-    return legacy_setting.value
-  end
-
-  return default_value
+local function get_setting_value(scope, setting_name)
+  return scope[setting_name].value
 end
 
 function runtime_defs.get_square_size()
-  return get_setting_value(settings.startup, runtime_defs.SETTING_NAUVIS_STARTING_SQUARE_SIZE, 7)
+  return get_setting_value(settings.startup, runtime_defs.SETTING_NAUVIS_STARTING_SQUARE_SIZE)
 end
 
 function runtime_defs.get_expansion_tiles_per_research()
-  return get_setting_value(settings.startup, runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH, 7)
+  return get_setting_value(settings.startup, runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH)
 end
 
 function runtime_defs.get_square_bounds(size, center)
@@ -626,15 +507,15 @@ function runtime_defs.get_surface_size(square_size)
 end
 
 function runtime_defs.get_background_tile_name()
-  return get_setting_value(settings.global, runtime_defs.SETTING_BACKGROUND_TILE, runtime_defs.DEFAULT_BACKGROUND_TILE_NAME)
+  return get_setting_value(settings.global, runtime_defs.SETTING_BACKGROUND_TILE)
 end
 
 function runtime_defs.get_screenshot_pixels_per_tile()
-  return get_setting_value(settings.global, runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE, 32)
+  return get_setting_value(settings.global, runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE)
 end
 
 function runtime_defs.is_screenshot_alt_mode_enabled()
-  return get_setting_value(settings.global, runtime_defs.SETTING_SCREENSHOT_ALT_MODE, true)
+  return get_setting_value(settings.global, runtime_defs.SETTING_SCREENSHOT_ALT_MODE)
 end
 
 function runtime_defs.get_anchor_bounds(square_size, center)
@@ -668,10 +549,6 @@ function runtime_defs.get_current_ingress_tier_level(planet_name)
   end
 
   return tier_level
-end
-
-function runtime_defs.get_current_ingress_tier(planet_name)
-  return runtime_defs.get_ingress_tier_definition(runtime_defs.get_current_ingress_tier_level(planet_name))
 end
 
 local function get_researched_tier_level_for_force(force, research_definitions)
@@ -747,10 +624,6 @@ function runtime_defs.is_inside_bounds(bounds, position)
   return square_layout.is_inside_bounds(bounds, position)
 end
 
-function runtime_defs.get_square_bounds(square_size, center)
-  return square_layout.get_square_bounds(square_size, center)
-end
-
 function runtime_defs.get_position_key(position)
   return position.x .. ":" .. position.y
 end
@@ -794,15 +667,7 @@ function runtime_defs.get_managed_tile_name(square_size, surface_size, position,
 end
 
 function runtime_defs.get_player_force()
-  return game and game.forces and game.forces.player or nil
-end
-
-function runtime_defs.format_ratio_percent(ratio)
-  return string.format("%.1f%%", ratio * 100)
-end
-
-function runtime_defs.format_decimal(value)
-  return string.format("%.2f", value)
+  return game.forces.player
 end
 
 function runtime_defs.format_resource_name(resource)
@@ -817,14 +682,6 @@ function runtime_defs.is_debug_space_age_planet_name(planet_name)
   end
 
   return false
-end
-
-function runtime_defs.format_position(position)
-  if not position then
-    return "(nil)"
-  end
-
-  return "(" .. position.x .. ", " .. position.y .. ")"
 end
 
 function runtime_defs.snap_entity_position_to_tile(position)
@@ -893,32 +750,6 @@ function runtime_defs.get_effective_ingress_tier_for_anchor(anchor)
   end
 
   return runtime_defs.get_ingress_tier_definition(tier_level)
-end
-
-function runtime_defs.build_ingress_tier_summary()
-  local tier = runtime_defs.get_current_ingress_tier("nauvis")
-  local item_rate_per_second = runtime_defs.get_ingress_item_rate_per_second()
-  local fluid_rate_per_second = runtime_defs.get_ingress_fluid_rate_per_second()
-
-  return tier.label
-    .. " | item/s per anchor: "
-    .. runtime_defs.format_decimal(item_rate_per_second)
-    .. " | fluid/s per anchor: "
-    .. runtime_defs.format_decimal(fluid_rate_per_second)
-end
-
-function runtime_defs.get_ingress_item_rate_per_second()
-  local tier = runtime_defs.get_current_ingress_tier("nauvis")
-
-  return item_ingress.get_total_items_per_second(
-    tier.item_lane_counts or {0, 0},
-    runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS
-  )
-end
-
-function runtime_defs.get_ingress_fluid_rate_per_second()
-  local tier = runtime_defs.get_current_ingress_tier("nauvis")
-  return (tier.fluid_amount_per_interval or 0) * (60 / runtime_defs.ITEM_ANCHOR_INTERVAL_TICKS)
 end
 
 return runtime_defs

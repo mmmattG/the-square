@@ -172,7 +172,7 @@ function planet_runtime.grant_initial_managed_line_inventory(player, planet_name
     return
   end
 
-  if not (player and player.valid and player.insert) then
+  if not (player and player.valid) then
     return
   end
 
@@ -432,9 +432,7 @@ function planet_runtime.clear_surface_chart(surface)
   end
 
   for _, force in pairs(game.forces) do
-    if force.valid and force.clear_chart then
-      force.clear_chart(surface)
-    end
+    force.clear_chart(surface)
   end
 end
 
@@ -465,17 +463,6 @@ function planet_runtime.teleport_player_to_planet_square(player, planet_name)
     planet:get_surface_size(),
     target_position
   )
-end
-
-function planet_runtime.expand_planet_square(planet_name, player, gui_runtime, anchor_runtime)
-  assert(planet_name, "planet_name is required")
-  local planet_square_runtime = require("lib.planet_square_runtime")
-
-  return planet_square_runtime.expand(planet_name, {
-    player = player,
-    gui_runtime = gui_runtime,
-    anchor_runtime = anchor_runtime
-  }) ~= nil
 end
 
 function planet_runtime.initialize_world(anchor_runtime, gui_runtime)

@@ -32,9 +32,7 @@ function void_item_runtime.should_destroy_entity(entity)
     return false
   end
 
-  local tile = entity.surface.get_tile and entity.surface.get_tile(tile_position)
-
-  return tile and tile.name == defs.VOID_TILE_NAME
+  return entity.surface.get_tile(tile_position).name == defs.VOID_TILE_NAME
 end
 
 function void_item_runtime.destroy_if_void_item(event)

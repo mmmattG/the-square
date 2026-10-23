@@ -15,7 +15,7 @@ local item_egress_belt_tiers = {
   {key = "blue", prototype_name = "express-underground-belt"}
 }
 
-if mods and mods["space-age"] and data.raw["underground-belt"]["turbo-underground-belt"] then
+if mods["space-age"] then
   item_ingress_belt_tiers[#item_ingress_belt_tiers + 1] = {key = "turbo", prototype_name = "turbo-underground-belt"}
   item_egress_belt_tiers[#item_egress_belt_tiers + 1] = {key = "turbo", prototype_name = "turbo-underground-belt"}
 end
@@ -321,7 +321,7 @@ local function is_managed_line_item_tier_available(tier)
     return true
   end
 
-  if tier.space_age_only and not (mods and mods["space-age"]) then
+  if tier.space_age_only and not mods["space-age"] then
     return false
   end
 
@@ -774,7 +774,7 @@ for _, definition in ipairs(ingress_research_definitions) do
   prototypes[#prototypes + 1] = build_ingress_research_technology(definition)
 end
 
-if mods and mods["space-age"] and data.raw.technology["turbo-transport-belt"] then
+if mods["space-age"] then
   prototypes[#prototypes + 1] = build_ingress_research_technology({
     name = "the-square-egress-turbo",
     icons = build_anchor_upgrade_icons("__space-age__/graphics/icons/turbo-transport-belt.png"),
