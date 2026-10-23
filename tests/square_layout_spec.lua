@@ -8,7 +8,7 @@ local square_layout = require("lib.square_layout")
 
 run_test("anchor ring tiles stay out of map", function()
   local square_size = 12
-  local surface_size = square_layout.get_surface_size(square_size, 1)
+  local surface_size = square_layout.get_surface_size(square_size)
 
   assert_equal(
     square_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -7}),
@@ -24,7 +24,7 @@ end)
 
 run_test("playable square uses the selected uniform tile", function()
   local square_size = 12
-  local surface_size = square_layout.get_surface_size(square_size, 1)
+  local surface_size = square_layout.get_surface_size(square_size)
 
   assert_equal(
     square_layout.get_managed_tile_name(square_size, surface_size, "sand-3", "out-of-map", {x = 0, y = 0}),
@@ -35,7 +35,7 @@ end)
 
 run_test("positions outside the managed surface stay unmanaged", function()
   local square_size = 12
-  local surface_size = square_layout.get_surface_size(square_size, 1)
+  local surface_size = square_layout.get_surface_size(square_size)
 
   assert_equal(
     square_layout.get_managed_tile_name(square_size, surface_size, "grass-1", "out-of-map", {x = 0, y = -8}),

@@ -4,6 +4,70 @@ expansion_research.DEFAULT_STARTING_SQUARE_SIZE = 7
 expansion_research.FINAL_FINITE_LEVEL = 40
 expansion_research.INFINITE_START_LEVEL = 41
 
+-- Science packs for Nauvis Square Expansion, in blocks of ten levels. The last band
+-- covers the infinite research from INFINITE_START_LEVEL onward.
+expansion_research.BANDS = {
+  {
+    start_level = 1,
+    label = "Automation science",
+    ingredients = {
+      {"automation-science-pack", 1}
+    }
+  },
+  {
+    start_level = 11,
+    label = "Automation + logistic science",
+    ingredients = {
+      {"automation-science-pack", 1},
+      {"logistic-science-pack", 1}
+    }
+  },
+  {
+    start_level = 21,
+    label = "Automation + logistic + chemical science",
+    ingredients = {
+      {"automation-science-pack", 1},
+      {"logistic-science-pack", 1},
+      {"chemical-science-pack", 1}
+    }
+  },
+  {
+    start_level = 31,
+    label = "Automation + logistic + chemical + production + utility science",
+    ingredients = {
+      {"automation-science-pack", 1},
+      {"logistic-science-pack", 1},
+      {"chemical-science-pack", 1},
+      {"production-science-pack", 1},
+      {"utility-science-pack", 1}
+    }
+  },
+  {
+    start_level = 41,
+    label = "All science through space",
+    ingredients = {
+      {"automation-science-pack", 1},
+      {"logistic-science-pack", 1},
+      {"chemical-science-pack", 1},
+      {"production-science-pack", 1},
+      {"utility-science-pack", 1},
+      {"space-science-pack", 1}
+    }
+  }
+}
+
+function expansion_research.get_band(level)
+  local selected_band = expansion_research.BANDS[1]
+
+  for _, band in ipairs(expansion_research.BANDS) do
+    if level >= band.start_level then
+      selected_band = band
+    end
+  end
+
+  return selected_band
+end
+
 local function get_unlocked_tiles_for_level(starting_square_size, level)
   local square_size = expansion_research.get_square_size_before_level(starting_square_size, level)
   local next_square_size = square_size + 2
@@ -38,17 +102,20 @@ function expansion_research.get_planet_technology_name(planet_name)
 end
 
 function expansion_research.get_planet_from_technology_name(technology_name)
-  return string.match(technology_name or "", "^the%-square%-(%a+)%-square%-expansion$")
+  return string.match(technology_name, "^the%-square%-(%a+)%-square%-expansion$")
 end
 
 function expansion_research.get_level_from_technology_name(technology_name)
-  return tonumber(string.match(technology_name or "", "^the%-square%-square%-expansion%-(%d%d%d%d)$"))
-    or tonumber(string.match(technology_name or "", "^fes%-square%-expansion%-(%d%d%d%d)$"))
+  return tonumber(string.match(technology_name, "^the%-square%-square%-expansion%-(%d%d%d%d)$"))
 end
 
-function expansion_research.is_expansion_technology_name(technology_name)
-  return expansion_research.get_level_from_technology_name(technology_name) ~= nil
-    or expansion_research.get_planet_from_technology_name(technology_name) ~= nil
+-- The Planet whose Square a Square Expansion technology grows, or nil for other technologies.
+function expansion_research.get_planet_for_technology_name(technology_name)
+  if expansion_research.get_level_from_technology_name(technology_name) then
+    return "nauvis"
+  end
+
+  return expansion_research.get_planet_from_technology_name(technology_name)
 end
 
 function expansion_research.get_infinite_research_unit_formula(starting_square_size, tiles_per_research)

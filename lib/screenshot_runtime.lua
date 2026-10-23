@@ -1,13 +1,19 @@
+-- The Base screenshot button: saves a picture of the current Planet's Square to
+-- script-output/the-square/.
 local base_screenshot = require("lib.base_screenshot")
-local defs = require("lib.runtime_defs")
-local planet_instance = require("lib.planet_instance")
+local mod_settings = require("lib.mod_settings")
+local planet_state = require("lib.planet_state")
 
 local screenshot_runtime = {}
+
+screenshot_runtime.DIRECTORY = "the-square"
+
+local MARGIN_TILES = 2
 
 local function build_screenshot_path(planet_name, square_size)
   return string.format(
     "%s/%s-base-%dx%d-tick-%d.png",
-    defs.BASE_SCREENSHOT_DIRECTORY,
+    screenshot_runtime.DIRECTORY,
     planet_name,
     square_size,
     square_size,
@@ -21,7 +27,7 @@ function screenshot_runtime.take_base_screenshot(player)
   end
 
   local viewed_surface = player.surface
-  local planet = viewed_surface and planet_instance.for_surface(viewed_surface.name)
+  local planet = viewed_surface and planet_state.for_surface(viewed_surface)
 
   if not planet then
     player.print({"message.the-square-screenshot-unsupported-surface"})
@@ -29,7 +35,7 @@ function screenshot_runtime.take_base_screenshot(player)
   end
 
   local square_size = planet:get_square_size()
-  local surface = game.surfaces[planet:get_surface_name()]
+  local surface = planet:get_surface()
 
   if not surface then
     player.print({"message.the-square-screenshot-unsupported-surface"})
@@ -38,8 +44,8 @@ function screenshot_runtime.take_base_screenshot(player)
 
   local capture = base_screenshot.build_capture_spec(
     square_size,
-    defs.BASE_SCREENSHOT_MARGIN_TILES,
-    defs.get_screenshot_pixels_per_tile(),
+    MARGIN_TILES,
+    mod_settings.get_screenshot_pixels_per_tile(),
     planet:get_square_position()
   )
   local path = build_screenshot_path(viewed_surface.name, square_size)
@@ -52,7 +58,7 @@ function screenshot_runtime.take_base_screenshot(player)
     zoom = capture.zoom,
     path = path,
     show_gui = false,
-    show_entity_info = defs.is_screenshot_alt_mode_enabled(),
+    show_entity_info = mod_settings.is_screenshot_alt_mode_enabled(),
     show_cursor_building_preview = false,
     force_render = true
   })
@@ -61,8 +67,8 @@ function screenshot_runtime.take_base_screenshot(player)
     "message.the-square-screenshot-saved",
     path,
     square_size,
-    defs.BASE_SCREENSHOT_MARGIN_TILES,
-    defs.get_screenshot_pixels_per_tile()
+    MARGIN_TILES,
+    mod_settings.get_screenshot_pixels_per_tile()
   })
 
   return true

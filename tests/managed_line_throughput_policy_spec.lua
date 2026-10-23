@@ -18,7 +18,7 @@ run_test("Managed Line throughput policy owns planet-specific budget rules", fun
     "seed egress should map to matching fruit budget"
   )
   assert_equal(
-    throughput_policy.should_skip_regular_egress("gleba", {resource = "yumako-seed"}),
+    throughput_policy.is_support_material_egress("gleba", {resource = "yumako-seed"}),
     true,
     "Gleba seed egress is consumed by the policy budget pass"
   )

@@ -1,120 +1,74 @@
-local managed_line_runtime = require("lib.managed_line_runtime")
-local planet_runtime = require("lib.planet_runtime")
-local defs = require("lib.runtime_defs")
-local debug_platform_runtime = require("lib.debug_platform_runtime")
-local planet_square_runtime = require("lib.planet_square_runtime")
+-- Event routing only. Each handler hands off to the module that owns the behaviour.
+local anchor_config_gui = require("lib.anchor_config_gui")
+local anchor_runtime = require("lib.anchor_runtime")
+local definitions = require("lib.managed_line_definitions")
 local gui_runtime = require("lib.gui_runtime")
-local screenshot_runtime = require("lib.screenshot_runtime")
-local square_move_runtime = require("lib.square_move_runtime")
+local managed_line_pump = require("lib.managed_line_pump")
+local managed_line_tiers = require("lib.managed_line_tiers")
+local mod_settings = require("lib.mod_settings")
+local planet_runtime = require("lib.planet_runtime")
+local planet_state = require("lib.planet_state")
+local square_move_gui = require("lib.square_move_gui")
+local square_runtime = require("lib.square_runtime")
 local void_item_runtime = require("lib.void_item_runtime")
 
-local function sync_all_runtime_guis()
-  gui_runtime.refresh_all_debug_guis()
-  gui_runtime.sync_all_square_move_guis()
+local function sync_player_guis(player)
+  gui_runtime.sync(player)
+  square_move_gui.sync(player)
 end
 
-local function sync_research_runtime_state(force)
-  local target_force = force or defs.get_player_force()
+local function sync_all_guis()
+  for _, player in pairs(game.players) do
+    sync_player_guis(player)
+  end
+end
 
-  if target_force then
-    managed_line_runtime.sync_tier(target_force)
+-- Managed Line Upgrade research changes every Planet's lines.
+local function sync_tiers(force)
+  if managed_line_tiers.sync_from_research(force) then
+    anchor_runtime.reconcile_all()
+    return true
   end
 
-  sync_all_runtime_guis()
-end
-
-local function initialize_world()
-  planet_runtime.initialize_world(managed_line_runtime, gui_runtime)
-end
-
-local function handle_player_join_or_respawn(event)
-  local player = game.get_player(event.player_index)
-
-  if player then
-    planet_runtime.teleport_player_to_planet_square(player, "nauvis")
-    planet_runtime.grant_initial_managed_line_inventory(player, "nauvis")
-    gui_runtime.sync_dev_gui(player)
-    gui_runtime.sync_screenshot_gui(player)
-    gui_runtime.sync_square_move_gui(player)
-    gui_runtime.sync_cliff_explosive_gui(player)
-  end
+  return false
 end
 
 script.on_init(function()
-  initialize_world()
+  planet_runtime.initialize_world()
+  sync_all_guis()
 end)
 
 script.on_configuration_changed(function()
-  local nauvis = storage.planets and storage.planets.nauvis and planet_runtime.ensure_planet_state("nauvis")
-
-  if nauvis then
-    local planet_state = nauvis:get_state()
-    managed_line_runtime.refresh_existing_planets()
-    managed_line_runtime.sync_tier(defs.get_player_force())
-
-    if nauvis:get_square_size() ~= defs.get_square_size() then
-      planet_runtime.notify_square_size_change_applies_to_new_saves("nauvis")
-    end
-
-    local surface = game.surfaces[nauvis:get_surface_name()]
-
-    if surface then
-      planet_runtime.refresh_all_generated_chunk_tiles(
-        surface,
-        nauvis:get_square_size(),
-        nauvis:get_surface_size(),
-        planet_state.square_position
-      )
-      planet_runtime.clear_surface_chart(surface)
-    end
-
-    gui_runtime.sync_all_dev_guis()
-    gui_runtime.sync_all_screenshot_guis()
-    gui_runtime.sync_all_square_move_guis()
-    gui_runtime.sync_all_cliff_explosive_guis()
-    planet_runtime.refresh_spawn_routing("nauvis", managed_line_runtime, gui_runtime)
-    return
-  end
-
-  initialize_world()
+  planet_runtime.handle_configuration_changed()
+  sync_tiers(game.forces.player)
+  sync_all_guis()
 end)
 
-script.on_event(defines.events.on_player_created, handle_player_join_or_respawn)
-script.on_event(defines.events.on_player_respawned, handle_player_join_or_respawn)
+local function handle_player_arrived(event)
+  local player = game.get_player(event.player_index)
+
+  planet_runtime.move_player_to_square(player)
+  planet_runtime.grant_initial_line_items(player)
+  sync_player_guis(player)
+end
+
+script.on_event(defines.events.on_player_created, handle_player_arrived)
+script.on_event(defines.events.on_player_respawned, handle_player_arrived)
 
 script.on_event(defines.events.on_chunk_generated, function(event)
-  if planet_runtime.refresh_generated_chunk_for_planet_surface(event.surface, event.area) then
-    managed_line_runtime.initialize(event.surface.name)
-  end
+  planet_runtime.handle_chunk_generated(event.surface, event.area)
 end)
 
-script.on_event(defines.events.on_player_rotated_entity, function(event)
-  managed_line_runtime.handle_rotated(event.entity)
-end)
+local function handle_entity_rotated(event)
+  anchor_runtime.handle_entity_rotated(event.entity)
+end
 
-script.on_event(defines.events.on_player_flipped_entity, function(event)
-  managed_line_runtime.handle_rotated(event.entity)
-end)
-
-script.on_event(defines.events.on_gui_opened, function(event)
-  if event.entity then
-    managed_line_runtime.handle_gui_opened(event.entity, game.get_player(event.player_index))
-  end
-end)
-
-script.on_event(defines.events.on_gui_closed, function(event)
-  if event.element and gui_runtime.handle_square_move_gui_closed(game.get_player(event.player_index), event.element) then
-    return
-  end
-
-  if event.element and managed_line_runtime.handle_config_gui_closed(game.get_player(event.player_index), event.element) then
-    return
-  end
-end)
+script.on_event(defines.events.on_player_rotated_entity, handle_entity_rotated)
+script.on_event(defines.events.on_player_flipped_entity, handle_entity_rotated)
 
 local function handle_entity_built(event)
-  managed_line_runtime.handle_built(event, gui_runtime)
-  void_item_runtime.destroy_if_void_item(event)
+  anchor_runtime.handle_entity_built(event)
+  void_item_runtime.destroy_if_in_void(event.entity)
 end
 
 script.on_event(defines.events.on_built_entity, handle_entity_built)
@@ -122,212 +76,114 @@ script.on_event(defines.events.on_robot_built_entity, handle_entity_built)
 script.on_event(defines.events.script_raised_built, handle_entity_built)
 script.on_event(defines.events.script_raised_revive, handle_entity_built)
 
-script.on_event(defines.events.on_player_dropped_item, function(event)
-  void_item_runtime.destroy_if_void_item(event)
-end)
-
-script.on_event(defines.events.on_trigger_created_entity, function(event)
-  void_item_runtime.destroy_if_void_item(event)
-end)
-
-local function handle_anchor_removed(event)
-  managed_line_runtime.handle_mined(event.entity)
+local function handle_item_entity_created(event)
+  void_item_runtime.destroy_if_in_void(event.entity)
 end
 
-script.on_event(defines.events.on_player_mined_entity, handle_anchor_removed)
-script.on_event(defines.events.on_robot_mined_entity, handle_anchor_removed)
-script.on_event(defines.events.on_entity_died, handle_anchor_removed)
+script.on_event(defines.events.on_player_dropped_item, handle_item_entity_created)
+script.on_event(defines.events.on_trigger_created_entity, handle_item_entity_created)
 
-script.on_event(defines.events.on_gui_click, function(event)
-  if not (event.element and event.element.valid) then
+local function handle_entity_removed(event)
+  anchor_runtime.handle_entity_removed(event.entity)
+end
+
+script.on_event(defines.events.on_player_mined_entity, handle_entity_removed)
+script.on_event(defines.events.on_robot_mined_entity, handle_entity_removed)
+script.on_event(defines.events.on_entity_died, handle_entity_removed)
+
+script.on_event(defines.events.on_gui_opened, function(event)
+  if event.entity then
+    anchor_config_gui.handle_entity_opened(game.get_player(event.player_index), event.entity)
+  end
+end)
+
+script.on_event(defines.events.on_gui_closed, function(event)
+  local element = event.element
+
+  if not (element and element.valid) then
     return
   end
 
   local player = game.get_player(event.player_index)
 
-  if managed_line_runtime.handle_config_gui_click(player, event.element) then
+  if not square_move_gui.handle_closed(player, element) then
+    anchor_config_gui.handle_closed(player, element)
+  end
+end)
+
+script.on_event(defines.events.on_gui_click, function(event)
+  local element = event.element
+
+  if not element.valid then
     return
   end
 
-  if event.element.name == defs.DEV_EXPAND_BUTTON_NAME then
-    if player and gui_runtime.is_dev_mode_enabled(player) then
-      planet_square_runtime.expand("nauvis", {
-        player = player,
-        gui_runtime = gui_runtime,
-        managed_line_runtime = managed_line_runtime,
-        announce_global = true
-      })
-      sync_all_runtime_guis()
-    end
+  local player = game.get_player(event.player_index)
 
+  if anchor_config_gui.handle_click(player, element) or gui_runtime.handle_click(player, element) then
     return
   end
 
-  local debug_orbit_planet = debug_platform_runtime.get_button_planet_name(event.element.name)
-
-  if debug_orbit_planet then
-    if player and gui_runtime.is_dev_mode_enabled(player) and debug_platform_runtime.is_space_age_active() then
-      local result = debug_platform_runtime.teleport_player_to_planet_platform(player, debug_orbit_planet)
-
-      if not result.ok then
-        player.print(result.error)
-      end
-    end
-
-    return
+  if square_move_gui.handle_click(player, element) then
+    gui_runtime.refresh_all_debug_panels()
   end
-
-  if event.element.name == defs.SCREENSHOT_BUTTON_NAME then
-    screenshot_runtime.take_base_screenshot(player)
-    return
-  end
-
-  if event.element.name == defs.SQUARE_MOVE_BUTTON_NAME then
-    gui_runtime.toggle_square_move_gui(player, square_move_runtime)
-    return
-  end
-
-  local square_move_direction = square_move_runtime.parse_direction_button_name(event.element.name)
-
-  if square_move_direction then
-    local result = square_move_runtime.move_for_player(player, square_move_direction, {
-      managed_line_runtime = managed_line_runtime,
-      mode = gui_runtime.get_square_move_mode(player)
-    })
-
-    if not result.ok and player then
-      if result.reason == "obstructed" then
-        local message_key = "message.the-square-move-obstructed"
-
-        if result.mode == defs.SQUARE_MOVE_MODES.CONTENTS then
-          message_key = "message.the-square-move-contents-obstructed"
-        end
-
-        player.print({
-          message_key,
-          {"the-square-direction." .. result.obstructed_side}
-        })
-      elseif result.reason == "unmovable" then
-        player.print({"message.the-square-move-contents-unmovable"})
-      else
-        player.print({"message.the-square-move-unsupported"})
-      end
-    end
-
-    gui_runtime.refresh_all_square_move_guis(square_move_runtime)
-    gui_runtime.refresh_all_debug_guis()
-    return
-  end
-
-  if event.element.name == defs.CLIFF_EXPLOSIVE_BUTTON_NAME then
-    if player and gui_runtime.is_cliff_explosive_button_enabled(player) then
-      player.insert({name = "cliff-explosives", count = 1})
-    end
-
-    return
-  end
-
 end)
 
 script.on_event(defines.events.on_gui_switch_state_changed, function(event)
-  if not (event.element and event.element.valid) then
-    return
-  end
-
-  gui_runtime.handle_square_move_mode_changed(
-    game.get_player(event.player_index),
-    event.element,
-    square_move_runtime
-  )
-end)
-
-script.on_event(defs.PLACE_MANAGED_ANCHOR_INPUT_NAME, function(event)
-  local player = game.get_player(event.player_index)
-
-  if player then
-    managed_line_runtime.handle_slot_click(player)
+  if event.element.valid then
+    square_move_gui.handle_switch_changed(game.get_player(event.player_index), event.element)
   end
 end)
 
-script.on_event(defs.OPEN_MANAGED_ANCHOR_INPUT_NAME, function(event)
+-- Clicks on Anchors (see the custom inputs in prototypes/managed_lines.lua).
+script.on_event(definitions.PLACE_INPUT_NAME, function(event)
+  anchor_config_gui.handle_slot_click(game.get_player(event.player_index))
+end)
+
+script.on_event(definitions.OPEN_INPUT_NAME, function(event)
   local player = game.get_player(event.player_index)
 
-  if player and player.selected then
-    managed_line_runtime.handle_gui_opened(player.selected, player)
+  if player.selected then
+    anchor_config_gui.handle_entity_opened(player, player.selected)
   end
 end)
 
 script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
-  if event.setting == defs.SETTING_BACKGROUND_TILE then
-    local nauvis_state = storage.planets and storage.planets.nauvis
-    local surface = nauvis_state and game.surfaces[nauvis_state.surface_name]
-
-    if surface and nauvis_state then
-      planet_runtime.refresh_all_generated_chunk_tiles(
-        surface,
-        nauvis_state.square_size,
-        nauvis_state.surface_size,
-        nauvis_state.square_position
-      )
-    end
-
-    gui_runtime.refresh_all_debug_guis()
-    return
-  end
-
-  if event.setting == defs.SETTING_DEV_MODE then
-    local player = game.get_player(event.player_index)
-
-    if player then
-      gui_runtime.sync_dev_gui(player)
-    end
-
-    return
-  end
-
-  if event.setting == defs.SETTING_CLIFF_EXPLOSIVE_BUTTON then
-    local player = game.get_player(event.player_index)
-
-    if player then
-      gui_runtime.sync_cliff_explosive_gui(player)
-    end
+  if event.setting == mod_settings.BACKGROUND_TILE then
+    square_runtime.repaint(planet_state.get("nauvis"))
+    gui_runtime.refresh_all_debug_panels()
+  elseif event.setting == mod_settings.DEV_MODE or event.setting == mod_settings.CLIFF_EXPLOSIVE_BUTTON then
+    gui_runtime.sync(game.get_player(event.player_index))
   end
 end)
 
 script.on_event(defines.events.on_research_finished, function(event)
-  local research = event.research
+  local expanded = planet_runtime.handle_research_finished(event.research)
+  local tiers_changed = sync_tiers(event.research.force)
 
-  if not (research and research.valid and research.force) then
-    return
-  end
-
-  if planet_square_runtime.expand_after_research(research, {
-    gui_runtime = gui_runtime,
-    managed_line_runtime = managed_line_runtime
-  }) then
-    sync_all_runtime_guis()
-  end
-
-  if managed_line_runtime.sync_tier(research.force) then
-    sync_all_runtime_guis()
+  if expanded or tiers_changed then
+    gui_runtime.refresh_all_debug_panels()
+    square_move_gui.sync_all()
   end
 end)
 
 script.on_nth_tick(1, function()
-  managed_line_runtime.pump_all()
+  managed_line_pump.pump_all()
 end)
 
 script.on_nth_tick(30, function()
-  gui_runtime.refresh_all_square_move_guis(square_move_runtime)
+  square_move_gui.refresh_all()
 end)
 
+-- Used by the playtest launcher (scripts/playtest-world.sh).
 remote.add_interface("the-square", {
   sync_research_runtime_state = function(force_name)
-    local force = force_name and game.forces[force_name] or defs.get_player_force()
-    sync_research_runtime_state(force)
+    sync_tiers(game.forces[force_name or "player"])
+    gui_runtime.refresh_all_debug_panels()
+    square_move_gui.sync_all()
   end,
   set_playtest_debug_enabled = function(enabled)
     storage.the_square_playtest_debug_enabled = enabled and true or nil
-    gui_runtime.sync_all_dev_guis()
+    gui_runtime.sync_all()
   end
 })

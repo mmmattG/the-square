@@ -1,4 +1,6 @@
-local defs = require("lib.runtime_defs")
+-- Dev mode helper: one paused, indestructible space platform per Planet orbit to
+-- jump into for testing.
+local planet_catalog = require("lib.planet_catalog")
 
 local debug_platform_runtime = {}
 
@@ -12,7 +14,7 @@ local function get_force_key(force)
 end
 
 local function get_platform_name(force, planet_name)
-  return "[the-square debug] " .. (force.name or "force") .. " " .. defs.format_resource_name(planet_name) .. " orbit"
+  return "[the-square debug] " .. (force.name or "force") .. " " .. planet_name .. " orbit"
 end
 
 local function get_stored_platform(force, planet_name)
@@ -97,12 +99,8 @@ function debug_platform_runtime.is_space_age_active()
   return script.active_mods["space-age"] ~= nil
 end
 
-function debug_platform_runtime.get_button_planet_name(element_name)
-  return string.match(element_name or "", "^" .. defs.DEV_ORBIT_TELEPORT_BUTTON_PREFIX .. "(.+)$")
-end
-
 function debug_platform_runtime.ensure_platform(force, planet_name)
-  if not (force and planet_name and defs.is_debug_space_age_planet_name(planet_name)) then
+  if not (force and planet_name and planet_catalog.is_supported(planet_name)) then
     return nil, "Unknown debug planet: " .. tostring(planet_name)
   end
 
