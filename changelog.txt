@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------------------------------
-Version: 0.1.6
+Version: 0.2.0
+  Compatibility:
+    - Updated for Factorio 2.1. Factorio 2.0 players should use version 0.1.5.
   Balancing:
     - Removed the burner mining drill from the starting inventory because there are no resource patches to mine.
   Bugfixes:

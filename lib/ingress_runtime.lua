@@ -41,8 +41,8 @@ local function set_anchor_active(anchor, entity, active)
     anchor.input_budget_active = next_active
   end
 
-  if entity and entity.valid and entity.active ~= nil and entity.active ~= next_active then
-    entity.active = next_active
+  if entity and entity.valid then
+    entity.disabled_by_script = not next_active
   end
 end
 
@@ -103,20 +103,10 @@ local function drain_fluid_anchor(entity, resource, amount)
     return 0
   end
 
-  if not entity.remove_fluid then
-    return 0
-  end
-
-  local ok, removed = pcall(entity.remove_fluid, {
+  return entity.extract_fluid({
     name = resource,
     amount = amount
   })
-
-  if not ok then
-    return 0
-  end
-
-  return removed or 0
 end
 
 local function get_mining_productivity_bonus()
