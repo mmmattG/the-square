@@ -1,27 +1,14 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 
+local helper = require("tests.helper")
+local assert_equal = helper.assert_equal
+local run_test = helper.run_test
+
 defines = {direction = {south = 1, west = 2, north = 3, east = 4}}
 settings = {global = {}}
 storage = {}
 
 local anchor_placement = require("lib.anchor_placement")
-
-local function assert_equal(actual, expected, message)
-  if actual ~= expected then
-    error((message or "values differ") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(actual))
-  end
-end
-
-local function run_test(name, fn)
-  local ok, err = pcall(fn)
-
-  if not ok then
-    io.stderr:write("FAIL " .. name .. "\n" .. err .. "\n")
-    os.exit(1)
-  end
-
-  io.stdout:write("PASS " .. name .. "\n")
-end
 
 run_test("Managed Line placement check owns Boundary and fluid gap rules", function()
   local anchor = {kind = "fluid", flow = "ingress"}

@@ -58,7 +58,7 @@ Missing expected previews are reported on the page and fail the command.
 All tooling lives in `dev/asset-gallery/`; generated pages, copied game assets and exports
 live in ignored `build/` folders. The mod builder's explicit runtime-file allowlist
 excludes both directories. `make asset-gallery-test` checks discovery and packaging
-without launching Factorio. This tool is independent of the e2e screenshot scripts.
+without launching Factorio.
 
 `make test` runs every Lua spec in `tests/*_spec.lua` and stops on the first failure. It requires either `luajit` or `lua` to be available on `PATH`; the target prefers `luajit` when both are installed.
 

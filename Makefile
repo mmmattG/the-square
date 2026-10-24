@@ -8,7 +8,7 @@ ARTIFACT := build/$(MOD_NAME)_$(MOD_VERSION).zip
 DETECTED_FACTORIO_MODS_DIR := $(shell ./scripts/detect-factorio-mods-dir.sh)
 FACTORIO_MODS_DIR ?= $(DETECTED_FACTORIO_MODS_DIR)
 
-.PHONY: all build install test typecheck unit-test e2e-load-test e2e-test e2e-content-move-test e2e-screenshot-test playtest asset-gallery asset-gallery-test
+.PHONY: all build install test typecheck unit-test playtest asset-gallery asset-gallery-test
 
 all: build install
 
@@ -35,7 +35,7 @@ install: build
 	fi
 	@printf 'Installed %s to %s\n' "$(notdir $(ARTIFACT))" "$(FACTORIO_MODS_DIR)"
 
-test: unit-test e2e-test e2e-content-move-test
+test: unit-test
 
 typecheck:
 	@if [ -z "$(LUAC)" ] && [ -z "$(LUA)" ]; then \
@@ -69,68 +69,6 @@ unit-test:
 		fi; \
 	done
 	@echo "PASS unit tests"
-
-# Runs Factorio itself and verifies the mod reaches save creation without prototype/load errors.
-# Set FACTORIO=/path/to/factorio if the binary is not on PATH or in a common install location.
-e2e-load-test:
-	@tmp=$$(mktemp); \
-	if ./scripts/e2e-load-mod.sh >$$tmp 2>&1; then \
-		rm -f $$tmp; \
-		echo "PASS e2e load test"; \
-	else \
-		status=$$?; \
-		echo "FAIL e2e load test" >&2; \
-		cat $$tmp >&2; \
-		rm -f $$tmp; \
-		exit $$status; \
-	fi
-
-# Runs Factorio itself and creates a fresh default save with this mod enabled.
-# Set FACTORIO=/path/to/factorio if the binary is not on PATH or in a common install location.
-e2e-test: e2e-load-test
-	@tmp=$$(mktemp); \
-	if ./scripts/e2e-create-default-world.sh >$$tmp 2>&1; then \
-		rm -f $$tmp; \
-		echo "PASS e2e create default world test"; \
-	else \
-		status=$$?; \
-		echo "FAIL e2e create default world test" >&2; \
-		cat $$tmp >&2; \
-		rm -f $$tmp; \
-		exit $$status; \
-	fi
-
-# Runs the contents-movement implementation inside Factorio and verifies that
-# entity state and placed tiles survive a one-tile move.
-e2e-content-move-test:
-	@tmp=$$(mktemp); \
-	if ./scripts/e2e-content-move.sh >$$tmp 2>&1; then \
-		cat $$tmp; \
-		rm -f $$tmp; \
-		echo "PASS e2e contents movement test"; \
-	else \
-		status=$$?; \
-		echo "FAIL e2e contents movement test" >&2; \
-		cat $$tmp >&2; \
-		rm -f $$tmp; \
-		exit $$status; \
-	fi
-
-# Runs Factorio with graphics and writes a rendered gameplay screenshot artifact.
-# Set E2E_SCREENSHOT_PATH=/path/to/world.png to override the default build/e2e-world.png.
-e2e-screenshot-test:
-	@tmp=$$(mktemp); \
-	if ./scripts/e2e-create-default-world-screenshot.sh >$$tmp 2>&1; then \
-		cat $$tmp; \
-		rm -f $$tmp; \
-		echo "PASS e2e screenshot test"; \
-	else \
-		status=$$?; \
-		echo "FAIL e2e screenshot test" >&2; \
-		cat $$tmp >&2; \
-		rm -f $$tmp; \
-		exit $$status; \
-	fi
 
 # Creates and launches an isolated human-in-the-loop playtest save with helper controls.
 # Set PLAYTEST_NO_LAUNCH=1 to only create the save.

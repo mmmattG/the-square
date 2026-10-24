@@ -1,23 +1,10 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 
+local helper = require("tests.helper")
+local assert_equal = helper.assert_equal
+local run_test = helper.run_test
+
 local base_screenshot = require("lib.base_screenshot")
-
-local function assert_equal(actual, expected, message)
-  if actual ~= expected then
-    error((message or "values differ") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(actual))
-  end
-end
-
-local function run_test(name, fn)
-  local ok, err = pcall(fn)
-
-  if not ok then
-    io.stderr:write("FAIL " .. name .. "\n" .. err .. "\n")
-    os.exit(1)
-  end
-
-  io.stdout:write("PASS " .. name .. "\n")
-end
 
 run_test("starting square framing includes two void tiles on each side", function()
   local spec = base_screenshot.build_capture_spec(7, 2, 32)

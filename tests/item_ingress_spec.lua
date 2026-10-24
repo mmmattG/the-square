@@ -1,29 +1,11 @@
 package.path = "./?.lua;./?/init.lua;" .. package.path
 
+local helper = require("tests.helper")
+local assert_equal = helper.assert_equal
+local assert_at_most = helper.assert_at_most
+local run_test = helper.run_test
+
 local item_ingress = require("lib.item_ingress")
-
-local function assert_equal(actual, expected, message)
-  if actual ~= expected then
-    error((message or "values differ") .. "\nexpected: " .. tostring(expected) .. "\nactual: " .. tostring(actual))
-  end
-end
-
-local function assert_at_most(actual, expected, message)
-  if actual > expected then
-    error((message or "value exceeded maximum") .. "\nmaximum: " .. tostring(expected) .. "\nactual: " .. tostring(actual))
-  end
-end
-
-local function run_test(name, fn)
-  local ok, err = pcall(fn)
-
-  if not ok then
-    io.stderr:write("FAIL " .. name .. "\n" .. err .. "\n")
-    os.exit(1)
-  end
-
-  io.stdout:write("PASS " .. name .. "\n")
-end
 
 local function simulate_ticks(item_lane_counts, tick_count)
   local carried_progress = {0, 0}

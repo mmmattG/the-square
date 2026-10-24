@@ -5,7 +5,8 @@ This project is a mod for the game Factorio.
 control.lua is reloaded on world creation
 settings.lua and data.lua on game startup
 
-Only run end-to-end (e2e) tests when explicitly asked.
+The specs in tests/ cover pure logic only (`make test`). Check anything that touches the Factorio
+API in game.
 
 changelog.txt is a user-facing changelog. Include changes that are visible to players.
 Significant internal refactors may be mentioned in broad, non-technical terms when useful for
