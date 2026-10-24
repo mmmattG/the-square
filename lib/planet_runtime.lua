@@ -1,357 +1,150 @@
-local defs = require("lib.runtime_defs")
-local planet_config = require("lib.planet_config")
-local planet_instance = require("lib.planet_instance")
-local planet_square = require("lib.planet_square")
+-- Planet lifecycle: setting up the world, a Planet's first arrival, refreshing
+-- after mod updates, and Square Expansion research.
+local anchor_runtime = require("lib.anchor_runtime")
+local expansion_research = require("lib.expansion_research")
+local managed_line_state = require("lib.managed_line_state")
+local mod_settings = require("lib.mod_settings")
+local planet_catalog = require("lib.planet_catalog")
+local planet_state = require("lib.planet_state")
+local square_runtime = require("lib.square_runtime")
 
 local planet_runtime = {}
-local ensure_surface_dimensions
 
-local function get_target_surface_size(square_size, expansions_completed)
-  return defs.get_surface_size(square_size)
-end
+-- The freeplay scenario's intro, crash site and starting drill don't fit a Square.
+-- Other scenarios have no freeplay interface.
+local function configure_freeplay()
+  local freeplay = remote.interfaces.freeplay
 
-local function get_edge_positions(bounds, side)
-  local positions = {}
-  local min_x = bounds.left_top.x
-  local min_y = bounds.left_top.y
-  local max_x = bounds.right_bottom.x - 1
-  local max_y = bounds.right_bottom.y - 1
-
-  if side == "north" then
-    for x = min_x + 1, max_x - 1 do
-      positions[#positions + 1] = {x = x, y = min_y}
-    end
-  elseif side == "south" then
-    for x = min_x + 1, max_x - 1 do
-      positions[#positions + 1] = {x = x, y = max_y}
-    end
-  elseif side == "west" then
-    for y = min_y + 1, max_y - 1 do
-      positions[#positions + 1] = {x = min_x, y = y}
-    end
-  elseif side == "east" then
-    for y = min_y + 1, max_y - 1 do
-      positions[#positions + 1] = {x = max_x, y = y}
-    end
-  end
-
-  return positions
-end
-
-local function choose_spread_positions(positions, count, side)
-  local chosen = {}
-  local position_count = #positions
-  local selected_indexes = {}
-
-  if count > position_count then
-    error("Not enough border tiles available for starter input anchors on side " .. side)
-  end
-
-  if count == 0 then
-    return chosen
-  end
-
-  if position_count % 2 == 1 then
-    local center = math.floor((position_count + 1) / 2)
-    local step = 1
-
-    if count % 2 == 1 then
-      selected_indexes[#selected_indexes + 1] = center
-    end
-
-    while #selected_indexes < count do
-      selected_indexes[#selected_indexes + 1] = center - step
-
-      if #selected_indexes < count then
-        selected_indexes[#selected_indexes + 1] = center + step
-      end
-
-      step = step + 1
-    end
-  else
-    local left = position_count / 2
-    local right = left + 1
-    local step = 0
-
-    if count % 2 == 1 then
-      selected_indexes[#selected_indexes + 1] = left
-      step = 1
-    end
-
-    while #selected_indexes < count do
-      selected_indexes[#selected_indexes + 1] = left - step
-
-      if #selected_indexes < count then
-        selected_indexes[#selected_indexes + 1] = right + step
-      end
-
-      step = step + 1
-    end
-  end
-
-  table.sort(selected_indexes)
-
-  for _, index in ipairs(selected_indexes) do
-    chosen[#chosen + 1] = positions[index]
-  end
-
-  return chosen
-end
-
-function planet_runtime.build_starter_anchor_layout(square_size, planet_name)
-  assert(planet_name, "planet_name is required")
-  local bounds = defs.get_anchor_bounds(square_size)
-  local resources_by_side = {}
-  local anchors = {}
-
-  for _, definition in ipairs(defs.get_input_definitions(planet_name)) do
-    if definition.starter_side then
-      resources_by_side[definition.starter_side] = resources_by_side[definition.starter_side] or {}
-      resources_by_side[definition.starter_side][#resources_by_side[definition.starter_side] + 1] = definition
-    end
-  end
-
-  for _, definition in ipairs(defs.get_output_definitions(planet_name)) do
-    if definition.starter_side then
-      resources_by_side[definition.starter_side] = resources_by_side[definition.starter_side] or {}
-      resources_by_side[definition.starter_side][#resources_by_side[definition.starter_side] + 1] = {
-        resource = definition.resource,
-        kind = definition.kind,
-        starter_side = definition.starter_side,
-        flow = "egress"
-      }
-    end
-  end
-
-  for _, side in ipairs({"north", "east", "south", "west"}) do
-    local side_resources = resources_by_side[side] or {}
-    local side_positions = get_edge_positions(bounds, side)
-    local chosen_positions = choose_spread_positions(side_positions, #side_resources, side)
-
-    for index, definition in ipairs(side_resources) do
-      local flow = definition.flow or "ingress"
-      anchors[#anchors + 1] = defs.create_managed_anchor(definition, flow, side, chosen_positions[index])
-    end
-  end
-
-  return anchors
-end
-
-local function build_stashed_managed_anchor(kind, flow)
-  return {
-    kind = kind,
-    flow = flow,
-    tier_level = 1,
-    item_name = defs.get_generic_anchor_item_name_for_tier(kind, flow, 1),
-    entity_name = defs.get_generic_anchor_entity_name(kind, flow),
-    item_progress = {0, 0}
-  }
-end
-
-function planet_runtime.build_initial_managed_line_state(planet_name)
-  assert(planet_name, "planet_name is required")
-  local anchors = {}
-
-  if planet_name == "nauvis" then
-    anchors[#anchors + 1] = build_stashed_managed_anchor("fluid", "ingress")
-    anchors[#anchors + 1] = build_stashed_managed_anchor("item", "ingress")
-    anchors[#anchors + 1] = build_stashed_managed_anchor("item", "ingress")
-  end
-
-  return {
-    layout_version = defs.STARTER_ANCHOR_LAYOUT_VERSION,
-    anchors = anchors
-  }
-end
-
-function planet_runtime.grant_initial_managed_line_inventory(player, planet_name)
-  local planet = planet_runtime.ensure_planet_state(planet_name)
-  local planet_state = planet and planet:get_state()
-
-  if not planet_state or planet_state.initial_managed_line_inventory_granted then
+  if not freeplay then
     return
   end
 
-  if not (player and player.valid) then
-    return
+  if freeplay.set_skip_intro then
+    remote.call("freeplay", "set_skip_intro", true)
   end
 
-  for _, anchor in ipairs(planet_runtime.build_initial_managed_line_state(planet_name).anchors) do
-    player.insert({name = anchor.item_name, count = 1})
+  if freeplay.set_disable_crashsite then
+    remote.call("freeplay", "set_disable_crashsite", true)
   end
 
-  planet_state.initial_managed_line_inventory_granted = true
-end
+  if freeplay.get_created_items and freeplay.set_created_items then
+    local created_items = remote.call("freeplay", "get_created_items")
 
-local function call_freeplay(interface_name, value)
-  if remote.interfaces.freeplay and remote.interfaces.freeplay[interface_name] then
-    return remote.call("freeplay", interface_name, value)
-  end
-end
-
-function planet_runtime.configure_freeplay()
-  call_freeplay("set_skip_intro", true)
-  call_freeplay("set_disable_crashsite", true)
-
-  if not (
-    remote.interfaces.freeplay
-    and remote.interfaces.freeplay.get_created_items
-    and remote.interfaces.freeplay.set_created_items
-  ) then
-    return
-  end
-
-  local created_items = call_freeplay("get_created_items")
-
-  if created_items then
     created_items["burner-mining-drill"] = nil
-    call_freeplay("set_created_items", created_items)
+    remote.call("freeplay", "set_created_items", created_items)
   end
 end
 
-local function build_managed_surface_tiles(square_size, surface_size, floor_tile_name, square_position)
-  local surface_bounds = defs.get_square_bounds(surface_size, square_position)
-  local tiles = {}
+local function unlock_starter_research(planet_name)
+  local technologies = game.forces.player.technologies
 
-  for y = surface_bounds.left_top.y, surface_bounds.right_bottom.y - 1 do
-    for x = surface_bounds.left_top.x, surface_bounds.right_bottom.x - 1 do
-      tiles[#tiles + 1] = {
-        name = defs.get_managed_tile_name(
-          square_size,
-          surface_size,
-          {x = x, y = y},
-          floor_tile_name,
-          square_position
-        ),
-        position = {x = x, y = y}
-      }
+  for _, technology_name in ipairs(planet_catalog.get(planet_name).starter_research or {}) do
+    if technologies[technology_name] then
+      technologies[technology_name].researched = true
+    end
+  end
+end
+
+local function spawn_starter_entities(planet)
+  local state = planet:get_state()
+
+  if state.starter_entities_spawned then
+    return
+  end
+
+  local surface = planet:get_surface()
+
+  for _, starter_entity in ipairs(planet_catalog.get(planet:get_name()).starter_entities or {}) do
+    local entity = surface.find_entities_filtered({name = starter_entity.name, position = starter_entity.position})[1]
+      or surface.create_entity({
+        name = starter_entity.name,
+        position = starter_entity.position,
+        force = "player",
+        raise_built = false
+      })
+
+    -- create_entity returns nil when something blocks the spot; skip that entity.
+    if entity and starter_entity.items then
+      local inventory = entity.get_inventory(defines.inventory.chest)
+
+      inventory.clear()
+
+      for _, stack in ipairs(starter_entity.items) do
+        inventory.insert(stack)
+      end
     end
   end
 
-  return tiles
+  state.starter_entities_spawned = true
 end
 
-function planet_runtime.refresh_managed_surface_tiles(
-  surface,
-  square_size,
-  surface_size,
-  floor_tile_name,
-  square_position
-)
-  if not surface then
+-- Sets up a Planet's Managed Lines and starter content once its surface exists, and
+-- brings them up to date after a mod update.
+function planet_runtime.refresh_planet(planet_name)
+  local planet = planet_state.get(planet_name)
+
+  if not planet:get_surface() then
     return
   end
 
-  local tile_updates = build_managed_surface_tiles(
-    square_size,
-    surface_size,
-    floor_tile_name,
-    square_position
-  )
+  managed_line_state.initialize(planet_name)
+  unlock_starter_research(planet_name)
+  anchor_runtime.reconcile(planet_name)
+  spawn_starter_entities(planet)
+  planet:get_state().managed_lines_initialized = true
+end
 
-  if #tile_updates > 0 then
-    -- Keep tile correction enabled so Factorio rebuilds the soft edge transition
-    -- between the playable floor and the out-of-map ring immediately.
-    surface.set_tiles(tile_updates, true, true, true, false)
+local function ensure_planet_initialized(planet_name)
+  local planet = planet_state.get(planet_name)
+
+  if not (planet:get_state().managed_lines_initialized and managed_line_state.get(planet_name)) then
+    planet_runtime.refresh_planet(planet_name)
   end
 end
 
-local function build_initial_surface_tiles(square_size, surface_size)
-  return build_managed_surface_tiles(square_size, surface_size)
-end
-
-function planet_runtime.build_generated_chunk_tiles(
-  square_size,
-  surface_size,
-  area,
-  floor_tile_name,
-  square_position
-)
-  local tiles = {}
-
-  for y = area.left_top.y, area.right_bottom.y - 1 do
-    for x = area.left_top.x, area.right_bottom.x - 1 do
-      local position = {x = x, y = y}
-      local tile_name = defs.get_managed_tile_name(
-        square_size,
-        surface_size,
-        position,
-        floor_tile_name,
-        square_position
-      ) or defs.VOID_TILE_NAME
-
-      tiles[#tiles + 1] = {
-        name = tile_name,
-        position = position
-      }
-    end
-  end
-
-  return tiles
-end
-
-function planet_runtime.refresh_generated_chunk_tiles(
-  surface,
-  square_size,
-  surface_size,
-  area,
-  floor_tile_name,
-  square_position
-)
-  if not (surface and area) then
-    return
-  end
-
-  local tile_updates = planet_runtime.build_generated_chunk_tiles(
-    square_size,
-    surface_size,
-    area,
-    floor_tile_name,
-    square_position
-  )
-
-  if #tile_updates > 0 then
-    surface.set_tiles(tile_updates, true, true, true, false)
-  end
-end
-
-function planet_runtime.refresh_all_generated_chunk_tiles(surface, square_size, surface_size, square_position)
-  if not surface then
-    return
-  end
-
-  for chunk in surface.get_chunks() do
-    planet_runtime.refresh_generated_chunk_tiles(surface, square_size, surface_size, {
-      left_top = {x = chunk.x * 32, y = chunk.y * 32},
-      right_bottom = {x = (chunk.x + 1) * 32, y = (chunk.y + 1) * 32}
-    }, nil, square_position)
-  end
-end
-
-function planet_runtime.refresh_generated_chunk_for_planet_surface(surface, area)
-  if not (surface and area) then
-    return false
-  end
-
-  local planet = planet_instance.for_surface(surface.name)
+-- Every new chunk on a Planet surface is painted as Square, Boundary or Void. The
+-- first chunk on a Planet sets the Planet up.
+function planet_runtime.handle_chunk_generated(surface, area)
+  local planet = planet_state.for_surface(surface)
 
   if not planet then
-    return false
+    return
   end
 
-  planet_runtime.refresh_generated_chunk_tiles(
-    surface,
-    planet:get_square_size(),
-    planet:get_surface_size(),
-    area,
-    planet:get_floor_tile_name(),
-    planet:get_square_position()
-  )
-
-  return true
+  square_runtime.paint_chunk(planet, area)
+  ensure_planet_initialized(planet:get_name())
 end
 
-local function destroy_noise_entities(surface)
+-- Puts the player in Nauvis's Square and makes it the force's spawn point.
+function planet_runtime.move_player_to_square(player)
+  local planet = planet_state.get("nauvis")
+  local surface = planet:get_surface()
+  local position = planet:get_square_position()
+
+  player.force.set_spawn_position(position, surface)
+  player.teleport(position, surface)
+  square_runtime.chart(player.force, planet)
+end
+
+-- Nauvis's stashed starting Managed Lines, given once to the first player to join.
+function planet_runtime.grant_initial_line_items(player)
+  local state = planet_state.get("nauvis"):get_state()
+
+  if state.initial_managed_line_inventory_granted then
+    return
+  end
+
+  for _, line in ipairs(managed_line_state.build_initial_lines("nauvis")) do
+    player.insert({name = line.item_name, count = 1})
+  end
+
+  state.initial_managed_line_inventory_granted = true
+end
+
+local function clear_surface(surface)
+  surface.destroy_decoratives({})
+  surface.clear_hidden_tiles()
+
   for _, entity in ipairs(surface.find_entities()) do
     if entity.valid and entity.type ~= "character" then
       entity.destroy()
@@ -359,189 +152,111 @@ local function destroy_noise_entities(surface)
   end
 end
 
-local function build_surface_map_gen_settings(square_size)
-  local surface_size = get_target_surface_size(square_size, 0)
+-- Turns Nauvis into a Square: runs on a new game, or when the mod is added to a save.
+function planet_runtime.initialize_world()
+  configure_freeplay()
 
-  return {
-    width = surface_size,
-    height = surface_size,
-    starting_points = {{x = 0, y = 0}},
-    peaceful_mode = true,
-    no_enemies_mode = true
-  }
-end
-
-function planet_runtime.ensure_planet_state(planet_name)
-  assert(planet_name, "planet_name is required")
-  return planet_instance.ensure(planet_name)
-end
-
-ensure_surface_dimensions = function(surface, target_surface_size, square_position)
-  square_position = square_position or {x = 0, y = 0}
-  local map_gen_settings = surface.map_gen_settings
-  local target_width = target_surface_size + (math.abs(square_position.x) * 2)
-  local target_height = target_surface_size + (math.abs(square_position.y) * 2)
-
-  if map_gen_settings.width < target_width or map_gen_settings.height < target_height then
-    map_gen_settings.width = math.max(map_gen_settings.width, target_width)
-    map_gen_settings.height = math.max(map_gen_settings.height, target_height)
-    surface.map_gen_settings = map_gen_settings
-  end
-
-  local chunk_radius = math.max(defs.CHART_MARGIN, math.ceil(target_surface_size / 64))
-  surface.request_to_generate_chunks(square_position, chunk_radius)
-  surface.force_generate_chunk_requests()
-end
-
-function planet_runtime.initialize_planet_surface(planet_name)
-  assert(planet_name, "planet_name is required")
-  local config = planet_config.get(planet_name)
-
-  if not config then
-    return nil
-  end
-
-  local square_size = config.square_size
-  local surface_size = get_target_surface_size(square_size, 0)
-  local surface = game.surfaces[config.surface_name]
-
-  if not surface then
-    surface = game.create_surface(config.surface_name, build_surface_map_gen_settings(square_size))
-  end
+  local planet = planet_state.get("nauvis")
+  local surface = planet:get_surface()
 
   surface.peaceful_mode = true
   surface.no_enemies_mode = true
-  ensure_surface_dimensions(surface, surface_size)
-  surface.destroy_decoratives({})
-  surface.clear_hidden_tiles()
-  destroy_noise_entities(surface)
-  -- Initial surface writes need the same correction pass or the initial void edge stays hard
-  -- until some later edit causes Factorio to recompute neighboring transitions.
-  surface.set_tiles(build_initial_surface_tiles(square_size, surface_size), true, true, true, false)
-
-  local planet = planet_runtime.ensure_planet_state(planet_name)
-  planet:set_square_size(square_size)
-  planet:set_surface_name(config.surface_name)
-
-  return surface
-end
-
-function planet_runtime.clear_surface_chart(surface)
-  if not surface then
-    return
-  end
-
-  for _, force in pairs(game.forces) do
-    force.clear_chart(surface)
-  end
-end
-
-function planet_runtime.chart_play_area(force, surface, surface_size, square_position)
-  planet_square.chart_play_area(force, surface, surface_size, square_position)
-end
-
-function planet_runtime.teleport_player_to_planet_square(player, planet_name)
-  assert(planet_name, "planet_name is required")
-  local planet = planet_instance.ensure(planet_name)
-
-  if not planet then
-    return
-  end
-
-  local surface = game.surfaces[planet:get_surface_name()]
-
-  if not surface then
-    return
-  end
-
-  local target_position = planet:get_square_position()
-  player.force.set_spawn_position(target_position, surface)
-  player.teleport(target_position, surface)
-  planet_runtime.chart_play_area(
-    player.force,
-    surface,
-    planet:get_surface_size(),
-    target_position
-  )
-end
-
-function planet_runtime.initialize_world(anchor_runtime, gui_runtime)
-  planet_runtime.configure_freeplay()
-
-  local surface = planet_runtime.initialize_planet_surface("nauvis")
+  square_runtime.ensure_surface_dimensions(surface, planet:get_surface_size(), planet:get_square_position())
+  clear_surface(surface)
+  square_runtime.paint_square(planet)
   game.forces.player.set_spawn_position({x = 0, y = 0}, surface)
-
-  if anchor_runtime then
-    anchor_runtime.initialize("nauvis")
-  end
+  ensure_planet_initialized("nauvis")
 
   for _, player in pairs(game.players) do
-    planet_runtime.teleport_player_to_planet_square(player, "nauvis")
-  end
-
-  if gui_runtime then
-    gui_runtime.sync_all_dev_guis()
-    gui_runtime.sync_all_screenshot_guis()
-    gui_runtime.sync_all_square_move_guis()
+    planet_runtime.move_player_to_square(player)
   end
 end
 
-function planet_runtime.refresh_spawn_routing(planet_name, anchor_runtime, gui_runtime)
-  assert(planet_name, "planet_name is required")
-  local planet = planet_runtime.ensure_planet_state(planet_name)
+local function notify_if_starting_size_changed()
+  local planet = planet_state.get("nauvis")
+  local starting_square_size = mod_settings.get_starting_square_size("nauvis")
 
-  if not planet then
+  if planet:get_square_size() == starting_square_size then
     return
   end
 
-  local surface = game.surfaces[planet:get_surface_name()]
+  game.print({"",
+    "[the-square] Starting square size changes only apply to new saves. ",
+    "This save remains at ",
+    planet:get_square_size(),
+    " and the current map setting is ",
+    starting_square_size,
+    "."
+  })
+end
 
-  if not surface then
+-- Brings every Planet up to date after the mod or its startup settings change.
+function planet_runtime.handle_configuration_changed()
+  if not (storage.planets and storage.planets.nauvis) then
+    planet_runtime.initialize_world()
     return
   end
 
-  planet_runtime.configure_freeplay()
-  local square_position = planet:get_square_position()
-  game.forces.player.set_spawn_position(square_position, surface)
-  ensure_surface_dimensions(
-    surface,
-    planet:get_surface_size(),
-    square_position
-  )
-
-  if anchor_runtime then
-    anchor_runtime.reconcile(planet_name)
+  for _, planet_name in ipairs(planet_catalog.SUPPORTED_PLANETS) do
+    planet_runtime.refresh_planet(planet_name)
   end
+
+  notify_if_starting_size_changed()
+
+  local nauvis = planet_state.get("nauvis")
+
+  square_runtime.repaint(nauvis)
+  square_runtime.clear_chart(nauvis)
+  configure_freeplay()
+  game.forces.player.set_spawn_position(nauvis:get_square_position(), nauvis:get_surface())
+  square_runtime.ensure_surface_dimensions(nauvis:get_surface(), nauvis:get_surface_size(), nauvis:get_square_position())
+  anchor_runtime.reconcile("nauvis")
 
   for _, player in pairs(game.players) do
-    planet_runtime.teleport_player_to_planet_square(player, planet_name)
-  end
-
-  if gui_runtime then
-    gui_runtime.sync_all_dev_guis()
-    gui_runtime.sync_all_square_move_guis()
+    planet_runtime.move_player_to_square(player)
   end
 end
 
-function planet_runtime.notify_square_size_change_applies_to_new_saves(planet_name)
-  assert(planet_name, "planet_name is required")
-  local planet = planet_instance.ensure(planet_name)
-  local config = planet_config.get(planet_name)
+-- Grows the Planet a finished Square Expansion technology belongs to. Returns false
+-- for other research.
+function planet_runtime.handle_research_finished(research)
+  local planet_name = expansion_research.get_planet_for_technology_name(research.name)
 
-  if not (planet and config) or planet:get_square_size() == config.square_size then
+  if not planet_name then
+    return false
+  end
+
+  if square_runtime.expand(planet_name) and game.players[1] then
+    game.players[1].play_sound({path = "utility/new_objective"})
+  end
+
+  local planet = planet_state.get(planet_name)
+
+  research.force.print({
+    "message.the-square-expansion-research-completed",
+    planet:get_completed_square_expansion_levels(),
+    planet:get_square_size()
+  })
+
+  return true
+end
+
+-- The dev mode Expand button grows Nauvis without research.
+function planet_runtime.expand_from_dev_button(player)
+  local result = square_runtime.expand("nauvis")
+
+  if not result then
     return
   end
 
-  game.print(
-    {"",
-      "[the-square] Starting square size changes only apply to new saves. ",
-      "This save remains at ",
-      planet:get_square_size(),
-      " and the current map setting is ",
-      config.square_size,
-      "."
-    }
-  )
+  player.play_sound({path = "utility/new_objective"})
+  game.print({"",
+    "[the-square] Square expanded from ",
+    result.previous_square_size, "x", result.previous_square_size,
+    " to ",
+    result.square_size, "x", result.square_size,
+    "."
+  })
 end
 
 return planet_runtime

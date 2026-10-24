@@ -1,23 +1,34 @@
+-- Static Planet Config for every supported Planet: starting size, floor, native
+-- resources, opt-in egress resources and starter content.
+-- Pure data, shared by the data stage, the control stage and dev/asset-gallery.
 local planet_catalog = {}
 
+-- Resource fields:
+--   unlocked_at_start  selectable in Anchor Slot Configuration from the start
+--   unlock_technology  otherwise selectable once this technology is researched
 local planets = {
   {
     name = "nauvis",
     label = "Nauvis",
     default_square_size = 7,
-    floor_tile_name = nil,
     native_free_resources = {
-      {resource = "iron-ore", kind = "item", starter_side = "north", prerequisite_resource = nil},
-      {resource = "copper-ore", kind = "item", starter_side = "north", prerequisite_resource = nil},
-      {resource = "coal", kind = "item", starter_side = "south", prerequisite_resource = nil},
-      {resource = "stone", kind = "item", starter_side = "south", prerequisite_resource = nil},
-      {resource = "water", kind = "fluid", starter_side = "west", prerequisite_resource = nil},
-      {resource = "wood", kind = "item", starter_side = "east", prerequisite_resource = nil},
-      {resource = "crude-oil", kind = "fluid", starter_side = nil, prerequisite_resource = nil},
-      {resource = "uranium-ore", kind = "item", starter_side = nil, prerequisite_resource = "crude-oil"}
+      {resource = "iron-ore", kind = "item", unlocked_at_start = true},
+      {resource = "copper-ore", kind = "item", unlocked_at_start = true},
+      {resource = "coal", kind = "item", unlocked_at_start = true},
+      {resource = "stone", kind = "item", unlocked_at_start = true},
+      {resource = "water", kind = "fluid", unlocked_at_start = true},
+      {resource = "wood", kind = "item", unlocked_at_start = true},
+      {resource = "crude-oil", kind = "fluid", unlock_technology = "oil-gathering"},
+      {resource = "uranium-ore", kind = "item", unlock_technology = "uranium-mining"}
     },
     opt_in_egress_resources = {
-      {resource = "sulfuric-acid", kind = "fluid", starter_side = nil, prerequisite_resource = "uranium-ore"}
+      {resource = "sulfuric-acid", kind = "fluid", unlock_technology = "uranium-mining"}
+    },
+    -- Nauvis is the only Planet that starts with Managed Lines, as stashed items.
+    initial_line_items = {
+      {kind = "fluid", flow = "ingress"},
+      {kind = "item", flow = "ingress"},
+      {kind = "item", flow = "ingress"}
     }
   },
   {
@@ -26,14 +37,19 @@ local planets = {
     default_square_size = 17,
     floor_tile_name = "volcanic-ash-soil",
     native_free_resources = {
-      {resource = "coal", kind = "item", starter_side = "north", prerequisite_resource = nil},
-      {resource = "calcite", kind = "item", starter_side = "east", prerequisite_resource = nil},
-      {resource = "tungsten-ore", kind = "item", starter_side = "south", prerequisite_resource = nil},
-      {resource = "sulfuric-acid", kind = "fluid", starter_side = "west", prerequisite_resource = nil},
-      {resource = "lava", kind = "fluid", starter_side = "west", prerequisite_resource = nil}
+      {resource = "coal", kind = "item", unlocked_at_start = true},
+      {resource = "calcite", kind = "item", unlocked_at_start = true},
+      {resource = "tungsten-ore", kind = "item", unlocked_at_start = true},
+      {resource = "sulfuric-acid", kind = "fluid", unlocked_at_start = true},
+      {resource = "lava", kind = "fluid", unlocked_at_start = true}
     },
     opt_in_egress_resources = {},
-    starter_research = {"calcite-processing", "tungsten-carbide"}
+    starter_research = {"calcite-processing", "tungsten-carbide"},
+    expansion_research = {
+      science_pack = "metallurgic-science-pack",
+      icon = "__space-age__/graphics/icons/metallurgic-science-pack.png",
+      order = "c-a[planet-square-expansion]-a[vulcanus]"
+    }
   },
   {
     name = "fulgora",
@@ -41,8 +57,8 @@ local planets = {
     default_square_size = 17,
     floor_tile_name = "fulgoran-dust",
     native_free_resources = {
-      {resource = "scrap", kind = "item", starter_side = "north", prerequisite_resource = nil},
-      {resource = "heavy-oil", kind = "fluid", starter_side = "west", prerequisite_resource = nil}
+      {resource = "scrap", kind = "item", unlocked_at_start = true},
+      {resource = "heavy-oil", kind = "fluid", unlocked_at_start = true}
     },
     opt_in_egress_resources = {},
     starter_research = {"recycling"},
@@ -52,6 +68,11 @@ local planets = {
       {name = "lightning-rod", position = {x = 7, y = -7}},
       {name = "lightning-rod", position = {x = -7, y = 7}},
       {name = "lightning-rod", position = {x = 7, y = 7}}
+    },
+    expansion_research = {
+      science_pack = "electromagnetic-science-pack",
+      icon = "__space-age__/graphics/icons/electromagnetic-science-pack.png",
+      order = "c-a[planet-square-expansion]-b[fulgora]"
     }
   },
   {
@@ -60,18 +81,27 @@ local planets = {
     default_square_size = 17,
     floor_tile_name = "lowland-cream-cauliflower",
     native_free_resources = {
-      {resource = "stone", kind = "item", starter_side = "north", prerequisite_resource = nil},
-      {resource = "water", kind = "fluid", starter_side = "west", prerequisite_resource = nil},
-      {resource = "yumako", kind = "item", starter_side = "south", prerequisite_resource = nil},
-      {resource = "jellynut", kind = "item", starter_side = "east", prerequisite_resource = nil}
+      {resource = "stone", kind = "item", unlocked_at_start = true},
+      {resource = "water", kind = "fluid", unlocked_at_start = true},
+      {resource = "yumako", kind = "item", unlocked_at_start = true},
+      {resource = "jellynut", kind = "item", unlocked_at_start = true}
     },
     opt_in_egress_resources = {
-      {resource = "yumako-seed", kind = "item", starter_side = "south", prerequisite_resource = nil},
-      {resource = "jellynut-seed", kind = "item", starter_side = "east", prerequisite_resource = nil}
+      {resource = "yumako-seed", kind = "item", unlocked_at_start = true},
+      {resource = "jellynut-seed", kind = "item", unlocked_at_start = true}
     },
     starter_research = {"heating-tower", "agriculture", "jellynut", "yumako"},
     starter_entities = {
-      {name = "steel-chest", position = {x = 0, y = 0}, inventory = {articles = {{name = "yumako-seed", count = 50}, {name = "jellynut-seed", count = 50}}}}
+      {
+        name = "steel-chest",
+        position = {x = 0, y = 0},
+        items = {{name = "yumako-seed", count = 50}, {name = "jellynut-seed", count = 50}}
+      }
+    },
+    expansion_research = {
+      science_pack = "agricultural-science-pack",
+      icon = "__space-age__/graphics/icons/agricultural-science-pack.png",
+      order = "c-a[planet-square-expansion]-c[gleba]"
     }
   },
   {
@@ -80,13 +110,18 @@ local planets = {
     default_square_size = 17,
     floor_tile_name = "snow-flat",
     native_free_resources = {
-      {resource = "crude-oil", kind = "fluid", starter_side = "north", prerequisite_resource = nil},
-      {resource = "ammoniacal-solution", kind = "fluid", starter_side = "east", prerequisite_resource = nil},
-      {resource = "fluorine", kind = "fluid", starter_side = "south", prerequisite_resource = nil},
-      {resource = "lithium-brine", kind = "fluid", starter_side = "west", prerequisite_resource = nil}
+      {resource = "crude-oil", kind = "fluid", unlocked_at_start = true},
+      {resource = "ammoniacal-solution", kind = "fluid", unlocked_at_start = true},
+      {resource = "fluorine", kind = "fluid", unlocked_at_start = true},
+      {resource = "lithium-brine", kind = "fluid", unlocked_at_start = true}
     },
     opt_in_egress_resources = {},
-    starter_research = {"lithium-processing"}
+    starter_research = {"lithium-processing"},
+    expansion_research = {
+      science_pack = "cryogenic-science-pack",
+      icon = "__space-age__/graphics/icons/cryogenic-science-pack.png",
+      order = "c-a[planet-square-expansion]-d[aquilo]"
+    }
   }
 }
 
@@ -98,79 +133,34 @@ for _, planet in ipairs(planets) do
   by_name[planet.name] = planet
 end
 
-local function copy_definition(definition)
-  return {
-    resource = definition.resource,
-    kind = definition.kind,
-    starter_side = definition.starter_side,
-    prerequisite_resource = definition.prerequisite_resource
-  }
-end
-
-local function copy_definitions(definitions)
-  local result = {}
-
-  for _, definition in ipairs(definitions or {}) do
-    result[#result + 1] = copy_definition(definition)
-  end
-
-  return result
-end
-
+-- Treat the returned table as read-only.
 function planet_catalog.get(planet_name)
   return by_name[planet_name]
 end
 
-function planet_catalog.get_native_free_resources(planet_name)
-  local planet = planet_catalog.get(planet_name)
-  return planet and copy_definitions(planet.native_free_resources) or nil
+function planet_catalog.is_supported(planet_name)
+  return by_name[planet_name] ~= nil
 end
 
-function planet_catalog.get_opt_in_egress_resources(planet_name)
-  local planet = planet_catalog.get(planet_name)
-  return planet and copy_definitions(planet.opt_in_egress_resources) or nil
-end
+-- Ingress lines draw from native free resources; egress lines from opt-in egress resources.
+function planet_catalog.get_resources(planet_name, flow)
+  local planet = by_name[planet_name]
 
-function planet_catalog.get_starter_research(planet_name)
-  local planet = planet_catalog.get(planet_name)
-  local result = {}
-
-  for _, technology_name in ipairs(planet and planet.starter_research or {}) do
-    result[#result + 1] = technology_name
+  if not planet then
+    return {}
   end
 
-  return result
+  return flow == "egress" and planet.opt_in_egress_resources or planet.native_free_resources
 end
 
-function planet_catalog.get_starter_entities(planet_name)
-  local planet = planet_catalog.get(planet_name)
-  local result = {}
-
-  for _, entity in ipairs(planet and planet.starter_entities or {}) do
-    result[#result + 1] = entity
+function planet_catalog.get_resource(planet_name, flow, resource)
+  for _, definition in ipairs(planet_catalog.get_resources(planet_name, flow)) do
+    if definition.resource == resource then
+      return definition
+    end
   end
 
-  return result
-end
-
-function planet_catalog.build_native_free_resources_by_planet()
-  local result = {}
-
-  for _, planet_name in ipairs(planet_catalog.SUPPORTED_PLANETS) do
-    result[planet_name] = planet_catalog.get_native_free_resources(planet_name)
-  end
-
-  return result
-end
-
-function planet_catalog.build_opt_in_egress_resources_by_planet()
-  local result = {}
-
-  for _, planet_name in ipairs(planet_catalog.SUPPORTED_PLANETS) do
-    result[planet_name] = planet_catalog.get_opt_in_egress_resources(planet_name)
-  end
-
-  return result
+  return nil
 end
 
 return planet_catalog

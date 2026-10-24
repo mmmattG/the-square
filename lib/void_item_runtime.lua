@@ -1,49 +1,38 @@
-local defs = require("lib.runtime_defs")
-local planet_instance = require("lib.planet_instance")
+-- Items dropped into the Void are destroyed instead of piling up out of reach.
+local planet_state = require("lib.planet_state")
+local square_layout = require("lib.square_layout")
+local square_runtime = require("lib.square_runtime")
 
 local void_item_runtime = {}
 
-local function get_event_entity(event)
-  return event and (event.entity or event.created_entity)
-end
-
-function void_item_runtime.should_destroy_entity(entity)
-  if not (entity and entity.valid and entity.surface and entity.position) then
+local function should_destroy(entity)
+  if not (entity.valid and entity.type == "item-entity") then
     return false
   end
 
-  if entity.type ~= "item-entity" then
-    return false
-  end
-
-  local planet = planet_instance.for_surface(entity.surface.name)
+  local planet = planet_state.for_surface(entity.surface)
 
   if not planet then
     return false
   end
 
-  local tile_position = defs.snap_entity_position_to_tile(entity.position)
-  local square_bounds = defs.get_square_bounds(
+  local tile_position = square_layout.snap_to_tile(entity.position)
+  local square_bounds = square_layout.get_square_bounds(
     planet:get_square_size(),
     planet:get_square_position()
   )
 
-  if defs.is_inside_bounds(square_bounds, tile_position) then
+  if square_layout.is_inside_bounds(square_bounds, tile_position) then
     return false
   end
 
-  return entity.surface.get_tile(tile_position).name == defs.VOID_TILE_NAME
+  return entity.surface.get_tile(tile_position).name == square_runtime.VOID_TILE_NAME
 end
 
-function void_item_runtime.destroy_if_void_item(event)
-  local entity = get_event_entity(event)
-
-  if void_item_runtime.should_destroy_entity(entity) then
+function void_item_runtime.destroy_if_in_void(entity)
+  if should_destroy(entity) then
     entity.destroy()
-    return true
   end
-
-  return false
 end
 
 return void_item_runtime

@@ -4,10 +4,6 @@ local helper = require("tests.helper")
 local assert_equal = helper.assert_equal
 local run_test = helper.run_test
 
-defines = {direction = {south = 1, west = 2, north = 3, east = 4}}
-settings = {global = {}}
-storage = {}
-
 local anchor_placement = require("lib.anchor_placement")
 
 run_test("Managed Line placement check owns Boundary and fluid gap rules", function()
