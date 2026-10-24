@@ -1,14 +1,20 @@
--- The Managed Lines a Planet owns, as stored in its planet state.
+-- The Managed Lines a Planet owns: storage.planets[planet].managed_lines, holding
+-- `anchors` (a list of line records) and, on Gleba, `gleba_fruit_budgets`.
 --
--- Each anchor record is one owned Managed Line (or an empty Anchor being configured):
---   kind, flow      "item"/"fluid", "ingress"/"egress" (nil on an unconfigured Anchor)
---   resource        what it carries (nil until configured)
+-- A line record is one of:
+--   a stashed line   kind, flow and tier_level, but no position
+--   a placed line    also resource, position and side on the Boundary
+--   an empty Anchor  only position and side: opened for configuration, or a mined
+--                    line that has not been configured again
+-- Fields:
+--   kind, flow      "item"/"fluid", "ingress"/"egress"
+--   resource        what a placed line carries
 --   tier_level      purchased item tier, see managed_line_definitions.ITEM_TIERS
---   position, side  its Anchor on the Boundary; nil while the line is stashed
+--   position, side  its Anchor on the Boundary
 --   direction       entity direction derived from flow, kind and side
 --   item_name       the inventory item that represents the line
---   entity_name     the Anchor entity prototype for the line
---   entity          the placed Anchor entity, when there is one
+--   entity_name     the Anchor entity prototype of a placed line
+--   entity          the placed Anchor entity
 --   item_progress   fractional item emission carried between ticks, per lane
 local definitions = require("lib.managed_line_definitions")
 local planet_catalog = require("lib.planet_catalog")
@@ -16,9 +22,6 @@ local planet_state = require("lib.planet_state")
 local square_layout = require("lib.square_layout")
 
 local managed_line_state = {}
-
--- Bumping this clears stored entity references so every Anchor is re-found or rebuilt.
-local LAYOUT_VERSION = 12
 
 -- Ingress items and fluid egress point into the Square; item egress and fluid
 -- ingress point out of it.
@@ -43,15 +46,11 @@ function managed_line_state.get_direction(flow, kind, side)
 end
 
 function managed_line_state.get_item_name(kind, flow, tier_level)
-  return definitions.get_item_name(kind, flow, definitions.get_item_tier_for_level(tier_level or 1).key)
+  return definitions.get_item_name(kind, flow, definitions.get_item_tier_for_level(tier_level).key)
 end
 
 function managed_line_state.get_entity_name(anchor)
-  if not anchor.resource then
-    return definitions.get_generic_entity_name(anchor.kind or "item", anchor.flow or "ingress")
-  end
-
-  return definitions.get_entity_name(anchor.kind, anchor.flow, definitions.get_item_tier_for_level(anchor.tier_level or 1).key)
+  return definitions.get_entity_name(anchor.kind, anchor.flow, definitions.get_item_tier_for_level(anchor.tier_level).key)
 end
 
 local function build_stashed_line(kind, flow)
@@ -60,7 +59,6 @@ local function build_stashed_line(kind, flow)
     flow = flow,
     tier_level = 1,
     item_name = managed_line_state.get_item_name(kind, flow, 1),
-    entity_name = definitions.get_generic_entity_name(kind, flow),
     item_progress = {0, 0}
   }
 end
@@ -92,58 +90,40 @@ local function move_anchor_onto_boundary(anchor, square_size, square_position)
   anchor.entity = nil
 end
 
+-- Recomputes a record's derived fields. Keeps budgets and progress, and keeps empty
+-- Anchors empty.
 local function normalize_anchor(anchor, square_size, square_position)
   anchor.item_progress = anchor.item_progress or {0, 0}
 
-  -- An empty Anchor that was opened for configuration but never configured.
-  if anchor.position and not anchor.resource and not (anchor.kind or anchor.flow) then
-    move_anchor_onto_boundary(anchor, square_size, square_position)
-    return
+  if anchor.kind then
+    anchor.flow = anchor.flow or "ingress"
+    anchor.tier_level = anchor.tier_level or 1
+    anchor.item_name = managed_line_state.get_item_name(anchor.kind, anchor.flow, anchor.tier_level)
+    anchor.entity_name = anchor.position and anchor.resource and managed_line_state.get_entity_name(anchor) or nil
+    anchor.direction = anchor.side and managed_line_state.get_direction(anchor.flow, anchor.kind, anchor.side) or nil
   end
 
-  anchor.flow = anchor.flow or "ingress"
-  anchor.item_name = managed_line_state.get_item_name(anchor.kind or "item", anchor.flow, anchor.tier_level)
-
-  if anchor.position then
-    anchor.entity_name = managed_line_state.get_entity_name(anchor)
-  else
-    anchor.entity_name = anchor.entity_name or definitions.get_generic_entity_name(anchor.kind or "item", anchor.flow)
-  end
-
-  anchor.direction = anchor.side and managed_line_state.get_direction(anchor.flow, anchor.kind, anchor.side) or nil
   move_anchor_onto_boundary(anchor, square_size, square_position)
 end
 
 function managed_line_state.get(planet_name)
   local planet = storage.planets and storage.planets[planet_name]
 
-  return planet and planet.starter_anchors or nil
+  return planet and planet.managed_lines or nil
 end
 
--- Creates the Planet's line set on first use and brings stored lines up to date.
+-- Creates the Planet's lines on first use and brings stored lines up to date.
 function managed_line_state.initialize(planet_name)
   local planet = planet_state.get(planet_name)
   local state = planet:get_state()
 
-  state.starter_anchors = state.starter_anchors or {
-    layout_version = LAYOUT_VERSION,
-    anchors = managed_line_state.build_initial_lines(planet_name)
-  }
+  state.managed_lines = state.managed_lines or {anchors = managed_line_state.build_initial_lines(planet_name)}
 
-  local managed_lines = state.starter_anchors
-  local layout_changed = managed_lines.layout_version ~= LAYOUT_VERSION
-
-  for _, anchor in ipairs(managed_lines.anchors) do
-    if layout_changed then
-      anchor.entity = nil
-    end
-
+  for _, anchor in ipairs(state.managed_lines.anchors) do
     normalize_anchor(anchor, planet:get_square_size(), planet:get_square_position())
   end
 
-  managed_lines.layout_version = LAYOUT_VERSION
-
-  return managed_lines
+  return state.managed_lines
 end
 
 function managed_line_state.find_by_position(managed_lines, position)
@@ -194,7 +174,7 @@ function managed_line_state.find_reusable_stashed_line(managed_lines, definition
     if not candidate.position
       and candidate.kind == definition.kind
       and candidate.flow == flow
-      and (candidate.tier_level or 1) == tier_level
+      and candidate.tier_level == tier_level
       and (not candidate.resource or candidate.resource == definition.resource)
     then
       return candidate
@@ -221,12 +201,13 @@ function managed_line_state.configure(anchor, definition, flow, side, tier_level
   anchor.side = side
   anchor.direction = managed_line_state.get_direction(flow, definition.kind, side)
   anchor.tier_level = tier_level
-  anchor.item_name = managed_line_state.get_item_name(anchor.kind, flow, tier_level)
+  anchor.item_name = managed_line_state.get_item_name(definition.kind, flow, tier_level)
   anchor.entity_name = managed_line_state.get_entity_name(anchor)
   anchor.item_progress = {0, 0}
 end
 
--- Clears a mined line's configuration but keeps it owned.
+-- A mined line becomes an empty Anchor; the player got its item back. Its tier
+-- stays as the default choice when the Anchor is configured again.
 function managed_line_state.clear(anchor)
   anchor.resource = nil
   anchor.kind = nil

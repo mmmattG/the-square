@@ -1,5 +1,15 @@
--- Per-Planet runtime state (Planet Instance and Planet Progression) in storage.planets.
--- The mod plays for the "player" force only.
+-- Per-Planet runtime state (Planet Instance and Planet Progression), one table per
+-- Planet in storage.planets. The mod plays for the "player" force only.
+--
+--   square_size                 current Square width in tiles
+--   square_position             tile the Square is centred on (Move Square changes it)
+--   expansion_research_levels   Square Expansion levels completed on this Planet
+--   managed_lines               see managed_line_state
+--   managed_lines_initialized   set once the Planet's lines and starter content exist
+--   starter_entities_spawned, initial_managed_line_inventory_granted
+--                               one-time setup flags
+--   uranium_sulfuric_acid_buffer, uranium_ore_progress_carry
+--                               Nauvis uranium budget, see managed_line_pump
 local mod_settings = require("lib.mod_settings")
 local planet_catalog = require("lib.planet_catalog")
 local square_layout = require("lib.square_layout")
@@ -8,49 +18,21 @@ local planet_state = {}
 local planet_methods = {}
 planet_methods.__index = planet_methods
 
-local function ensure_planet_state_defaults(planet_name, state)
-  local planet = planet_catalog.get(planet_name)
-  local starting_square_size = mod_settings.get_starting_square_size(planet_name)
-  local nauvis_default_square_size = planet_catalog.get("nauvis").default_square_size
-
-  state.name = planet_name
-  state.surface_name = state.surface_name or planet_name
-
-  if state.square_size == nil
-    or (
-      planet_name ~= "nauvis"
-      and state.square_size == nauvis_default_square_size
-      and (state.expansion_research_levels or 0) == 0
-      and (state.expansions_completed or 0) == 0
-    )
-  then
-    state.square_size = starting_square_size
-  end
-
-  state.surface_size = square_layout.get_surface_size(state.square_size)
-  state.floor_tile_name = state.floor_tile_name or planet.floor_tile_name
-  state.expansions_completed = state.expansions_completed or 0
-  state.expansion_research_levels = state.expansion_research_levels or 0
-  state.square_position = state.square_position or {x = 0, y = 0}
-
-  if planet_name == "nauvis" then
-    state.ingress_tier = state.ingress_tier or 1
-    state.uranium_ore_progress_carry = state.uranium_ore_progress_carry or 0
-    state.growth_progress = nil
-    state.expansion_speed_research_levels = nil
-  end
-
-  return state
-end
-
--- The state of a supported Planet, created on first use. Errors for unsupported names.
+-- The state of a supported Planet, created with defaults on first use.
 function planet_state.get(planet_name)
   assert(planet_catalog.is_supported(planet_name), "unsupported planet: " .. tostring(planet_name))
 
   storage.planets = storage.planets or {}
-  storage.planets[planet_name] = storage.planets[planet_name] or {}
 
-  return setmetatable({state = ensure_planet_state_defaults(planet_name, storage.planets[planet_name])}, planet_methods)
+  if not storage.planets[planet_name] then
+    storage.planets[planet_name] = {
+      square_size = mod_settings.get_starting_square_size(planet_name),
+      square_position = {x = 0, y = 0},
+      expansion_research_levels = 0
+    }
+  end
+
+  return setmetatable({name = planet_name, state = storage.planets[planet_name]}, planet_methods)
 end
 
 -- The Planet whose Square is on this surface, or nil.
@@ -63,19 +45,12 @@ function planet_state.for_surface(surface)
 end
 
 function planet_methods:get_name()
-  return self.state.name
+  return self.name
 end
 
+-- Each Planet's Square is on the surface of the same name. Nil until someone arrives.
 function planet_methods:get_surface()
-  return game.surfaces[self.state.surface_name]
-end
-
-function planet_methods:get_surface_name()
-  return self.state.surface_name
-end
-
-function planet_methods:set_surface_name(surface_name)
-  self.state.surface_name = surface_name
+  return game.surfaces[self.name]
 end
 
 function planet_methods:get_square_size()
@@ -84,11 +59,11 @@ end
 
 function planet_methods:set_square_size(square_size)
   self.state.square_size = square_size
-  self.state.surface_size = square_layout.get_surface_size(square_size)
 end
 
+-- The Square plus its Boundary ring.
 function planet_methods:get_surface_size()
-  return self.state.surface_size
+  return square_layout.get_surface_size(self.state.square_size)
 end
 
 function planet_methods:get_square_position()
@@ -103,7 +78,7 @@ end
 
 -- nil means "use the Background tile map setting" (Nauvis).
 function planet_methods:get_floor_tile_name()
-  return self.state.floor_tile_name
+  return planet_catalog.get(self.name).floor_tile_name
 end
 
 function planet_methods:get_completed_square_expansion_levels()
@@ -112,11 +87,10 @@ end
 
 function planet_methods:set_completed_square_expansion_levels(levels)
   self.state.expansion_research_levels = levels
-  self.state.expansions_completed = levels
 end
 
 function planet_methods:get_managed_lines()
-  return self.state.starter_anchors
+  return self.state.managed_lines
 end
 
 function planet_methods:get_state()

@@ -3,6 +3,7 @@ Version: 0.2.0
   Compatibility:
     - Updated for Factorio 2.1. Factorio 2.0 players should use version 0.1.5.
   Changes:
+    - Reworked much of the mod's code. Existing saves upgrade automatically.
     - Removed the "Enable logistic network automation" map setting. Active provider, buffer, requester and storage chests are now always available once researched.
     - Removed the "Ingress placement debug" player setting, which no longer did anything.
   Balancing:

@@ -1,6 +1,5 @@
 -- Managed Line Upgrade research and the throughput it gives each line.
 local definitions = require("lib.managed_line_definitions")
-local planet_state = require("lib.planet_state")
 
 local managed_line_tiers = {}
 
@@ -33,32 +32,22 @@ function managed_line_tiers.get_researched_item_tiers(force)
   return tiers
 end
 
-local function get_tier_state()
-  return planet_state.get("nauvis"):get_state()
-end
-
--- Copies the researched tier into storage and returns true when it changed.
-function managed_line_tiers.sync_from_research(force)
-  local tier_state = get_tier_state()
-  local tier_level = managed_line_tiers.get_researched_tier_level(force)
-
-  if tier_state.ingress_tier == tier_level and tier_state.egress_tier == tier_level then
-    return false
+function managed_line_tiers.is_upgrade_technology(technology_name)
+  for _, upgrade in ipairs(definitions.UPGRADE_TECHNOLOGIES) do
+    if upgrade.name == technology_name then
+      return true
+    end
   end
 
-  tier_state.ingress_tier = tier_level
-  tier_state.egress_tier = tier_level
-
-  return true
+  return false
 end
 
 -- A line's purchased tier sets its throughput, except that yellow lines gain their
--- second lane from the dual-lane research.
-function managed_line_tiers.get_throughput(anchor)
-  local tier_level = anchor.tier_level or 1
+-- second lane once the force has researched tier 2 (dual lane) or higher.
+function managed_line_tiers.get_throughput(anchor, researched_tier_level)
+  local tier_level = anchor.tier_level
 
-  -- Read storage directly: the pump calls this for every line on every tick.
-  if tier_level == 1 and (storage.planets.nauvis.ingress_tier or 1) >= 2 then
+  if tier_level == 1 and researched_tier_level >= 2 then
     tier_level = 2
   end
 

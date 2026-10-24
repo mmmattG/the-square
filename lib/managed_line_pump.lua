@@ -64,7 +64,7 @@ local function placed_entity(anchor)
 end
 
 -- Sulfuric acid egress fills a capped buffer that uranium ore ingress spends.
-local function drain_uranium_acid_buffer(managed_lines, planet)
+local function drain_uranium_acid_buffer(managed_lines, planet, researched_tier_level)
   local buffer_capacity = throughput_policy.URANIUM_SULFURIC_ACID_BUFFER_CAPACITY
   local buffer = math.min(buffer_capacity, math.max(0, planet.uranium_sulfuric_acid_buffer or 0))
 
@@ -78,7 +78,8 @@ local function drain_uranium_acid_buffer(managed_lines, planet)
         break
       end
 
-      local amount = math.min(managed_line_tiers.get_throughput(anchor).fluid_amount_per_tick, remaining_capacity)
+      local throughput = managed_line_tiers.get_throughput(anchor, researched_tier_level)
+      local amount = math.min(throughput.fluid_amount_per_tick, remaining_capacity)
       buffer = buffer + extract_fluid(entity, anchor.resource, amount)
     end
   end
@@ -88,14 +89,15 @@ end
 
 -- How much uranium ore each placed uranium line wants this tick, and how much of
 -- that its belt can take.
-local function collect_uranium_lines(managed_lines)
+local function collect_uranium_lines(managed_lines, researched_tier_level)
   local lines = {}
 
   for _, anchor in ipairs(managed_lines.anchors) do
     local entity = placed_entity(anchor)
 
     if entity and anchor.flow == "ingress" and anchor.resource == "uranium-ore" then
-      local lane_one_count, lane_two_count = advance_item_emissions(anchor, managed_line_tiers.get_throughput(anchor))
+      local throughput = managed_line_tiers.get_throughput(anchor, researched_tier_level)
+      local lane_one_count, lane_two_count = advance_item_emissions(anchor, throughput)
       local capacity = 0
 
       if lane_one_count > 0 and entity.get_transport_line(1).can_insert_at_back() then
@@ -148,10 +150,10 @@ local function spend_uranium_budget(uranium_lines, planet)
 end
 
 -- Returns each uranium line's share of this tick's ore budget, keyed by anchor.
-local function plan_uranium(managed_lines, planet)
-  drain_uranium_acid_buffer(managed_lines, planet)
+local function plan_uranium(managed_lines, planet, researched_tier_level)
+  drain_uranium_acid_buffer(managed_lines, planet, researched_tier_level)
 
-  local uranium_lines = collect_uranium_lines(managed_lines)
+  local uranium_lines = collect_uranium_lines(managed_lines, researched_tier_level)
 
   if #uranium_lines == 0 then
     return {}
@@ -175,7 +177,7 @@ local function plan_uranium(managed_lines, planet)
 end
 
 -- Seed egress on Gleba adds fruit to a capped budget per fruit.
-local function drain_gleba_seeds(managed_lines)
+local function drain_gleba_seeds(managed_lines, researched_tier_level)
   managed_lines.gleba_fruit_budgets = managed_lines.gleba_fruit_budgets or {}
   local budgets = managed_lines.gleba_fruit_budgets
   local fruit_capacity = throughput_policy.GLEBA_SEED_BUFFER_CAPACITY * throughput_policy.GLEBA_FRUIT_PER_SEED
@@ -185,7 +187,8 @@ local function drain_gleba_seeds(managed_lines)
     local fruit = throughput_policy.get_gleba_fruit_for_seed_anchor(anchor)
 
     if entity and fruit then
-      local lane_one_count, lane_two_count = advance_item_emissions(anchor, managed_line_tiers.get_throughput(anchor))
+      local throughput = managed_line_tiers.get_throughput(anchor, researched_tier_level)
+      local lane_one_count, lane_two_count = advance_item_emissions(anchor, throughput)
       local free_fruit_capacity = fruit_capacity - math.min(fruit_capacity, math.max(0, budgets[fruit] or 0))
       local seed_capacity = math.floor(free_fruit_capacity / throughput_policy.GLEBA_FRUIT_PER_SEED)
       local seeds = remove_items(entity, anchor.resource, 1, math.min(lane_one_count, seed_capacity))
@@ -207,9 +210,9 @@ local function pump_uranium_ingress(anchor, entity, uranium_plan)
   end
 end
 
-local function pump_gleba_fruit_ingress(anchor, entity, fruit_budgets)
+local function pump_gleba_fruit_ingress(anchor, entity, throughput, fruit_budgets)
   local available = fruit_budgets[anchor.resource] or 0
-  local lane_one_count, lane_two_count = advance_item_emissions(anchor, managed_line_tiers.get_throughput(anchor))
+  local lane_one_count, lane_two_count = advance_item_emissions(anchor, throughput)
 
   if available > 0 then
     available = available - insert_items_within_budget(entity, anchor.resource, lane_one_count, lane_two_count, available)
@@ -219,7 +222,7 @@ local function pump_gleba_fruit_ingress(anchor, entity, fruit_budgets)
 end
 
 local function pump_line(anchor, entity, planet_name, context)
-  local throughput = managed_line_tiers.get_throughput(anchor)
+  local throughput = managed_line_tiers.get_throughput(anchor, context.researched_tier_level)
 
   if anchor.flow == "ingress" then
     if anchor.kind == "fluid" then
@@ -227,7 +230,7 @@ local function pump_line(anchor, entity, planet_name, context)
     elseif anchor.resource == "uranium-ore" then
       pump_uranium_ingress(anchor, entity, context.uranium_plan)
     elseif throughput_policy.should_gate_gleba_fruit(planet_name, anchor) then
-      pump_gleba_fruit_ingress(anchor, entity, context.fruit_budgets)
+      pump_gleba_fruit_ingress(anchor, entity, throughput, context.fruit_budgets)
     else
       local lane_one_count, lane_two_count = advance_item_emissions(anchor, throughput)
 
@@ -253,17 +256,19 @@ local function pump_line(anchor, entity, planet_name, context)
   end
 end
 
-function managed_line_pump.pump_planet(planet_name)
+-- researched_tier_level comes from managed_line_tiers.get_researched_tier_level.
+function managed_line_pump.pump_planet(planet_name, researched_tier_level)
   local planet = storage.planets and storage.planets[planet_name]
-  local managed_lines = planet and planet.starter_anchors
+  local managed_lines = planet and planet.managed_lines
 
   if not managed_lines then
     return
   end
 
   local context = {
-    uranium_plan = planet_name == "nauvis" and plan_uranium(managed_lines, planet) or {},
-    fruit_budgets = planet_name == "gleba" and drain_gleba_seeds(managed_lines) or {}
+    researched_tier_level = researched_tier_level,
+    uranium_plan = planet_name == "nauvis" and plan_uranium(managed_lines, planet, researched_tier_level) or {},
+    fruit_budgets = planet_name == "gleba" and drain_gleba_seeds(managed_lines, researched_tier_level) or {}
   }
 
   for _, anchor in ipairs(managed_lines.anchors) do
@@ -276,8 +281,10 @@ function managed_line_pump.pump_planet(planet_name)
 end
 
 function managed_line_pump.pump_all()
+  local researched_tier_level = managed_line_tiers.get_researched_tier_level(game.forces.player)
+
   for _, planet_name in ipairs(planet_catalog.SUPPORTED_PLANETS) do
-    managed_line_pump.pump_planet(planet_name)
+    managed_line_pump.pump_planet(planet_name, researched_tier_level)
   end
 end
 
