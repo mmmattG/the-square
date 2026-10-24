@@ -428,4 +428,6 @@ if [ "${PLAYTEST_NO_LAUNCH:-}" ]; then
   exit 0
 fi
 
-exec "$factorio_bin" --load-game "$save_path" --config "$config_path" --mod-directory "$mod_dir"
+# Tells Steam's copy of Factorio it was started by Steam. Otherwise Steam restarts it
+# and asks to confirm the command line. Other builds ignore it.
+SteamAppId=427520 exec "$factorio_bin" --load-game "$save_path" --config "$config_path" --mod-directory "$mod_dir"

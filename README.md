@@ -71,6 +71,8 @@ Windows shells, and replaces any older copy of the mod there. Override it with
 zip is locked.
 
 `make playtest` builds a save in `build/playtest/` with helper tools and launches Factorio.
+Its dev panel can expand the Square, and with Space Age unlock each Planet, jump to a
+platform in its orbit, or land straight in its Square.
 Set `PLAYTEST_SPACE_AGE=0` for base game only, or `PLAYTEST_NO_LAUNCH=1` to only create the save.
 Set `FACTORIO=/path/to/factorio` if the game is not found.
 
