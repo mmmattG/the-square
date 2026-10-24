@@ -26,10 +26,11 @@ Everything below this was written by my LLMs, not me.
 - **Some resources have a price.** Nauvis uranium ore needs sulfuric acid sent out through an
   egress line, and Gleba fruit needs its seeds sent out. What you send out builds a small
   budget that the ingress line spends.
-- **Faster lines.** `Dual-lane ingress` (after Logistics) fills both lanes of yellow lines.
-  `Red ingress` and `Blue ingress` (after Logistics 2 and 3) unlock red and blue Managed Line
-  items, and Space Age adds turbo. Each copies the science cost of the logistics research it
-  follows.
+- **Faster lines.** `Dual-lane Managed Lines` (after Logistics) fills both lanes of yellow
+  item lines and doubles fluid lines, including the ones you own. `Red Managed Lines` and
+  `Blue Managed Lines` (after Logistics 2 and 3) unlock faster item lines, and Space Age adds
+  turbo. Lines you own keep their tier until you swap them at their Anchor. Each research
+  copies the science cost of the logistics research it follows.
 - **Space Age eggs.** With no nests to capture, `Captivity` unlocks a hand-only recipe for five
   fresh biter eggs on Nauvis, and `Biochamber` one for a pentapod egg on Gleba.
 - **Tools.** Top-bar buttons can move the Square or its contents one tile, and save a
@@ -78,7 +79,7 @@ Set `FACTORIO=/path/to/factorio` if the game is not found.
 
 ### Code map
 
-[CONTEXT.md](CONTEXT.md) defines the game terms used in the code.
+[GLOSSARY.md](GLOSSARY.md) defines the game terms used in the code.
 
 - `data.lua` loads `prototypes/`: Managed Line items and Anchors, research, tips, and egg recipes.
 - `control.lua` only routes events to the modules in `lib/`.

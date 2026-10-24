@@ -1,4 +1,4 @@
-# The Square Context
+# The Square Glossary
 
 This glossary defines the ubiquitous language for The Square, a constraint-focused Factorio challenge variant. Use these terms in design sessions, issues, documentation, and code-facing discussion so gameplay concepts stay distinct from implementation details.
 
@@ -64,12 +64,8 @@ _Avoid_: Global expansion, empire growth
 
 ### Economy And Throughput
 
-**Managed Line Tier**:
-The current throughput level shared by a **Planet**'s owned **Managed Lines**, including ingress and matching egress tiers.
-_Avoid_: Anchor tier, ingress tier, belt tier, pipe tier, lane tier
-
 **Managed Line Upgrade**:
-A global research step that raises the throughput of owned **Managed Lines** without changing ownership or placement rules. Turbo Managed Lines are the Space Age final tier for both ingress and egress.
+A research step that unlocks a faster tier of item **Managed Lines** (red, blue, then Space Age's turbo) to craft and place. Owned lines keep their tier until the player swaps them. The first step, dual-lane, is the exception: it adds the second lane to every yellow line and doubles yellow fluid lines.
 _Avoid_: Anchor upgrade, ingress upgrade, output upgrade
 
 **Difficulty Preset**:
@@ -101,10 +97,6 @@ _Avoid_: Output line, export line
 **Anchor**:
 A physical **Boundary** slot on the anchor ring where a **Managed Line** can be placed.
 _Avoid_: Managed Line, port, connector
-
-**Starter Layout**:
-The authored initial placement of a **Planet**'s pre-owned free **Managed Lines** into anchor slots.
-_Avoid_: Default spread, generated layout
 
 **Stashed Line**:
 An owned **Managed Line** with no current **Anchor** on the map.
@@ -174,7 +166,6 @@ _Avoid_: Regression, accidental break
 - One **Planet** owns exactly one local **Square**, one **Planet Config**, and one **Planet Progression**.
 - One completed **Square Expansion** adds exactly one **Ring** to one **Planet**.
 - A **Difficulty Preset** changes tuning such as starting size and pacing without changing the invariant Square rules.
-- A **Starter Layout** places a **Planet**'s initial **Managed Lines** on its **Boundary**.
 - **Anchor Slot Configuration** places one **Managed Line** into one empty **Anchor** only after the matching inventory item is consumed.
 - A **Native Free Resource** enters through an **Ingress Line**; a **Cultivated Resource** stays inside the **Square**.
 - A **Support Material Dependency** is satisfied by an **Opt-In Egress Resource** through an **Egress Line**.

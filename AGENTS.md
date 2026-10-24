@@ -31,4 +31,4 @@ and validation passes:
 Do not create the release marker commit or tag merely because info.json was bumped. The tag is
 the authoritative release boundary when auditing changes since a previous release.
 
-See CONTEXT.md for a glossary of terms
+See GLOSSARY.md for the game terms

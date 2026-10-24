@@ -18,6 +18,7 @@ Version: 0.2.0
     - In multiplayer, the whole team now hears the Square expansion sound.
     - The Vulcanus, Fulgora, Gleba and Aquilo starting square size settings now have names and descriptions.
     - Fixed an error when a blocked placement was refunded to a player with a full inventory.
+    - Fixed the Managed Line upgrade research descriptions and tips, which said every upgrade improves the lines you already own. Only Dual-lane does; Red, Blue and Turbo unlock new lines.
   Optimizations:
     - Reduced the routine script work performed by Managed Lines.
 
