@@ -96,25 +96,21 @@ script.on_event(defines.events.on_player_flipped_entity, function(event)
   managed_line_runtime.handle_rotated(event.entity)
 end)
 
-if defines.events.on_gui_opened then
-  script.on_event(defines.events.on_gui_opened, function(event)
-    if event.entity then
-      managed_line_runtime.handle_gui_opened(event.entity, game.get_player(event.player_index))
-    end
-  end)
-end
+script.on_event(defines.events.on_gui_opened, function(event)
+  if event.entity then
+    managed_line_runtime.handle_gui_opened(event.entity, game.get_player(event.player_index))
+  end
+end)
 
-if defines.events.on_gui_closed then
-  script.on_event(defines.events.on_gui_closed, function(event)
-    if event.element and gui_runtime.handle_square_move_gui_closed(game.get_player(event.player_index), event.element) then
-      return
-    end
+script.on_event(defines.events.on_gui_closed, function(event)
+  if event.element and gui_runtime.handle_square_move_gui_closed(game.get_player(event.player_index), event.element) then
+    return
+  end
 
-    if event.element and managed_line_runtime.handle_config_gui_closed(game.get_player(event.player_index), event.element) then
-      return
-    end
-  end)
-end
+  if event.element and managed_line_runtime.handle_config_gui_closed(game.get_player(event.player_index), event.element) then
+    return
+  end
+end)
 
 local function handle_entity_built(event)
   managed_line_runtime.handle_built(event, gui_runtime)
@@ -126,17 +122,13 @@ script.on_event(defines.events.on_robot_built_entity, handle_entity_built)
 script.on_event(defines.events.script_raised_built, handle_entity_built)
 script.on_event(defines.events.script_raised_revive, handle_entity_built)
 
-if defines.events.on_player_dropped_item then
-  script.on_event(defines.events.on_player_dropped_item, function(event)
-    void_item_runtime.destroy_if_void_item(event)
-  end)
-end
+script.on_event(defines.events.on_player_dropped_item, function(event)
+  void_item_runtime.destroy_if_void_item(event)
+end)
 
-if defines.events.on_trigger_created_entity then
-  script.on_event(defines.events.on_trigger_created_entity, function(event)
-    void_item_runtime.destroy_if_void_item(event)
-  end)
-end
+script.on_event(defines.events.on_trigger_created_entity, function(event)
+  void_item_runtime.destroy_if_void_item(event)
+end)
 
 local function handle_anchor_removed(event)
   managed_line_runtime.handle_mined(event.entity)

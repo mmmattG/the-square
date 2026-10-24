@@ -32,7 +32,7 @@ function planet_square_runtime.expand(planet_name, options)
     return nil
   end
 
-  if options.announce_global and game and game.print then
+  if options.announce_global then
     game.print(get_expanded_planet_message(result))
   end
 
@@ -54,7 +54,7 @@ function planet_square_runtime.expand_after_research(research, options)
   planet_instance.ensure(planet_name)
 
   planet_square_runtime.expand(planet_name, {
-    player = options.player or (game and game.players and game.players[1]),
+    player = options.player or game.players[1],
     gui_runtime = options.gui_runtime,
     managed_line_runtime = options.managed_line_runtime,
     anchor_runtime = options.anchor_runtime

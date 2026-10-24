@@ -50,7 +50,7 @@ local function build_recipe()
 end
 
 function pentapod_egg_bootstrap.install(data_stage, active_mods)
-  if not (active_mods and active_mods["space-age"]) then
+  if not active_mods["space-age"] then
     return false
   end
 
