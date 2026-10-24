@@ -60,21 +60,24 @@ local function set_tiles(surface, tiles)
 end
 
 -- Paints an area: managed positions get floor or Void, everything else Void.
-local function paint_area(surface, planet, area, floor_tile_name)
+-- With only_changes, tiles that are already right are left alone. Rewriting a Void
+-- tile would destroy the Anchor entity standing on it.
+local function paint_area(surface, planet, area, only_changes)
   local square_size = planet:get_square_size()
   local surface_size = planet:get_surface_size()
   local square_position = planet:get_square_position()
+  local floor_tile_name = planet:get_floor_tile_name()
   local tiles = {}
 
   for y = area.left_top.y, area.right_bottom.y - 1 do
     for x = area.left_top.x, area.right_bottom.x - 1 do
       local position = {x = x, y = y}
+      local name = square_runtime.get_tile_name(square_size, surface_size, position, floor_tile_name, square_position)
+        or square_runtime.VOID_TILE_NAME
 
-      tiles[#tiles + 1] = {
-        name = square_runtime.get_tile_name(square_size, surface_size, position, floor_tile_name, square_position)
-          or square_runtime.VOID_TILE_NAME,
-        position = position
-      }
+      if not (only_changes and surface.get_tile(x, y).name == name) then
+        tiles[#tiles + 1] = {name = name, position = position}
+      end
     end
   end
 
@@ -82,22 +85,23 @@ local function paint_area(surface, planet, area, floor_tile_name)
 end
 
 function square_runtime.paint_chunk(planet, area)
-  paint_area(planet:get_surface(), planet, area, planet:get_floor_tile_name())
+  paint_area(planet:get_surface(), planet, area, false)
 end
 
 -- Paints the Square and its Boundary.
 function square_runtime.paint_square(planet)
   local area = square_layout.get_square_bounds(planet:get_surface_size(), planet:get_square_position())
 
-  paint_area(planet:get_surface(), planet, area, planet:get_floor_tile_name())
+  paint_area(planet:get_surface(), planet, area, false)
 end
 
--- Repaints every generated chunk, e.g. after the Background tile setting changes.
+-- Repaints every generated chunk where it differs, e.g. after the Background tile
+-- setting changes. Buildings and Anchors are kept.
 function square_runtime.repaint(planet)
   local surface = planet:get_surface()
 
   for chunk in surface.get_chunks() do
-    paint_area(surface, planet, chunk.area, planet:get_floor_tile_name())
+    paint_area(surface, planet, chunk.area, true)
   end
 end
 
@@ -142,22 +146,22 @@ local function get_resize_tiles(planet, old_square_size, new_square_size)
 end
 
 -- Planet-Local Expansion: grows a Planet's Square by one Ring and shifts its placed
--- Managed Lines out to the new Boundary. Returns the old and new sizes, or nil when
--- the Planet has no surface yet.
+-- Managed Lines out to the new Boundary. Returns the old and new sizes.
 function square_runtime.expand(planet_name)
   local planet = planet_state.get(planet_name)
   local surface = planet:get_surface()
-
-  if not surface then
-    return nil
-  end
-
   local previous_square_size = planet:get_square_size()
   local square_size = previous_square_size + 2
   local managed_lines = planet:get_managed_lines()
 
   planet:set_square_size(square_size)
   planet:set_completed_square_expansion_levels(planet:get_completed_square_expansion_levels() + 1)
+
+  -- Research finished before anyone reaches the Planet still counts: its surface is
+  -- painted at the grown size when it is first generated.
+  if not surface then
+    return {previous_square_size = previous_square_size, square_size = square_size}
+  end
 
   square_runtime.ensure_surface_dimensions(surface, planet:get_surface_size(), planet:get_square_position())
   set_tiles(surface, get_resize_tiles(planet, previous_square_size, square_size))
