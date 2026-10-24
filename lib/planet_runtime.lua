@@ -233,18 +233,37 @@ function planet_runtime.handle_research_finished(research)
   return true
 end
 
--- The dev mode Expand button grows Nauvis without research.
-function planet_runtime.expand_from_dev_button(player)
-  local result = square_runtime.expand("nauvis")
+-- The next Square Expansion technology for a Planet: Nauvis's first unresearched
+-- level, then its infinite technology; other Planets have one infinite technology.
+local function get_next_expansion_technology(force, planet_name)
+  if planet_name ~= "nauvis" then
+    return force.technologies[expansion_research.get_planet_technology_name(planet_name)]
+  end
 
-  player.play_sound({path = "utility/new_objective"})
-  game.print({"",
-    "[the-square] Square expanded from ",
-    result.previous_square_size, "x", result.previous_square_size,
-    " to ",
-    result.square_size, "x", result.square_size,
-    "."
-  })
+  for level = 1, expansion_research.FINAL_FINITE_LEVEL do
+    local technology = force.technologies[expansion_research.get_technology_name(level)]
+
+    if technology and not technology.researched then
+      return technology
+    end
+  end
+
+  return force.technologies[expansion_research.get_technology_name(expansion_research.INFINITE_START_LEVEL)]
+end
+
+-- The dev mode Expand button finishes the next Square Expansion research for the
+-- Planet the player is viewing. on_research_finished then grows the Square as usual.
+function planet_runtime.research_next_expansion(player)
+  local planet = planet_state.for_surface(player.surface)
+  local technology = planet and get_next_expansion_technology(player.force, planet:get_name())
+
+  if not technology then
+    return {ok = false, error = {"message.the-square-dev-expand-unsupported"}}
+  end
+
+  technology.researched = true
+
+  return {ok = true}
 end
 
 return planet_runtime

@@ -127,7 +127,8 @@ function gui_runtime.sync(player)
     caption = {"gui.the-square-cliff-explosive-button"}
   })
   set_button(player.gui.top, DEV_EXPAND_BUTTON_NAME, dev_mode, {
-    caption = {"gui.the-square-dev-expand-button"}
+    caption = {"gui.the-square-dev-expand-button"},
+    tooltip = {"gui.the-square-dev-expand-button-tooltip"}
   })
 
   local frame = player.gui.left[DEBUG_FRAME_NAME]
@@ -190,8 +191,7 @@ function gui_runtime.handle_click(player, element)
 
   if name == DEV_EXPAND_BUTTON_NAME then
     if gui_runtime.is_dev_mode_enabled(player) then
-      planet_runtime.expand_from_dev_button(player)
-      gui_runtime.refresh_all_debug_panels()
+      print_failure(player, planet_runtime.research_next_expansion(player))
     end
 
     return true
