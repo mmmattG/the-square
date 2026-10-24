@@ -1,20 +1,9 @@
 local pentapod_egg_bootstrap = {}
 
-pentapod_egg_bootstrap.CATEGORY_NAME = "the-square-hand-crafting"
 pentapod_egg_bootstrap.RECIPE_NAME = "the-square-pentapod-egg-bootstrap"
 pentapod_egg_bootstrap.UNLOCK_TECHNOLOGY_NAME = "biochamber"
 pentapod_egg_bootstrap.ENERGY_REQUIRED = 15
 pentapod_egg_bootstrap.GLEBA_PRESSURE = 2000
-
-local function append_unique(values, value)
-  for _, existing_value in ipairs(values) do
-    if existing_value == value then
-      return
-    end
-  end
-
-  values[#values + 1] = value
-end
 
 local function add_recipe_unlock(technology, recipe_name)
   technology.effects = technology.effects or {}
@@ -36,7 +25,8 @@ local function build_recipe()
     type = "recipe",
     name = pentapod_egg_bootstrap.RECIPE_NAME,
     icon = "__space-age__/graphics/icons/pentapod-egg.png",
-    category = pentapod_egg_bootstrap.CATEGORY_NAME,
+    -- Only the character has the built-in "hand-crafting" category, so machines cannot make eggs.
+    categories = {"hand-crafting"},
     subgroup = "agriculture-processes",
     order = "d[organic-processing]-a[pentapod-egg]-a[bootstrap]",
     enabled = false,
@@ -47,9 +37,8 @@ local function build_recipe()
       {type = "item", name = "nutrients", amount = 30}
     },
     results = {
-      {type = "item", name = "pentapod-egg", amount = 1}
+      {type = "item", name = "pentapod-egg", amount = 1, reset_freshness_on_craft = true}
     },
-    reset_freshness_on_craft = true,
     surface_conditions = {
       {
         property = "pressure",
@@ -65,18 +54,7 @@ function pentapod_egg_bootstrap.install(data_stage, active_mods)
     return false
   end
 
-  data_stage:extend({
-    {
-      type = "recipe-category",
-      name = pentapod_egg_bootstrap.CATEGORY_NAME
-    },
-    build_recipe()
-  })
-
-  for _, character in pairs(data_stage.raw.character or {}) do
-    character.crafting_categories = character.crafting_categories or {}
-    append_unique(character.crafting_categories, pentapod_egg_bootstrap.CATEGORY_NAME)
-  end
+  data_stage:extend({build_recipe()})
 
   local technology = data_stage.raw.technology[pentapod_egg_bootstrap.UNLOCK_TECHNOLOGY_NAME]
   if technology then

@@ -77,7 +77,7 @@ end
 
 local function apply_starter_pack(platform)
   if platform.apply_starter_pack then
-    make_entity_indestructible(platform:apply_starter_pack())
+    make_entity_indestructible(platform.apply_starter_pack())
   end
 
   make_platform_indestructible(platform)

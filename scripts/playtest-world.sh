@@ -4,6 +4,7 @@ set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 mod_name=$(python3 -c 'import json, pathlib; print(json.loads(pathlib.Path("info.json").read_text())["name"])' < /dev/null)
+factorio_version=$(python3 -c 'import json, pathlib; print(json.loads(pathlib.Path("info.json").read_text())["factorio_version"])' < /dev/null)
 
 find_factorio() {
   if [ "${FACTORIO:-}" ]; then printf '%s\n' "$FACTORIO"; return 0; fi
@@ -54,14 +55,14 @@ write-data=$write_data_dir
 EOF
 
 cat > "$mod_dir/mod-list.json" <<EOF
-{"mods":[{"name":"base","enabled":true},{"name":"elevated-rails","enabled":$official_space_age_mods_enabled},{"name":"quality","enabled":$official_space_age_mods_enabled},{"name":"space-age","enabled":$official_space_age_mods_enabled},{"name":"$mod_name","enabled":true},{"name":"the-square-playtest-tools","enabled":true}]}
+{"mods":[{"name":"base","enabled":true},{"name":"elevated-rails","enabled":$official_space_age_mods_enabled},{"name":"quality","enabled":$official_space_age_mods_enabled},{"name":"recycler","enabled":$official_space_age_mods_enabled},{"name":"space-age","enabled":$official_space_age_mods_enabled},{"name":"$mod_name","enabled":true},{"name":"the-square-playtest-tools","enabled":true}]}
 EOF
 
 playtest_mod_dir="$mod_dir/the-square-playtest-tools_0.1.0"
 mkdir -p "$playtest_mod_dir"
 
 cat > "$playtest_mod_dir/info.json" <<EOF
-{"name":"the-square-playtest-tools","version":"0.1.0","title":"The Square Playtest Tools","author":"The Square tests","factorio_version":"2.0","dependencies":["base","$mod_name"]}
+{"name":"the-square-playtest-tools","version":"0.1.0","title":"The Square Playtest Tools","author":"The Square tests","factorio_version":"$factorio_version","dependencies":["base","$mod_name"]}
 EOF
 
 cat > "$playtest_mod_dir/control.lua" <<'EOF'
@@ -416,7 +417,7 @@ fi
 echo "Created playtest save: $save_path"
 echo "Playtest data directory: $case_dir"
 if [ "$official_space_age_mods_enabled" = true ]; then
-  echo "Space Age playtest mods enabled: elevated-rails, quality, space-age"
+  echo "Space Age playtest mods enabled: elevated-rails, quality, recycler, space-age"
 else
   echo "Space Age playtest mods disabled"
 fi

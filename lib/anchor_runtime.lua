@@ -81,9 +81,7 @@ local function configure_source_anchor_entity(entity, direction, anchor, planet_
 
   entity.destructible = false
   entity.operable = true
-  if entity.active ~= nil then
-    entity.active = should_anchor_entity_be_active(anchor, planet_name)
-  end
+  entity.disabled_by_script = not should_anchor_entity_be_active(anchor, planet_name)
 end
 
 local function get_required_underground_belt_type(anchor)

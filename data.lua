@@ -529,7 +529,11 @@ local function round_to_nearest_50(value)
 end
 
 local function build_planet_expansion_technology(planet_name, definition)
-  if not (data.raw.tool and data.raw.tool[definition.science_pack]) then
+  -- Factorio 2.1 made science packs plain items, but mods can still define tool-type packs.
+  -- data.raw.tool is nil when no tool prototypes exist at all.
+  local tools = data.raw.tool or {}
+
+  if not (data.raw.item[definition.science_pack] or tools[definition.science_pack]) then
     return nil
   end
 
