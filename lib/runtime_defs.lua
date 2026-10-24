@@ -10,7 +10,6 @@ runtime_defs.BASE_SCREENSHOT_MARGIN_TILES = 2
 runtime_defs.BASE_SCREENSHOT_DIRECTORY = "the-square"
 runtime_defs.SETTING_NAUVIS_STARTING_SQUARE_SIZE = "the-square-nauvis-starting-square-size"
 runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH = "the-square-expansion-tiles-per-research"
-runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION = "the-square-enable-logistic-network-automation"
 runtime_defs.SETTING_BACKGROUND_TILE = "the-square-background-tile"
 runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE = "the-square-screenshot-pixels-per-tile"
 runtime_defs.SETTING_SCREENSHOT_ALT_MODE = "the-square-screenshot-alt-mode"
@@ -19,7 +18,6 @@ runtime_defs.SETTING_INGRESS_PLACEMENT_DEBUG = "the-square-ingress-placement-deb
 runtime_defs.SETTING_CLIFF_EXPLOSIVE_BUTTON = "the-square-cliff-explosive-button"
 runtime_defs.LEGACY_SETTING_NAMES = {
   [runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH] = "fes-expansion-tiles-per-research",
-  [runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION] = "fes-enable-logistic-network-automation",
   [runtime_defs.SETTING_BACKGROUND_TILE] = "fes-background-tile",
   [runtime_defs.SETTING_SCREENSHOT_PIXELS_PER_TILE] = "fes-screenshot-pixels-per-tile",
   [runtime_defs.SETTING_SCREENSHOT_ALT_MODE] = "fes-screenshot-alt-mode",
@@ -167,12 +165,6 @@ runtime_defs.EXPANSION_RESEARCH_BANDS = {
     start_level = 41,
     label = "All science through space"
   }
-}
-runtime_defs.FORBIDDEN_LOGISTIC_CONTAINER_NAMES = {
-  ["active-provider-chest"] = true,
-  ["buffer-chest"] = true,
-  ["requester-chest"] = true,
-  ["storage-chest"] = true
 }
 runtime_defs.COUNTED_CATEGORY_ORDER = {
   "crafting",
@@ -623,10 +615,6 @@ end
 
 function runtime_defs.get_expansion_tiles_per_research()
   return get_setting_value(settings.startup, runtime_defs.SETTING_EXPANSION_TILES_PER_RESEARCH, 7)
-end
-
-function runtime_defs.is_logistic_network_automation_enabled()
-  return get_setting_value(settings.global, runtime_defs.SETTING_ENABLE_LOGISTIC_NETWORK_AUTOMATION, false)
 end
 
 function runtime_defs.get_square_bounds(size, center)

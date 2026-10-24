@@ -588,38 +588,6 @@ local function get_entity_refund_item_name(entity)
   return items_to_place[1].name
 end
 
-local function is_forbidden_logistic_container(entity)
-  return entity
-    and entity.valid
-    and entity.type == "logistic-container"
-    and defs.FORBIDDEN_LOGISTIC_CONTAINER_NAMES[entity.name] == true
-end
-
-local function apply_logistic_network_setting_to_force(force)
-  if not (force and force.valid) then
-    return
-  end
-
-  if defs.is_logistic_network_automation_enabled() then
-    force.reset_technology_effects()
-    return
-  end
-
-  for recipe_name in pairs(defs.FORBIDDEN_LOGISTIC_CONTAINER_NAMES) do
-    local recipe = force.recipes[recipe_name]
-
-    if recipe then
-      recipe.enabled = false
-    end
-  end
-end
-
-function anchor_runtime.apply_logistic_network_setting_to_all_forces()
-  for _, force in pairs(game.forces) do
-    apply_logistic_network_setting_to_force(force)
-  end
-end
-
 local function reject_anchor_placement(entity, actor, message)
   if not (entity and entity.valid) then
     return
@@ -1434,20 +1402,9 @@ function anchor_runtime.handle_entity_built(event, gui_runtime)
     return
   end
 
-  if is_forbidden_logistic_container(entity) and not defs.is_logistic_network_automation_enabled() then
-    reject_reserved_ring_placement(
-      entity,
-      actor,
-      {"message.the-square-logistic-network-disabled", {"entity-name." .. entity.name}}
-    )
-    return
-  end
-
   if anchor_runtime.is_managed_anchor_entity_name(entity.name) then
     handle_managed_anchor_built(entity, actor, gui_runtime)
   end
 end
-
-anchor_runtime.apply_logistic_network_setting_to_force = apply_logistic_network_setting_to_force
 
 return anchor_runtime

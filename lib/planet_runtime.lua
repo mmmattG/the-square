@@ -486,7 +486,6 @@ function planet_runtime.initialize_world(anchor_runtime, gui_runtime)
 
   if anchor_runtime then
     anchor_runtime.initialize("nauvis")
-    anchor_runtime.apply_logistic_network_setting_to_all_forces()
   end
 
   for _, player in pairs(game.players) do
@@ -525,7 +524,6 @@ function planet_runtime.refresh_spawn_routing(planet_name, anchor_runtime, gui_r
 
   if anchor_runtime then
     anchor_runtime.reconcile(planet_name)
-    anchor_runtime.apply_logistic_network_setting_to_all_forces()
   end
 
   for _, player in pairs(game.players) do

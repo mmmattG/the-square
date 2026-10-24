@@ -54,13 +54,6 @@ data:extend({
 		order = "b",
 	},
 	{
-		type = "bool-setting",
-		name = "the-square-enable-logistic-network-automation",
-		setting_type = "runtime-global",
-		default_value = true,
-		order = "d",
-	},
-	{
 		type = "string-setting",
 		name = "the-square-background-tile",
 		setting_type = "runtime-global",
