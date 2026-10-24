@@ -8,7 +8,7 @@ ARTIFACT := build/$(MOD_NAME)_$(MOD_VERSION).zip
 DETECTED_FACTORIO_MODS_DIR := $(shell ./scripts/detect-factorio-mods-dir.sh)
 FACTORIO_MODS_DIR ?= $(DETECTED_FACTORIO_MODS_DIR)
 
-.PHONY: all build install test typecheck unit-test playtest asset-gallery asset-gallery-test
+.PHONY: all build install test syntax-check unit-test playtest asset-gallery asset-gallery-test
 
 all: build install
 
@@ -37,7 +37,7 @@ install: build
 
 test: unit-test
 
-typecheck:
+syntax-check:
 	@if [ -z "$(LUAC)" ] && [ -z "$(LUA)" ]; then \
 		echo "error: expected luac, luajit, or lua in PATH" >&2; \
 		exit 1; \
