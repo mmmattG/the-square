@@ -11,7 +11,9 @@ find_factorio() {
   if command -v factorio >/dev/null 2>&1; then command -v factorio; return 0; fi
   for candidate in \
     "/Applications/Factorio.app/Contents/MacOS/factorio" \
-    "$HOME/Library/Application Support/Steam/steamapps/common/Factorio/factorio.app/Contents/MacOS/factorio"; do
+    "$HOME/Library/Application Support/Steam/steamapps/common/Factorio/factorio.app/Contents/MacOS/factorio" \
+    "$HOME/.local/share/Steam/steamapps/common/Factorio/bin/x64/factorio" \
+    "$HOME/.steam/steam/steamapps/common/Factorio/bin/x64/factorio"; do
     if [ -x "$candidate" ]; then printf '%s\n' "$candidate"; return 0; fi
   done
   return 1
