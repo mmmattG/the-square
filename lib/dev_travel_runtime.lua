@@ -1,8 +1,10 @@
--- Dev mode helper: one paused, indestructible space platform per Planet orbit to
--- jump into for testing.
-local planet_catalog = require("lib.planet_catalog")
+-- Dev mode travel between Planets for testing (Space Age only): unlock a Planet,
+-- jump into a paused, indestructible debug platform in its orbit, or land straight
+-- in its Square without the cargo pod ride.
+local planet_state = require("lib.planet_state")
+local square_runtime = require("lib.square_runtime")
 
-local debug_platform_runtime = {}
+local dev_travel_runtime = {}
 
 local function ensure_storage()
   storage.debug_space_platforms = storage.debug_space_platforms or {}
@@ -95,15 +97,11 @@ local function create_platform(force, planet_name)
   return platform
 end
 
-function debug_platform_runtime.is_space_age_active()
+function dev_travel_runtime.is_space_age_active()
   return script.active_mods["space-age"] ~= nil
 end
 
-function debug_platform_runtime.ensure_platform(force, planet_name)
-  if not (force and planet_name and planet_catalog.is_supported(planet_name)) then
-    return nil, "Unknown debug planet: " .. tostring(planet_name)
-  end
-
+local function ensure_platform(force, planet_name)
   local platform = get_stored_platform(force, planet_name) or find_existing_platform(force, planet_name)
 
   if platform then
@@ -115,24 +113,71 @@ function debug_platform_runtime.ensure_platform(force, planet_name)
   return create_platform(force, planet_name)
 end
 
-function debug_platform_runtime.teleport_player_to_planet_platform(player, planet_name)
-  if not (player and player.valid and player.force) then
-    return {ok = false, error = "Invalid player"}
-  end
-
-  local platform, err = debug_platform_runtime.ensure_platform(player.force, planet_name)
-
-  if not platform then
-    return {ok = false, error = err or "Could not create debug space platform"}
-  end
-
-  local ok = player.enter_space_platform(platform)
-
-  if not ok then
-    return {ok = false, error = "Could not enter debug space platform"}
-  end
-
-  return {ok = true, platform = platform}
+-- Space Age's technology that unlocks travel to a Planet. Nauvis has none.
+function dev_travel_runtime.get_discovery_technology(force, planet_name)
+  return force.technologies["planet-discovery-" .. planet_name]
 end
 
-return debug_platform_runtime
+function dev_travel_runtime.unlock_planet(force, planet_name)
+  local technology = dev_travel_runtime.get_discovery_technology(force, planet_name)
+
+  if technology then
+    technology.researched = true
+  end
+end
+
+-- A player sitting in a platform hub can't enter another platform, and teleporting a
+-- player in remote view only moves the view. This puts the player back in control of
+-- their character, wherever it stands.
+local function return_to_character(player)
+  if player.hub then
+    player.leave_space_platform()
+  end
+
+  if player.controller_type == defines.controllers.remote then
+    player.exit_remote_view()
+  end
+end
+
+function dev_travel_runtime.go_to_orbit(player, planet_name)
+  local platform = ensure_platform(player.force, planet_name)
+
+  if not platform then
+    return {ok = false, error = "Could not create a debug platform above " .. planet_name}
+  end
+
+  if player.hub and player.hub == platform.hub then
+    return {ok = true}
+  end
+
+  return_to_character(player)
+
+  if not player.enter_space_platform(platform) then
+    return {ok = false, error = "Could not enter the debug platform above " .. planet_name}
+  end
+
+  return {ok = true}
+end
+
+-- Teleports the player's character into the Planet's Square. A Planet nobody has
+-- visited has no surface yet, so this creates it; generating the Square's chunks
+-- paints them and sets the Planet up, as a normal first landing would.
+function dev_travel_runtime.land(player, planet_name)
+  local surface = game.surfaces[planet_name] or game.planets[planet_name].create_surface()
+  local planet = planet_state.get(planet_name)
+  local center = planet:get_square_position()
+
+  square_runtime.ensure_surface_dimensions(surface, planet:get_surface_size(), center)
+
+  local position = surface.find_non_colliding_position("character", center, 16, 0.5) or center
+
+  return_to_character(player)
+
+  if not player.teleport(position, surface) then
+    return {ok = false, error = "Could not land on " .. planet_name}
+  end
+
+  return {ok = true}
+end
+
+return dev_travel_runtime
