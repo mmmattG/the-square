@@ -34,12 +34,25 @@ local CONTENT_OBSTRUCTION_ENTITY_TYPES_TO_IGNORE = {
   ["rocket-silo-rocket-shadow"] = true
 }
 
--- Clone the rocket explicitly to preserve a ready silo. Factorio recreates its
--- shadow, so cloning the shadow separately would double-count staged entities.
+-- Characters stay put. Rocket shadows move with their rocket (see find_rocket_shadows)
+-- and are not counted as contents.
 local CONTENT_CLONE_ENTITY_TYPES_TO_IGNORE = {
   character = true,
   ["rocket-silo-rocket-shadow"] = true
 }
+
+-- Silos, rockets and cargo pods move by teleport instead of cloning. A cloned ready
+-- rocket loses its cargo pod, which empties its cargo and stops it taking more.
+-- Silos go first, so each rocket, shadow and pod lands back on its moved silo.
+local TELEPORT_ORDER_BY_TYPE = {
+  ["rocket-silo"] = 1,
+  ["rocket-silo-rocket"] = 2,
+  ["rocket-silo-rocket-shadow"] = 3,
+  ["cargo-pod"] = 4
+}
+
+-- A rocket casts a shadow several tiles to the side, which can fall outside the Square.
+local ROCKET_SHADOW_SEARCH_MARGIN = 8
 
 local function copy_position(position)
   return {x = position.x, y = position.y}
@@ -539,6 +552,54 @@ local function clone_tiles_to_staging_surface(surface, staging_surface, source_b
   })
 end
 
+local function is_teleported_entity(entity)
+  return TELEPORT_ORDER_BY_TYPE[entity.type] ~= nil
+end
+
+-- Shadows of rockets in the Square, which are not counted as its contents.
+local function find_rocket_shadows(surface, bounds)
+  return surface.find_entities_filtered({
+    type = "rocket-silo-rocket-shadow",
+    area = {
+      left_top = {
+        x = bounds.left_top.x - ROCKET_SHADOW_SEARCH_MARGIN,
+        y = bounds.left_top.y - ROCKET_SHADOW_SEARCH_MARGIN
+      },
+      right_bottom = {
+        x = bounds.right_bottom.x + ROCKET_SHADOW_SEARCH_MARGIN,
+        y = bounds.right_bottom.y + ROCKET_SHADOW_SEARCH_MARGIN
+      }
+    }
+  })
+end
+
+local function sort_for_teleport(entities)
+  table.sort(entities, function(a, b)
+    return TELEPORT_ORDER_BY_TYPE[a.type] < TELEPORT_ORDER_BY_TYPE[b.type]
+  end)
+end
+
+-- Teleports each entity one tile in direction, or back again with distance -1.
+-- Rockets and pods sit off the tile grid, so positions are kept exact. If one
+-- cannot move, the ones already moved are put back and this returns false.
+local function teleport_entities(entities, direction, distance)
+  for index, entity in ipairs(entities) do
+    local target = square_layout.move_position(entity.position, direction, distance)
+
+    if not entity.teleport(target, nil, false, false) then
+      for undo_index = index - 1, 1, -1 do
+        local moved = entities[undo_index]
+
+        moved.teleport(square_layout.move_position(moved.position, direction, -distance), nil, false, false)
+      end
+
+      return false
+    end
+  end
+
+  return true
+end
+
 local function restore_entities_from_staging_surface(
   surface,
   staging_surface,
@@ -567,15 +628,28 @@ local function move_contents(planet, surface, direction)
   local connected_managed_lines = get_connected_managed_lines(surface, managed_lines)
   local permitted_leading_connections = build_permitted_connections(managed_lines, direction)
   local movable_entities = {}
+  local teleported_entities = {}
   local held_leading_connections = {}
 
   for _, entity in ipairs(collect_contents_entities(surface, bounds)) do
-    if is_permitted_departing_connection(entity, permitted_leading_connections) then
+    if is_teleported_entity(entity) then
+      teleported_entities[#teleported_entities + 1] = entity
+    elseif is_permitted_departing_connection(entity, permitted_leading_connections) then
       held_leading_connections[#held_leading_connections + 1] = entity
     else
       movable_entities[#movable_entities + 1] = entity
     end
   end
+
+  -- Teleported entities never leave the Square, so they count towards what it should
+  -- hold. Rocket shadows are left out of that count, like every other check here.
+  local expected_count = #movable_entities + #teleported_entities
+
+  for _, shadow in ipairs(find_rocket_shadows(surface, bounds)) do
+    teleported_entities[#teleported_entities + 1] = shadow
+  end
+
+  sort_for_teleport(teleported_entities)
 
   -- Staging on a temporary surface lets Factorio clone entity state before the
   -- originals are removed, and provides the source needed to roll back a failed move.
@@ -605,22 +679,37 @@ local function move_contents(planet, surface, direction)
   destroy_entities(movable_entities)
   destroy_entities(held_leading_connections)
 
-  if not restore_entities_from_staging_surface(
+  local teleported = teleport_entities(teleported_entities, direction, 1)
+
+  if not (teleported and restore_entities_from_staging_surface(
     surface,
     staging_surface,
     staged_entities,
     to_destination_offset,
     bounds,
-    #movable_entities
-  ) then
-    destroy_entities(collect_contents_entities(surface, bounds))
+    expected_count
+  )) then
+    local restored_entities = {}
+
+    for _, entity in ipairs(collect_contents_entities(surface, bounds)) do
+      if not is_teleported_entity(entity) then
+        restored_entities[#restored_entities + 1] = entity
+      end
+    end
+
+    destroy_entities(restored_entities)
+
+    if teleported then
+      teleport_entities(teleported_entities, direction, -1)
+    end
+
     restore_entities_from_staging_surface(
       surface,
       staging_surface,
       staged_entities,
       center,
       bounds,
-      #movable_entities
+      expected_count
     )
 
     for anchor, connection in pairs(connected_managed_lines) do

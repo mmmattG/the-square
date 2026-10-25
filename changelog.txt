@@ -20,6 +20,7 @@ Date: 2026-10-25
     - In multiplayer, the whole team now hears the Square expansion sound.
     - The Vulcanus, Fulgora, Gleba and Aquilo starting square size settings now have names and descriptions.
     - Fixed an error when a blocked placement was refunded to a player with a full inventory.
+    - Moving the Square's contents no longer empties the cargo of a rocket waiting in a rocket silo.
     - The missing item and full inventory messages now name Fast, Express and Turbo Ingress and Egress instead of showing an unknown locale key.
     - Fixed the Ingress and Egress upgrade research descriptions and tips, which said every upgrade improves the ones you already own. Only Dual-lane does; Fast, Express and Turbo unlock new ones.
   Optimizations:
