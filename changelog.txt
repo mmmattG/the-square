@@ -3,15 +3,12 @@ Version: 0.2.0
 Date: 2026-10-25
   Changes:
     - Updated for Factorio 2.1. Existing saves upgrade automatically. Factorio 2.0 players should keep using 0.1.5.
-    - Managed Lines are now called Ingress and Egress. Their faster tiers use Factorio's belt names: Fast, Express and Turbo.
-    - Logistic chests are now always available once researched. The setting that turned them off is gone.
+    - Removed the "Enable logistic network automation" setting.
     - The starting burner mining drill is gone, since there are no ore patches to mine.
   Bugfixes:
     - Moving the Square's contents no longer empties a rocket waiting in a silo.
     - Gleba's seed Egress no longer breaks when the Square expands.
     - Changing the Background tile no longer removes Ingress and Egress placed on Nauvis.
-    - Updating the mod no longer sends every player back to Nauvis.
-    - Square expansion research finished before you reach a Planet now counts when you arrive.
     - Fixed several smaller bugs and some confusing text.
 
 ---------------------------------------------------------------------------------------------------
