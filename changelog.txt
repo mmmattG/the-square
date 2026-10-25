@@ -1,32 +1,18 @@
 ---------------------------------------------------------------------------------------------------
 Version: 0.2.0
 Date: 2026-10-25
-  Optimizations:
-    - Reduced the routine script work performed by Ingress and Egress.
-  Balancing:
-    - Removed the burner mining drill from the starting inventory because there are no resource patches to mine.
   Changes:
-    - Reworked much of the mod's code. Existing saves upgrade automatically.
-    - Managed Lines are now called Ingress and Egress, and their tiers use Factorio's belt names: Item Ingress, then Fast, Express and Turbo. Their descriptions still name the belt colour.
-    - Removed the "Enable logistic network automation" map setting. Active provider, buffer, requester and storage chests are now always available once researched.
-    - Removed the "Ingress placement debug" player setting, which no longer did anything.
+    - Updated for Factorio 2.1. Existing saves upgrade automatically. Factorio 2.0 players should keep using 0.1.5.
+    - Managed Lines are now called Ingress and Egress. Their faster tiers use Factorio's belt names: Fast, Express and Turbo.
+    - Logistic chests are now always available once researched. The setting that turned them off is gone.
+    - The starting burner mining drill is gone, since there are no ore patches to mine.
   Bugfixes:
-    - Moving the Square's contents no longer empties the cargo of a rocket waiting in a rocket silo.
-    - Item Egress, such as Gleba's seed Egress, no longer breaks when the Square expands.
-    - Changing the Background tile map setting no longer removes Nauvis's placed Ingress and Egress, and mod updates no longer empty their belts and pipes.
-    - Updating the mod no longer teleports every player back to Nauvis.
-    - Square expansion research finished before anyone reaches a Planet now counts when the Planet is first visited.
-    - The "starting square size only applies to new saves" notice no longer appears after every update once the Square has grown.
-    - In multiplayer, the whole team now hears the Square expansion sound.
-    - Fixed an error when a blocked placement was refunded to a player with a full inventory.
-    - The missing item and full inventory messages now name Fast, Express and Turbo Ingress and Egress instead of showing an unknown locale key.
-    - Fixed the Ingress and Egress upgrade research descriptions and tips, which said every upgrade improves the ones you already own. Only Dual-lane does; Fast, Express and Turbo unlock new ones.
-    - The Vulcanus, Fulgora, Gleba and Aquilo starting square size settings now have names and descriptions.
-    - Removed obsolete Ingress and Egress configuration recipes from the crafting menu.
-  Debug:
-    - Developer mode can now unlock, orbit and land on each Planet, and its Expand button finishes the next Square expansion research for the Planet you are viewing.
-  Compatibility:
-    - Updated for Factorio 2.1. Factorio 2.0 players should use version 0.1.5.
+    - Moving the Square's contents no longer empties a rocket waiting in a silo.
+    - Gleba's seed Egress no longer breaks when the Square expands.
+    - Changing the Background tile no longer removes Ingress and Egress placed on Nauvis.
+    - Updating the mod no longer sends every player back to Nauvis.
+    - Square expansion research finished before you reach a Planet now counts when you arrive.
+    - Fixed several smaller bugs and some confusing text.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.5
