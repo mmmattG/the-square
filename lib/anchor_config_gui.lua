@@ -60,6 +60,12 @@ local function print_debug(player, message)
   end
 end
 
+-- A Managed Line item's display name, e.g. "Red Item Ingress Managed Line". Item lines
+-- build their names from tier and type, so there is no "item-name.<name>" locale key.
+local function get_item_display_name(item_name)
+  return prototypes.item[item_name].localised_name
+end
+
 local function are_prerequisites_researched(technology)
   for _, prerequisite in pairs(technology.prerequisites) do
     if not prerequisite.researched then
@@ -287,12 +293,12 @@ local function pick(player, open_config, anchor, managed_lines, flow, resource)
   local is_line_type_change = previous_item_name ~= nil and previous_item_name ~= next_item_name
 
   if is_line_type_change and not player.can_insert({name = previous_item_name, count = 1}) then
-    player.print({"message.the-square-managed-line-refund-inventory-full", {"item-name." .. previous_item_name}})
+    player.print({"message.the-square-managed-line-refund-inventory-full", get_item_display_name(previous_item_name)})
     return
   end
 
   if (is_new_line or is_line_type_change) and player.remove_item({name = next_item_name, count = 1}) < 1 then
-    player.print({"message.the-square-managed-line-missing-inventory", {"item-name." .. next_item_name}})
+    player.print({"message.the-square-managed-line-missing-inventory", get_item_display_name(next_item_name)})
     return
   end
 
@@ -311,7 +317,7 @@ local function pick(player, open_config, anchor, managed_lines, flow, resource)
 
   if is_line_type_change and player.insert({name = previous_item_name, count = 1}) < 1 then
     player.insert({name = next_item_name, count = 1})
-    player.print({"message.the-square-managed-line-refund-inventory-full", {"item-name." .. previous_item_name}})
+    player.print({"message.the-square-managed-line-refund-inventory-full", get_item_display_name(previous_item_name)})
     return
   end
 
