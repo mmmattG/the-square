@@ -187,7 +187,7 @@ local function get_connector_entity_name(anchor)
   return definitions.get_item_tier_for_level(anchor.tier_level).transport_belt
 end
 
--- Managed Line Shift: replaces a line's Anchor entity with a plain belt or pipe, so
+-- Anchor Shift: replaces a line's Anchor entity with a plain belt or pipe, so
 -- the line still reaches its Anchor once the Anchor moves one tile further out.
 function anchor_runtime.leave_connector(surface, anchor)
   local connector_name = get_connector_entity_name(anchor)

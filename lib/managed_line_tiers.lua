@@ -1,4 +1,4 @@
--- Managed Line Upgrade research and the throughput it gives each line.
+-- Tier Upgrade research and the throughput it gives each line.
 local definitions = require("lib.managed_line_definitions")
 
 local managed_line_tiers = {}

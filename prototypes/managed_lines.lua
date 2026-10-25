@@ -142,7 +142,7 @@ local function build_line_recipe(kind, flow, tier)
   return {
     type = "recipe",
     name = name,
-    -- Higher tiers are unlocked by their Managed Line Upgrade research.
+    -- Higher tiers are unlocked by their Tier Upgrade research.
     enabled = tier.key == "yellow",
     energy_required = 5,
     ingredients = get_line_ingredients(kind, flow, tier),
