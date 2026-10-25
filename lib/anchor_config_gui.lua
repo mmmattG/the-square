@@ -60,7 +60,7 @@ local function print_debug(player, message)
   end
 end
 
--- A Managed Line item's display name, e.g. "Red Item Ingress Managed Line". Item lines
+-- A Managed Line item's display name, e.g. "Fast Item Ingress". Item lines
 -- build their names from tier and type, so there is no "item-name.<name>" locale key.
 local function get_item_display_name(item_name)
   return prototypes.item[item_name].localised_name

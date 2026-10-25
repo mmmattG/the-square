@@ -19,18 +19,20 @@ Everything below this was written by my LLMs, not me.
   side. Nauvis levels step up through science packs every ten levels, then continue forever
   with all science through space. Each other Planet has one infinite expansion research paid
   in its own science pack.
-- **Resources come from Managed Lines.** There are no ore patches. Click an empty Anchor on
-  the edge of the Square to place a Managed Line. Ingress lines bring a Planet's native
-  resources in; egress lines send support materials out. Placing one uses a Managed Line
-  item. Nauvis starts with three in your inventory, and you craft more.
+- **Resources come from Ingress.** There are no ore patches. Click an empty Anchor on the
+  edge of the Square to place an Ingress or Egress item. Ingress brings a Planet's native
+  resources in; Egress sends support materials out. Nauvis starts with three in your
+  inventory, and you craft more.
 - **Some resources have a price.** Nauvis uranium ore needs sulfuric acid sent out through an
-  egress line, and Gleba fruit needs its seeds sent out. What you send out builds a small
-  budget that the ingress line spends.
-- **Faster lines.** `Dual-lane Managed Lines` (after Logistics) fills both lanes of yellow
-  item lines and doubles fluid lines, including the ones you own. `Red Managed Lines` and
-  `Blue Managed Lines` (after Logistics 2 and 3) unlock faster item lines, and Space Age adds
-  turbo. Lines you own keep their tier until you swap them at their Anchor. Each research
-  copies the science cost of the logistics research it follows.
+  Egress, and Gleba fruit needs its seeds sent out. What you send out builds a small budget
+  that the Ingress spends.
+- **Faster Ingress and Egress.** Item ones are named like Factorio's belts: `Item Ingress`
+  (yellow), then `Fast`, `Express` and, with Space Age, `Turbo`. `Dual-lane Ingress and
+  Egress` (after Logistics) fills both lanes of the yellow ones and doubles fluid ones,
+  including the ones you own. `Fast` and `Express Ingress and Egress` (after Logistics 2 and
+  3) unlock the red and blue tiers, and Space Age adds the green `Turbo` tier. The ones you
+  own keep their tier until you swap them at their Anchor. Each research copies the science
+  cost of the logistics research it follows.
 - **Space Age eggs.** With no nests to capture, `Captivity` unlocks a hand-only recipe for five
   fresh biter eggs on Nauvis, and `Biochamber` one for a pentapod egg on Gleba.
 - **Tools.** Top-bar buttons can move the Square or its contents one tile, and save a
@@ -81,7 +83,8 @@ Set `FACTORIO=/path/to/factorio` if the game is not found.
 
 ### Code map
 
-[GLOSSARY.md](GLOSSARY.md) defines the game terms used in the code.
+[GLOSSARY.md](GLOSSARY.md) defines the game terms used in the code. The code says Managed
+Line where players see Ingress and Egress.
 
 - `data.lua` loads `prototypes/`: Managed Line items and Anchors, research, tips, and egg recipes.
 - `control.lua` only routes events to the modules in `lib/`.

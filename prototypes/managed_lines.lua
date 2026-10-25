@@ -68,20 +68,37 @@ local function build_line_icons(kind, flow, tier)
   }
 end
 
+-- Players see Managed Lines as Ingress and Egress, named like Factorio's belts:
+-- "Item Ingress", then "Fast Item Ingress" and so on. Item line descriptions name the
+-- belt colour, so searching a menu for "red" still finds them.
+local function get_line_localised_name(kind, flow, tier)
+  local base_name = {"item-name." .. definitions.get_item_name(kind, flow)}
+
+  if kind == "fluid" or tier.key == "yellow" then
+    return base_name
+  end
+
+  return {"item-name.the-square-tiered-generic-anchor", {"the-square-managed-line-tier." .. tier.key}, base_name}
+end
+
+local function get_line_item_description(kind, flow, tier)
+  local flow_description = {"item-description.the-square-" .. flow .. "-line"}
+
+  if kind == "fluid" then
+    return flow_description
+  end
+
+  return {"item-description.the-square-item-line", {"the-square-belt-colour." .. tier.key}, flow_description}
+end
+
 local function build_line_item(kind, flow, tier)
   local order = SUBGROUP_ORDER[kind .. "_" .. flow]
 
   return {
     type = "item",
     name = definitions.get_item_name(kind, flow, tier.key),
-    localised_name = kind == "item"
-      and {
-        "item-name.the-square-tiered-generic-anchor",
-        {"the-square-managed-line-tier." .. tier.key},
-        {"item-name." .. definitions.get_item_name(kind, flow)}
-      }
-      or nil,
-    localised_description = {"item-description.the-square-generic-anchor"},
+    localised_name = get_line_localised_name(kind, flow, tier),
+    localised_description = get_line_item_description(kind, flow, tier),
     icons = build_line_icons(kind, flow, tier),
     subgroup = "energy-pipe-distribution",
     order = "z[the-square]-" .. (tier.key == "yellow" and order or order .. "-" .. tier.key),
@@ -172,7 +189,7 @@ local function build_anchor_entity(kind, flow, tier)
   local item_name = definitions.get_item_name(kind, flow, tier.key)
 
   entity.name = definitions.get_entity_name(kind, flow, tier.key)
-  entity.localised_name = {"entity-name." .. definitions.get_generic_entity_name(kind, flow)}
+  entity.localised_name = get_line_localised_name(kind, flow, tier)
   entity.localised_description = {"entity-description.the-square-" .. flow .. "-anchor"}
   entity.icon = icon
   entity.icon_size = 64
