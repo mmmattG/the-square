@@ -86,7 +86,7 @@ Set `FACTORIO=/path/to/factorio` if the game is not found.
 [GLOSSARY.md](GLOSSARY.md) defines the game terms used in the code. The code says Managed
 Line where players see Ingress and Egress.
 
-- `data.lua` loads `prototypes/`: Managed Line items and Anchors, research, tips, and egg recipes.
+- `data.lua` loads `prototypes/`: Ingress and Egress items and Anchors, research, tips, and egg recipes.
 - `control.lua` only routes events to the modules in `lib/`.
 - Shared by both stages: `managed_line_definitions` (names, tiers, throughput),
   `planet_catalog` (each Planet's resources and starter content), `mod_settings`,

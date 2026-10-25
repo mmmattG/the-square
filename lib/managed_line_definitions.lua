@@ -67,7 +67,7 @@ definitions.THROUGHPUT_BY_TIER_LEVEL = {
   [5] = {item_lane_counts = {4, 4}, fluid_amount_per_tick = 1280}
 }
 
--- Managed Line Upgrade research, in order. Each one copies the science cost of its
+-- Tier Upgrade research, in order. Each one copies the science cost of its
 -- vanilla prerequisite. Researching it raises the force's tier to tier_level; every
 -- upgrade after dual-lane also unlocks the recipes for its item tier.
 -- The names predate egress lines and are kept so existing saves keep their research.

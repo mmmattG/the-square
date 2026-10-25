@@ -72,14 +72,14 @@ local frame_name = "the_square_playtest_frame"
 local toggle_button_name = "the_square_playtest_toggle"
 local chest_position = {x = 0, y = 2}
 
-local managed_line_item_roots = {
+local ingress_egress_item_roots = {
   "the-square-item-ingress-anchor",
   "the-square-item-egress-anchor",
   "the-square-fluid-ingress-anchor",
   "the-square-fluid-egress-anchor"
 }
 
-local managed_line_tier_suffixes = {
+local ingress_egress_tier_suffixes = {
   "",
   "-red",
   "-blue",
@@ -200,11 +200,11 @@ local function reset_research(force)
   sync_the_square(force)
 end
 
-local function get_existing_managed_line_item_names()
+local function get_existing_ingress_egress_item_names()
   local names = {}
 
-  for _, root in ipairs(managed_line_item_roots) do
-    for _, suffix in ipairs(managed_line_tier_suffixes) do
+  for _, root in ipairs(ingress_egress_item_roots) do
+    for _, suffix in ipairs(ingress_egress_tier_suffixes) do
       local item_name = root .. suffix
       if prototypes and prototypes.item and prototypes.item[item_name] then
         names[#names + 1] = item_name
@@ -253,7 +253,7 @@ local function fill_bonus_chest(surface)
   end
 
   inventory.clear()
-  for _, item_name in ipairs(get_existing_managed_line_item_names()) do
+  for _, item_name in ipairs(get_existing_ingress_egress_item_names()) do
     inventory.insert({name = item_name, count = 50})
   end
 
@@ -313,8 +313,8 @@ local function refresh_playtest_frame(player)
   end
 
   frame.clear()
-  frame.add({type = "label", caption = "Cheat mode, always day, and bonus Managed Line chest are enabled."})
-  frame.add({type = "button", name = "the_square_playtest_refill_chest", caption = "Refill Managed Line chest"})
+  frame.add({type = "label", caption = "Cheat mode, always day, and a bonus Ingress and Egress chest are enabled."})
+  frame.add({type = "button", name = "the_square_playtest_refill_chest", caption = "Refill Ingress and Egress chest"})
 
   for _, button in ipairs(research_buttons) do
     local technology = get_force().technologies[button.technologies[#button.technologies]]
@@ -374,7 +374,7 @@ script.on_event(defines.events.on_gui_click, function(event)
   if event.element.name == "the_square_playtest_refill_chest" then
     local chest = fill_bonus_chest(player.surface)
     if chest then
-      player.print("Refilled Managed Line chest at (" .. chest.position.x .. ", " .. chest.position.y .. ").")
+      player.print("Refilled Ingress and Egress chest at (" .. chest.position.x .. ", " .. chest.position.y .. ").")
     end
     return
   end

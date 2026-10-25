@@ -43,7 +43,7 @@ The current unlocked playable area on one **Planet**.
 _Avoid_: Base, arena, map
 
 **Boundary**:
-The outer edge of a **Planet**'s **Square** where **Managed Lines** may be placed.
+The outer edge of a **Planet**'s **Square** where **Ingress** and **Egress** may be placed.
 _Avoid_: Border zone, wall
 
 **Void**:
@@ -64,9 +64,9 @@ _Avoid_: Global expansion, empire growth
 
 ### Economy And Throughput
 
-**Managed Line Upgrade**:
-A research step that unlocks a faster tier of item **Managed Lines** to craft and place. The tiers follow Factorio's belts: yellow (no prefix in game), then Fast (red), Express (blue) and Space Age's Turbo (green). Owned lines keep their tier until the player swaps them. The first step, dual-lane, is the exception: it adds the second lane to every yellow line and doubles fluid lines.
-_Avoid_: Anchor upgrade, ingress upgrade, output upgrade
+**Tier Upgrade**:
+A research step that unlocks a faster tier of item **Ingress** and **Egress** to craft and place. The tiers follow Factorio's belts: yellow (no prefix, like "Transport belt"), then Fast (red), Express (blue) and Space Age's Turbo (green). Owned ones keep their tier until the player swaps them. The first step, dual-lane, is the exception: it adds the second lane to every yellow item one and doubles fluid ones.
+_Avoid_: Managed Line Upgrade, anchor upgrade, colour names as tier names
 
 **Difficulty Preset**:
 A named package of tuning values that changes harshness without changing core rules.
@@ -80,35 +80,34 @@ _Avoid_: Normal mode, standard mode
 A softer tuning preset that mainly increases starting area and eases pacing.
 _Avoid_: Casual mode, sandbox mode
 
-### Managed Logistics
+### Ingress And Egress
 
-**Managed Line**:
-A **Planet**-local border line owned by the mod, either ingress or egress. Game text never says Managed Line: players see Ingress and Egress items, such as Item Ingress, Fast Item Egress or Fluid Ingress.
-_Avoid_: Port, connector, lane
+**Ingress**:
+An owned **Planet**-local connection on an **Anchor** that brings a **Planet**-native external resource into the **Square**. Players craft and place it as an item: Item Ingress (Fast, Express and Turbo for higher tiers) or Fluid Ingress.
+_Avoid_: Managed Line, input line, source
 
-**Ingress Line**:
-A **Managed Line** that brings a **Planet**-native external resource into the **Square**.
-_Avoid_: Input line, source
+**Egress**:
+An owned **Planet**-local connection on an **Anchor** that sends a specific local support resource out of the **Square**. Items: Item Egress (and its higher tiers) or Fluid Egress.
+_Avoid_: Managed Line, output line, export line
 
-**Egress Line**:
-A **Managed Line** that sends a specific local support resource out of the **Square**.
-_Avoid_: Output line, export line
+**Managed Line** (code only):
+The code's name for **Ingress** and **Egress** together, as in `managed_line_state` and `storage.planets[...].managed_lines`. Use it only when talking about code; players and docs say **Ingress** and **Egress**.
 
 **Anchor**:
-A physical **Boundary** slot on the anchor ring where a **Managed Line** can be placed.
-_Avoid_: Managed Line, port, connector
+A physical **Boundary** slot on the anchor ring where an **Ingress** or **Egress** can be placed.
+_Avoid_: Ingress, Egress, port, connector
 
 **Stashed Line**:
-An owned **Managed Line** with no current **Anchor** on the map.
+An owned **Ingress** or **Egress** in an inventory instead of on an **Anchor**.
 _Avoid_: Disabled line, hidden line
 
 **Anchor Slot Configuration**:
-The flow where clicking an empty **Anchor** opens a configuration menu, then choosing an ingress or egress resource consumes one matching **Managed Line** item from the player's inventory.
+The flow where clicking an empty **Anchor** opens a configuration menu, then choosing a resource consumes one matching **Ingress** or **Egress** item from the player's inventory.
 _Avoid_: Cursor placement, placement preview, ghost placement
 
-**Managed Line Shift**:
-The automatic outward movement of a placed **Managed Line** from one anchor slot to the next after a **Ring** is added.
-_Avoid_: Anchor shift, auto-move, border slide
+**Anchor Shift**:
+The automatic outward movement of a placed **Ingress** or **Egress** from one anchor slot to the next after a **Ring** is added.
+_Avoid_: Managed Line Shift, auto-move, border slide
 
 ### Resource Model
 
@@ -166,9 +165,9 @@ _Avoid_: Regression, accidental break
 - One **Planet** owns exactly one local **Square**, one **Planet Config**, and one **Planet Progression**.
 - One completed **Square Expansion** adds exactly one **Ring** to one **Planet**.
 - A **Difficulty Preset** changes tuning such as starting size and pacing without changing the invariant Square rules.
-- **Anchor Slot Configuration** places one **Managed Line** into one empty **Anchor** only after the matching inventory item is consumed.
-- A **Native Free Resource** enters through an **Ingress Line**; a **Cultivated Resource** stays inside the **Square**.
-- A **Support Material Dependency** is satisfied by an **Opt-In Egress Resource** through an **Egress Line**.
+- **Anchor Slot Configuration** places one **Ingress** or **Egress** into one empty **Anchor** only after the matching inventory item is consumed.
+- A **Native Free Resource** enters through an **Ingress**; a **Cultivated Resource** stays inside the **Square**.
+- A **Support Material Dependency** is satisfied by an **Opt-In Egress Resource** through an **Egress**.
 - **Planet-Local Logistics** never replace **Vanilla Rocket Logistics**.
 - **Rocket Footprint Pressure** is one of the ways vanilla Space Age systems still consume scarce local **Square** space.
 - The **Planet-Scoped Refactor** should be proven first on Nauvis and then on a **Proof Planet**.
@@ -179,13 +178,13 @@ _Avoid_: Regression, accidental break
 >
 > **Domain expert:** "No. It uses the same core **Challenge Variant** rules, but with its own **Planet Config** for starting size, native resources, and research pacing."
 >
-> **Dev:** "So a rocket import to Vulcanus should consume an **Ingress Line** there?"
+> **Dev:** "So a rocket import to Vulcanus should consume an **Ingress** there?"
 >
-> **Domain expert:** "No. That's **Vanilla Rocket Logistics**. **Ingress Lines** are only for **Planet-Local Logistics** and native external sourcing."
+> **Domain expert:** "No. That's **Vanilla Rocket Logistics**. **Ingress** is only for **Planet-Local Logistics** and native external sourcing."
 >
 > **Dev:** "What about something like sulfuric acid supporting extraction?"
 >
-> **Domain expert:** "That's a **Support Material Dependency**. The affected resource explicitly opts into the generic **Egress Line** system on that **Planet**."
+> **Domain expert:** "That's a **Support Material Dependency**. The affected resource explicitly opts into the generic **Egress** system on that **Planet**."
 
 ## Flagged Ambiguities
 
@@ -193,5 +192,6 @@ _Avoid_: Regression, accidental break
 - "expansion" was previously used for both the research and the area gain; use **Square Expansion** for the research line and **Ring** or **Planet-Local Expansion** for the resulting map change.
 - "free resources" was too vague; use **Native Free Resource** for planet-native raw ingress and **Cultivated Resource** for resources that must stay in-square.
 - "imports" was ambiguous between local external sourcing and interplanetary shipping; use **External Sourcing** for ingress and **Vanilla Rocket Logistics** for off-planet movement.
-- "egress" risked meaning any export; use **Egress Line** only for **Planet**-local support-material rules, not for interplanetary trade.
+- "egress" risked meaning any export; use **Egress** only for **Planet**-local support-material rules, not for interplanetary trade.
+- "Managed Line" read as jargon to players; game text and docs say **Ingress** and **Egress**, and Managed Line stays a code name.
 - "ghost" conflicts with Factorio ghost entities that construction bots can build; use **Anchor Slot Configuration** for the menu-driven anchor slot flow.

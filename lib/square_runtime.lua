@@ -173,7 +173,7 @@ function square_runtime.expand(planet_name)
       end
     end
 
-    -- Managed Line Shift.
+    -- Anchor Shift.
     for _, anchor in ipairs(managed_lines.anchors) do
       if anchor.position and anchor.side then
         anchor.position = square_layout.move_position(anchor.position, anchor.side, 1)

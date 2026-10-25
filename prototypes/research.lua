@@ -1,4 +1,4 @@
--- Square Expansion research for every Planet, and the Managed Line Upgrade research.
+-- Square Expansion research for every Planet, and the Tier Upgrade research.
 local definitions = require("lib.managed_line_definitions")
 local expansion_research = require("lib.expansion_research")
 local mod_settings = require("lib.mod_settings")
