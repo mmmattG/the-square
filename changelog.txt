@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 0.2.0
-Date: 2026-10-25
+Date: 2026-10-26
   Changes:
     - Updated for Factorio 2.1. Existing saves upgrade automatically. Factorio 2.0 players should keep using 0.1.5.
     - Removed the "Enable logistic network automation" setting.
