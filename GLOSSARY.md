@@ -65,7 +65,7 @@ _Avoid_: Global expansion, empire growth
 ### Economy And Throughput
 
 **Managed Line Upgrade**:
-A research step that unlocks a faster tier of item **Managed Lines** (red, blue, then Space Age's turbo) to craft and place. Owned lines keep their tier until the player swaps them. The first step, dual-lane, is the exception: it adds the second lane to every yellow line and doubles yellow fluid lines.
+A research step that unlocks a faster tier of item **Managed Lines** to craft and place. The tiers follow Factorio's belts: yellow (no prefix in game), then Fast (red), Express (blue) and Space Age's Turbo (green). Owned lines keep their tier until the player swaps them. The first step, dual-lane, is the exception: it adds the second lane to every yellow line and doubles fluid lines.
 _Avoid_: Anchor upgrade, ingress upgrade, output upgrade
 
 **Difficulty Preset**:
@@ -83,7 +83,7 @@ _Avoid_: Casual mode, sandbox mode
 ### Managed Logistics
 
 **Managed Line**:
-A **Planet**-local border line owned by the mod, either ingress or egress.
+A **Planet**-local border line owned by the mod, either ingress or egress. Game text never says Managed Line: players see Ingress and Egress items, such as Item Ingress, Fast Item Egress or Fluid Ingress.
 _Avoid_: Port, connector, lane
 
 **Ingress Line**:

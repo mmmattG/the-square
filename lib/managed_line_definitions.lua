@@ -142,11 +142,6 @@ function definitions.get_entity_name(kind, flow, tier_key)
   return "the-square-" .. kind .. "-" .. flow .. "-managed-anchor" .. get_tier_suffix(kind, tier_key)
 end
 
--- Locale key root shared by every tier of one kind and flow.
-function definitions.get_generic_entity_name(kind, flow)
-  return "the-square-generic-" .. kind .. "-" .. flow .. "-anchor"
-end
-
 -- Calls fn(kind, flow, tier) once for every Managed Line item that exists.
 function definitions.each_line_item(fn)
   for _, tier in ipairs(definitions.ITEM_TIERS) do

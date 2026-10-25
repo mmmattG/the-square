@@ -5,24 +5,25 @@ Date: 2026-10-25
     - Updated for Factorio 2.1. Factorio 2.0 players should use version 0.1.5.
   Changes:
     - Reworked much of the mod's code. Existing saves upgrade automatically.
+    - Managed Lines are now called Ingress and Egress, and their tiers use Factorio's belt names: Item Ingress, then Fast, Express and Turbo. Their descriptions still name the belt colour.
     - Removed the "Enable logistic network automation" map setting. Active provider, buffer, requester and storage chests are now always available once researched.
     - Removed the "Ingress placement debug" player setting, which no longer did anything.
   Balancing:
     - Removed the burner mining drill from the starting inventory because there are no resource patches to mine.
   Bugfixes:
-    - Removed obsolete Managed Line configuration recipes from the crafting menu.
-    - Item egress lines, such as Gleba's seed lines, no longer break when the Square expands.
+    - Removed obsolete Ingress and Egress configuration recipes from the crafting menu.
+    - Item Egress, such as Gleba's seed Egress, no longer breaks when the Square expands.
     - Updating the mod no longer teleports every player back to Nauvis.
-    - Changing the Background tile map setting no longer removes Nauvis's placed Managed Lines, and mod updates no longer empty their belts and pipes.
+    - Changing the Background tile map setting no longer removes Nauvis's placed Ingress and Egress, and mod updates no longer empty their belts and pipes.
     - The "starting square size only applies to new saves" notice no longer appears after every update once the Square has grown.
     - Square expansion research finished before anyone reaches a Planet now counts when the Planet is first visited.
     - In multiplayer, the whole team now hears the Square expansion sound.
     - The Vulcanus, Fulgora, Gleba and Aquilo starting square size settings now have names and descriptions.
     - Fixed an error when a blocked placement was refunded to a player with a full inventory.
-    - The missing line and full inventory messages now name red, blue and turbo Managed Lines instead of showing an unknown locale key.
-    - Fixed the Managed Line upgrade research descriptions and tips, which said every upgrade improves the lines you already own. Only Dual-lane does; Red, Blue and Turbo unlock new lines.
+    - The missing item and full inventory messages now name Fast, Express and Turbo Ingress and Egress instead of showing an unknown locale key.
+    - Fixed the Ingress and Egress upgrade research descriptions and tips, which said every upgrade improves the ones you already own. Only Dual-lane does; Fast, Express and Turbo unlock new ones.
   Optimizations:
-    - Reduced the routine script work performed by Managed Lines.
+    - Reduced the routine script work performed by Ingress and Egress.
 
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.5
