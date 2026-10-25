@@ -76,6 +76,8 @@ zip is locked.
 Its dev panel can expand the Square, and with Space Age unlock each Planet, jump to a
 platform in its orbit, or land straight in its Square.
 Set `PLAYTEST_SPACE_AGE=0` for base game only, or `PLAYTEST_NO_LAUNCH=1` to only create the save.
+On Linux it also works from a terminal outside your desktop session, such as SSH or T3 Code's
+terminal: it borrows the logged-in desktop's display to open the game window.
 Set `FACTORIO=/path/to/factorio` if the game is not found.
 
 `make asset-gallery` builds a local page of every visual the mod shows. See

@@ -428,6 +428,46 @@ if [ "${PLAYTEST_NO_LAUNCH:-}" ]; then
   exit 0
 fi
 
+# A shell outside the desktop session, such as SSH or T3 Code's terminal, has no
+# display, so Factorio can't open its window. On Linux, borrow the logged-in desktop
+# session's Wayland and X11 displays.
+use_desktop_display() {
+  runtime_dir=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+
+  for socket in "$runtime_dir"/wayland-[0-9]*; do
+    if [ -S "$socket" ]; then
+      export XDG_RUNTIME_DIR="$runtime_dir"
+      export WAYLAND_DISPLAY="${socket##*/}"
+      break
+    fi
+  done
+
+  for socket in /tmp/.X11-unix/X[0-9]*; do
+    display_number=${socket##*/X}
+
+    case "$display_number" in
+      *[!0-9]*) continue ;;
+    esac
+
+    if [ -S "$socket" ] && [ -O "$socket" ]; then
+      export DISPLAY=":$display_number"
+      break
+    fi
+  done
+}
+
+if [ "$(uname -s)" = Linux ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DISPLAY:-}" ]; then
+  use_desktop_display
+
+  if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DISPLAY:-}" ]; then
+    echo "error: no desktop display found, so Factorio can't open a window." >&2
+    echo "Log in to a desktop session, or set PLAYTEST_NO_LAUNCH=1 to only create the save." >&2
+    exit 1
+  fi
+
+  echo "Using the desktop session's display (WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-} DISPLAY=${DISPLAY:-})"
+fi
+
 # Tells Steam's copy of Factorio it was started by Steam. Otherwise Steam restarts it
 # and asks to confirm the command line. Other builds ignore it.
 SteamAppId=427520 exec "$factorio_bin" --load-game "$save_path" --config "$config_path" --mod-directory "$mod_dir"
