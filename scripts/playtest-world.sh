@@ -104,22 +104,22 @@ local research_buttons = {
   },
   {
     name = "the_square_playtest_unlock_ingress_dual",
-    caption = "Unlock dual-lane lines",
+    caption = "Unlock Dual-lane",
     technologies = {"the-square-ingress-dual-lane"}
   },
   {
     name = "the_square_playtest_unlock_ingress_red",
-    caption = "Unlock red lines",
+    caption = "Unlock Fast tier",
     technologies = {"the-square-ingress-red"}
   },
   {
     name = "the_square_playtest_unlock_ingress_blue",
-    caption = "Unlock blue lines",
+    caption = "Unlock Express tier",
     technologies = {"the-square-ingress-blue"}
   },
   {
     name = "the_square_playtest_unlock_ingress_turbo",
-    caption = "Unlock turbo lines",
+    caption = "Unlock Turbo tier",
     technologies = {"the-square-egress-turbo"}
   }
 }
@@ -179,6 +179,36 @@ local function unlock_technologies(force, technology_names)
 
   sync_the_square(force)
   return unlocked
+end
+
+-- Researches every technology a player could finish, except Square expansion,
+-- which would grow the Square by dozens of rings. Infinite research is skipped
+-- because it can never be finished.
+local INFINITE_MAX_LEVEL = 4294967295
+
+local function is_square_expansion(technology)
+  return string.find(technology.name, "^the%-square%-.*square%-expansion") ~= nil
+end
+
+local function research_all(force)
+  local researched = 0
+
+  for _, technology in pairs(force.technologies) do
+    local prototype = technology.prototype
+
+    if technology.enabled
+      and not technology.researched
+      and not prototype.hidden
+      and prototype.max_level < INFINITE_MAX_LEVEL
+      and not is_square_expansion(technology)
+    then
+      technology.researched = true
+      researched = researched + 1
+    end
+  end
+
+  sync_the_square(force)
+  return researched
 end
 
 local function reset_research(force)
@@ -323,6 +353,7 @@ local function refresh_playtest_frame(player)
     end
   end
 
+  frame.add({type = "button", name = "the_square_playtest_research_all", caption = "Research all (not Square expansion)"})
   frame.add({type = "button", name = "the_square_playtest_reset_research", caption = "Reset research"})
 end
 
@@ -376,6 +407,13 @@ script.on_event(defines.events.on_gui_click, function(event)
     if chest then
       player.print("Refilled Ingress and Egress chest at (" .. chest.position.x .. ", " .. chest.position.y .. ").")
     end
+    return
+  end
+
+  if event.element.name == "the_square_playtest_research_all" then
+    local researched = research_all(player.force)
+    player.print("Researched " .. researched .. " technologies. Square expansion and infinite research were left alone.")
+    refresh_playtest_frame(player)
     return
   end
 
